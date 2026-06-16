@@ -13,7 +13,7 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public string? Phone { get; set; }
     public string Status { get; set; } = "ACTIVE";
-    public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Role Role { get; set; } = null!;
 }

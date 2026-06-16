@@ -236,3 +236,6 @@ C:\Users\Juan Pablo\ProyectoDeGrado\TurisClick.Api\artifacts\verify-build\ru\Mic
 C:\Users\Juan Pablo\ProyectoDeGrado\TurisClick.Api\artifacts\verify-build\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\Users\Juan Pablo\ProyectoDeGrado\TurisClick.Api\artifacts\verify-build\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\Users\Juan Pablo\ProyectoDeGrado\TurisClick.Api\artifacts\verify-build\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
+C:\Users\Juan Pablo\ProyectoDeGrado\TurisClick.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\Juan Pablo\ProyectoDeGrado\TurisClick.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\Juan Pablo\ProyectoDeGrado\TurisClick.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerUI.dll

@@ -96,8 +96,8 @@ public class AppDbContext : DbContext
                 .HasDefaultValue("ACTIVE")
                 .IsRequired();
 
-            entity.Property(user => user.RegisteredAt)
-                .HasColumnName("registered_at")
+            entity.Property(user => user.CreatedAt)
+                .HasColumnName("created_at")
                 .HasDefaultValueSql("now()");
 
             entity.HasIndex(user => user.Email)
