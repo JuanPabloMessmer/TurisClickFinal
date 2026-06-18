@@ -14,6 +14,11 @@ public class AuthService : IAuthService
 {
     private const string DefaultUserRole = "TOURIST";
     private const string ActiveStatus = "ACTIVE";
+    private static readonly HashSet<string> AppRoles =
+        new(StringComparer.OrdinalIgnoreCase) { "TOURIST" };
+
+    private static readonly HashSet<string> BackofficeRoles =
+        new(StringComparer.OrdinalIgnoreCase) { "ADMIN", "PROVIDER" };
 
     private readonly IAuthRepository _authRepository;
     private readonly IConfiguration _configuration;
@@ -65,6 +70,19 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
     {
+        return await AuthenticateAsync(request, AppRoles, "User cannot access the tourist application.");
+    }
+
+    public async Task<AuthResponse> LoginBackofficeAsync(LoginRequest request)
+    {
+        return await AuthenticateAsync(request, BackofficeRoles, "User cannot access the backoffice.");
+    }
+
+    private async Task<AuthResponse> AuthenticateAsync(
+        LoginRequest request,
+        IReadOnlySet<string> allowedRoles,
+        string unauthorizedRoleMessage)
+    {
         var email = NormalizeEmail(request.Email);
         var user = await _authRepository.GetUserByEmailAsync(email);
 
@@ -88,6 +106,11 @@ public class AuthService : IAuthService
         if (user.Role is null)
         {
             throw new NotFoundException("User role was not found.");
+        }
+
+        if (!allowedRoles.Contains(user.Role.Name))
+        {
+            throw new ForbiddenException(unauthorizedRoleMessage);
         }
 
         return BuildAuthResponse(user);

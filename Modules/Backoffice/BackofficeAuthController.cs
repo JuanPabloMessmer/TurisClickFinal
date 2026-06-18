@@ -4,36 +4,18 @@ using TurisClick.Api.Modules.Auth.DTOs;
 using TurisClick.Api.Modules.Auth.Services;
 using TurisClick.Api.Shared.Exceptions;
 
-namespace TurisClick.Api.Modules.Auth;
+namespace TurisClick.Api.Modules.Backoffice;
 
 [ApiController]
-[Route("api/auth")]
+[Route("api/backoffice/auth")]
 [AllowAnonymous]
-public class AuthController : ControllerBase
+public class BackofficeAuthController : ControllerBase
 {
     private readonly IAuthService _authService;
 
-    public AuthController(IAuthService authService)
+    public BackofficeAuthController(IAuthService authService)
     {
         _authService = authService;
-    }
-
-    [HttpPost("register")]
-    public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
-    {
-        try
-        {
-            var response = await _authService.RegisterAsync(request);
-            return Created(string.Empty, response);
-        }
-        catch (ConflictException exception)
-        {
-            return Conflict(new { message = exception.Message });
-        }
-        catch (NotFoundException exception)
-        {
-            return NotFound(new { message = exception.Message });
-        }
     }
 
     [HttpPost("login")]
@@ -41,8 +23,7 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var response = await _authService.LoginAsync(request);
-            return Ok(response);
+            return Ok(await _authService.LoginBackofficeAsync(request));
         }
         catch (UnauthorizedException exception)
         {

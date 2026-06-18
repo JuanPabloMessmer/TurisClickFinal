@@ -4,8 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using TurisClick.Api.Infrastructure.Database;
+using TurisClick.Api.Infrastructure.OpenApi;
 using TurisClick.Api.Modules.Auth.Repositories;
 using TurisClick.Api.Modules.Auth.Services;
+using TurisClick.Api.Modules.Users.Repositories;
+using TurisClick.Api.Modules.Users.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +20,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 
@@ -63,13 +68,15 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Enter a valid JWT bearer token."
     });
 
-    options.AddSecurityRequirement(openApiDocument => new OpenApiSecurityRequirement
-    {
-        [new OpenApiSecuritySchemeReference("Bearer", openApiDocument, null)] = []
-    });
+    options.OperationFilter<AuthorizeOperationFilter>();
 });
 
 var app = builder.Build();
+
+await DatabaseSeeder.SeedTemporaryAdminAsync(
+    app.Services,
+    app.Configuration,
+    app.Logger);
 
 if (app.Environment.IsDevelopment())
 {
