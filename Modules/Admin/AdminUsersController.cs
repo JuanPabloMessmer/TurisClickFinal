@@ -7,7 +7,7 @@ using TurisClick.Api.Shared.Exceptions;
 namespace TurisClick.Api.Modules.Admin;
 
 [ApiController]
-[Route("api/admin/users")]
+[Route("api/backoffice/users")]
 [Authorize(Roles = "ADMIN")]
 public class AdminUsersController : ControllerBase
 {
