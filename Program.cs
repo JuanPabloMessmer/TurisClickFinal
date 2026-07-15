@@ -8,6 +8,8 @@ using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.OpenApi;
 using TurisClick.Api.Modules.Auth.Repositories;
 using TurisClick.Api.Modules.Auth.Services;
+using TurisClick.Api.Modules.Providers.Repositories;
+using TurisClick.Api.Modules.Providers.Services;
 using TurisClick.Api.Modules.Users.Repositories;
 using TurisClick.Api.Modules.Users.Services;
 
@@ -26,6 +28,8 @@ builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IProviderRepository, ProviderRepository>();
+builder.Services.AddScoped<IProviderService, ProviderService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 

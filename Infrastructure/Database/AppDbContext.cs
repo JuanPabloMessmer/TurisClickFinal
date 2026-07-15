@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TurisClick.Api.Modules.Providers;
 using TurisClick.Api.Modules.Roles;
 using TurisClick.Api.Modules.Users;
 
@@ -12,6 +13,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Provider> Providers => Set<Provider>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,6 +21,7 @@ public class AppDbContext : DbContext
 
         ConfigureRoles(modelBuilder);
         ConfigureUsers(modelBuilder);
+        ConfigureProviders(modelBuilder);
     }
 
     private static void ConfigureRoles(ModelBuilder modelBuilder)
@@ -106,6 +109,73 @@ public class AppDbContext : DbContext
             entity.HasOne(user => user.Role)
                 .WithMany(role => role.Users)
                 .HasForeignKey(user => user.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigureProviders(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Provider>(entity =>
+        {
+            entity.ToTable("providers");
+
+            entity.HasKey(provider => provider.ProviderId);
+
+            entity.Property(provider => provider.ProviderId)
+                .HasColumnName("provider_id");
+
+            entity.Property(provider => provider.UserId)
+                .HasColumnName("user_id")
+                .IsRequired();
+
+            entity.Property(provider => provider.CompanyName)
+                .HasColumnName("company_name")
+                .HasMaxLength(150)
+                .IsRequired();
+
+            entity.Property(provider => provider.Nit)
+                .HasColumnName("nit")
+                .HasMaxLength(50);
+
+            entity.Property(provider => provider.Description)
+                .HasColumnName("description")
+                .HasColumnType("text");
+
+            entity.Property(provider => provider.ContactPhone)
+                .HasColumnName("contact_phone")
+                .HasMaxLength(30);
+
+            entity.Property(provider => provider.ContactEmail)
+                .HasColumnName("contact_email")
+                .HasMaxLength(150);
+
+            entity.Property(provider => provider.Address)
+                .HasColumnName("address")
+                .HasMaxLength(255);
+
+            entity.Property(provider => provider.LogoUrl)
+                .HasColumnName("logo_url")
+                .HasMaxLength(500);
+
+            entity.Property(provider => provider.Status)
+                .HasColumnName("status")
+                .HasMaxLength(20)
+                .HasDefaultValue("ACTIVE")
+                .IsRequired();
+
+            entity.Property(provider => provider.CreatedAt)
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("now()");
+
+            entity.HasIndex(provider => provider.UserId)
+                .IsUnique();
+
+            entity.HasIndex(provider => provider.Nit)
+                .IsUnique();
+
+            entity.HasOne(provider => provider.User)
+                .WithOne(user => user.Provider)
+                .HasForeignKey<Provider>(provider => provider.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

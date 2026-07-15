@@ -1,4 +1,5 @@
-﻿using TurisClick.Api.Modules.Roles;
+using TurisClick.Api.Modules.Providers;
+using TurisClick.Api.Modules.Roles;
 
 namespace TurisClick.Api.Modules.Users;
 
@@ -16,4 +17,5 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Role Role { get; set; } = null!;
+    public Provider? Provider { get; set; }
 }
