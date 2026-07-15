@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TurisClick.Api.Modules.Providers.DTOs;
@@ -13,10 +14,12 @@ public class ProviderService : IProviderService
         new(StringComparer.OrdinalIgnoreCase) { "ACTIVE", "INACTIVE", "BLOCKED" };
 
     private readonly IProviderRepository _providerRepository;
+    private readonly PasswordHasher<User> _passwordHasher;
 
     public ProviderService(IProviderRepository providerRepository)
     {
         _providerRepository = providerRepository;
+        _passwordHasher = new PasswordHasher<User>();
     }
 
     public async Task<IReadOnlyList<ProviderResponse>> GetAllAsync()
@@ -33,11 +36,11 @@ public class ProviderService : IProviderService
 
     public async Task<ProviderResponse> CreateAsync(CreateProviderRequest request)
     {
-        var user = await GetRequiredProviderUserAsync(request.UserId);
+        var email = NormalizeEmail(request.Email);
 
-        if (await _providerRepository.UserHasProviderAsync(user.UserId))
+        if (await _providerRepository.EmailExistsAsync(email))
         {
-            throw new ConflictException("User already has a provider profile.");
+            throw new ConflictException("Email is already registered.");
         }
 
         var nit = NormalizeOptional(request.Nit);
@@ -47,9 +50,25 @@ public class ProviderService : IProviderService
             throw new ConflictException("NIT is already registered.");
         }
 
+        var role = await _providerRepository.GetRoleByNameAsync("PROVIDER")
+            ?? throw new NotFoundException("Provider role was not found.");
+
+        var user = new User
+        {
+            RoleId = role.RoleId,
+            FirstName = request.FirstName.Trim(),
+            LastName = NormalizeOptional(request.LastName),
+            Email = email,
+            Phone = NormalizeOptional(request.Phone),
+            Status = "ACTIVE",
+            CreatedAt = DateTime.UtcNow,
+            Role = role
+        };
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
+
         var provider = new Provider
         {
-            UserId = user.UserId,
             CompanyName = request.CompanyName.Trim(),
             Nit = nit,
             Description = NormalizeOptional(request.Description),
@@ -64,11 +83,11 @@ public class ProviderService : IProviderService
 
         try
         {
-            await _providerRepository.CreateAsync(provider);
+            await _providerRepository.CreateWithUserAsync(user, provider);
         }
         catch (DbUpdateException exception) when (IsUniqueViolation(exception))
         {
-            throw new ConflictException("Provider user or NIT is already registered.");
+            throw new ConflictException("Email, provider user, or NIT is already registered.");
         }
 
         return MapToResponse(provider);
@@ -139,19 +158,6 @@ public class ProviderService : IProviderService
         }
     }
 
-    private async Task<User> GetRequiredProviderUserAsync(int userId)
-    {
-        var user = await _providerRepository.GetUserByIdAsync(userId)
-            ?? throw new NotFoundException("User was not found.");
-
-        if (!string.Equals(user.Role.Name, "PROVIDER", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ValidationException("User must have the PROVIDER role.");
-        }
-
-        return user;
-    }
-
     private async Task<Provider> GetRequiredProviderAsync(int providerId)
     {
         return await _providerRepository.GetByIdAsync(providerId)
@@ -199,6 +205,11 @@ public class ProviderService : IProviderService
     private static string? NormalizeEmailOptional(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToLowerInvariant();
+    }
+
+    private static string NormalizeEmail(string email)
+    {
+        return email.Trim().ToLowerInvariant();
     }
 
     private static bool IsUniqueViolation(DbUpdateException exception)

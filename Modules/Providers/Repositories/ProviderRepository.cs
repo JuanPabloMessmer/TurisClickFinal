@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Infrastructure.Database;
+using TurisClick.Api.Modules.Roles;
 using TurisClick.Api.Modules.Users;
 
 namespace TurisClick.Api.Modules.Providers.Repositories;
@@ -46,6 +47,17 @@ public class ProviderRepository : IProviderRepository
             .FirstOrDefaultAsync(user => user.UserId == userId);
     }
 
+    public async Task<Role?> GetRoleByNameAsync(string roleName)
+    {
+        return await _dbContext.Roles
+            .FirstOrDefaultAsync(role => role.Name == roleName);
+    }
+
+    public async Task<bool> EmailExistsAsync(string email)
+    {
+        return await _dbContext.Users.AnyAsync(user => user.Email == email);
+    }
+
     public async Task<bool> UserHasProviderAsync(int userId, int? excludedProviderId = null)
     {
         return await _dbContext.Providers.AnyAsync(provider =>
@@ -64,6 +76,23 @@ public class ProviderRepository : IProviderRepository
     {
         _dbContext.Providers.Add(provider);
         await _dbContext.SaveChangesAsync();
+
+        return provider;
+    }
+
+    public async Task<Provider> CreateWithUserAsync(User user, Provider provider)
+    {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        _dbContext.Users.Add(user);
+        await _dbContext.SaveChangesAsync();
+
+        provider.UserId = user.UserId;
+        provider.User = user;
+
+        _dbContext.Providers.Add(provider);
+        await _dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return provider;
     }

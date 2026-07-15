@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "9cb86de4-010c-4d0f-9850-c5f38b41c2c5",
     "name": "TurisClick API",
-    "description": "TurisClick authentication, backoffice authentication, and ADMIN-only user management endpoints.",
+    "description": "TurisClick authentication, backoffice authentication, ADMIN-only user management, and provider management endpoints.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -32,6 +32,22 @@
     {
       "key": "userId",
       "value": "1"
+    },
+    {
+      "key": "providerId",
+      "value": "1"
+    },
+    {
+      "key": "providerEmail",
+      "value": "provider@example.com"
+    },
+    {
+      "key": "providerPassword",
+      "value": "ProviderPass2026!"
+    },
+    {
+      "key": "providerToken",
+      "value": ""
     }
   ],
   "item": [
@@ -352,6 +368,325 @@
               ]
             },
             "description": "Allowed values: ADMIN, TOURIST, PROVIDER."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Providers",
+      "item": [
+        {
+          "name": "Admin - List Providers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/backoffice/providers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "providers"
+              ]
+            },
+            "description": "ADMIN only. Lists all provider companies."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin - Get Provider By Id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/backoffice/providers/{{providerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "providers",
+                "{{providerId}}"
+              ]
+            },
+            "description": "ADMIN only. Gets a provider company by id."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin - Create Provider With User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set(\"providerId\", json.providerId);",
+                  "  pm.collectionVariables.set(\"userId\", json.userId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Carlos\",\n  \"lastName\": \"Mamani\",\n  \"email\": \"{{providerEmail}}\",\n  \"password\": \"{{providerPassword}}\",\n  \"phone\": \"76543210\",\n  \"companyName\": \"Andes Travel Bolivia\",\n  \"nit\": \"123456789\",\n  \"description\": \"Tourism company focused on cultural and adventure experiences in Bolivia.\",\n  \"contactPhone\": \"76543210\",\n  \"contactEmail\": \"contact@andestravel.bo\",\n  \"address\": \"La Paz, Bolivia\",\n  \"logoUrl\": \"https://example.com/logos/andes-travel.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/backoffice/providers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "providers"
+              ]
+            },
+            "description": "ADMIN only. Creates both the PROVIDER user account and its provider company profile in one request."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin - Update Provider",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"Andes Travel Bolivia Updated\",\n  \"nit\": \"123456789\",\n  \"description\": \"Updated company description.\",\n  \"contactPhone\": \"76543211\",\n  \"contactEmail\": \"updated@andestravel.bo\",\n  \"address\": \"Calle Sagarnaga, La Paz, Bolivia\",\n  \"logoUrl\": \"https://example.com/logos/andes-travel-updated.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/backoffice/providers/{{providerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "providers",
+                "{{providerId}}"
+              ]
+            },
+            "description": "ADMIN only. Updates company data for any provider."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin - Change Provider Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/backoffice/providers/{{providerId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "providers",
+                "{{providerId}}",
+                "status"
+              ]
+            },
+            "description": "ADMIN only. Allowed status values: ACTIVE, INACTIVE, BLOCKED."
+          },
+          "response": []
+        },
+        {
+          "name": "Backoffice Provider Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set(\"providerToken\", json.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{providerEmail}}\",\n  \"password\": \"{{providerPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/backoffice/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Logs in with the provider account created by the admin provider creation request."
+          },
+          "response": []
+        },
+        {
+          "name": "Provider - Get Own Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{providerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/backoffice/provider/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "provider",
+                "profile"
+              ]
+            },
+            "description": "PROVIDER only. Gets the authenticated provider company profile."
+          },
+          "response": []
+        },
+        {
+          "name": "Provider - Update Own Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{providerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"My Tourism Company\",\n  \"nit\": \"987654321\",\n  \"description\": \"My updated company information.\",\n  \"contactPhone\": \"71234567\",\n  \"contactEmail\": \"mycompany@example.com\",\n  \"address\": \"Santa Cruz, Bolivia\",\n  \"logoUrl\": \"https://example.com/logos/my-company.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/backoffice/provider/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "provider",
+                "profile"
+              ]
+            },
+            "description": "PROVIDER only. Updates the authenticated provider company profile. No userId or providerId is sent."
           },
           "response": []
         }

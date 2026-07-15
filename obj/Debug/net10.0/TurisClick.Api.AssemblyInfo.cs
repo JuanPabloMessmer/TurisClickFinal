@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TurisClick.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e2ec0f3d64058f7808a913ca693317406311a8fc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+904cb19e96f5775fffc037ec327915bd498b4f19")]
 [assembly: System.Reflection.AssemblyProductAttribute("TurisClick.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TurisClick.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
