@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TurisClick.Api.Modules.Categories;
 using TurisClick.Api.Modules.Providers;
 using TurisClick.Api.Modules.Roles;
 using TurisClick.Api.Modules.Users;
@@ -14,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Provider> Providers => Set<Provider>();
+    public DbSet<Category> Categories => Set<Category>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,6 +24,7 @@ public class AppDbContext : DbContext
         ConfigureRoles(modelBuilder);
         ConfigureUsers(modelBuilder);
         ConfigureProviders(modelBuilder);
+        ConfigureCategories(modelBuilder);
     }
 
     private static void ConfigureRoles(ModelBuilder modelBuilder)
@@ -177,6 +180,41 @@ public class AppDbContext : DbContext
                 .WithOne(user => user.Provider)
                 .HasForeignKey<Provider>(provider => provider.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigureCategories(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.ToTable("categories");
+
+            entity.HasKey(category => category.CategoryId);
+
+            entity.Property(category => category.CategoryId)
+                .HasColumnName("category_id");
+
+            entity.Property(category => category.Name)
+                .HasColumnName("name")
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(category => category.Description)
+                .HasColumnName("description")
+                .HasColumnType("text");
+
+            entity.Property(category => category.Status)
+                .HasColumnName("status")
+                .HasMaxLength(20)
+                .HasDefaultValue("ACTIVE")
+                .IsRequired();
+
+            entity.Property(category => category.CreatedAt)
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("now()");
+
+            entity.HasIndex(category => category.Name)
+                .IsUnique();
         });
     }
 }
