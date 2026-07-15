@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Modules.Categories;
+using TurisClick.Api.Modules.Destinations;
 using TurisClick.Api.Modules.Providers;
 using TurisClick.Api.Modules.Roles;
 using TurisClick.Api.Modules.Users;
@@ -16,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Provider> Providers => Set<Provider>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Destination> Destinations => Set<Destination>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +27,7 @@ public class AppDbContext : DbContext
         ConfigureUsers(modelBuilder);
         ConfigureProviders(modelBuilder);
         ConfigureCategories(modelBuilder);
+        ConfigureDestinations(modelBuilder);
     }
 
     private static void ConfigureRoles(ModelBuilder modelBuilder)
@@ -214,6 +217,49 @@ public class AppDbContext : DbContext
                 .HasDefaultValueSql("now()");
 
             entity.HasIndex(category => category.Name)
+                .IsUnique();
+        });
+    }
+
+    private static void ConfigureDestinations(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Destination>(entity =>
+        {
+            entity.ToTable("destinations");
+
+            entity.HasKey(destination => destination.DestinationId);
+
+            entity.Property(destination => destination.DestinationId)
+                .HasColumnName("destination_id");
+
+            entity.Property(destination => destination.Name)
+                .HasColumnName("name")
+                .HasMaxLength(150)
+                .IsRequired();
+
+            entity.Property(destination => destination.Department)
+                .HasColumnName("department")
+                .HasMaxLength(100);
+
+            entity.Property(destination => destination.Description)
+                .HasColumnName("description")
+                .HasColumnType("text");
+
+            entity.Property(destination => destination.DestinationType)
+                .HasColumnName("destination_type")
+                .HasMaxLength(80);
+
+            entity.Property(destination => destination.Status)
+                .HasColumnName("status")
+                .HasMaxLength(20)
+                .HasDefaultValue("ACTIVE")
+                .IsRequired();
+
+            entity.Property(destination => destination.CreatedAt)
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("now()");
+
+            entity.HasIndex(destination => new { destination.Name, destination.Department })
                 .IsUnique();
         });
     }
