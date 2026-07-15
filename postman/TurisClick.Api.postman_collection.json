@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "9cb86de4-010c-4d0f-9850-c5f38b41c2c5",
-    "name": "TurisClick API",
-    "description": "TurisClick authentication, backoffice authentication, ADMIN-only user management, and provider management endpoints.",
+    "_postman_id": "18d13dc4-c2db-4f1d-81f5-91252b0f05bb",
+    "name": "TURISCLICK",
+    "description": "TurisClick API collection for public app authentication and backoffice user/provider management.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -10,49 +10,61 @@
   },
   "variable": [
     {
-      "key": "baseUrl",
+      "key": "base_url",
+      "value": "https://turisclick-api-abd8gef5hfhxg2hr.eastus2-01.azurewebsites.net"
+    },
+    {
+      "key": "local_base_url",
       "value": "http://localhost:5180"
     },
     {
-      "key": "adminEmail",
+      "key": "authorization_secret",
+      "value": ""
+    },
+    {
+      "key": "tourist_authorization_secret",
+      "value": ""
+    },
+    {
+      "key": "provider_authorization_secret",
+      "value": ""
+    },
+    {
+      "key": "admin_email",
       "value": "admin@turisclick.local"
     },
     {
-      "key": "adminPassword",
+      "key": "admin_password",
       "value": "TempAdmin2026!"
     },
     {
-      "key": "adminToken",
-      "value": ""
+      "key": "tourist_email",
+      "value": "tourist@example.com"
     },
     {
-      "key": "touristToken",
-      "value": ""
+      "key": "tourist_password",
+      "value": "TouristPass2026!"
     },
     {
-      "key": "userId",
-      "value": "1"
-    },
-    {
-      "key": "providerId",
-      "value": "1"
-    },
-    {
-      "key": "providerEmail",
+      "key": "provider_email",
       "value": "provider@example.com"
     },
     {
-      "key": "providerPassword",
+      "key": "provider_password",
       "value": "ProviderPass2026!"
     },
     {
-      "key": "providerToken",
-      "value": ""
+      "key": "user_id",
+      "value": "1"
+    },
+    {
+      "key": "provider_id",
+      "value": "1"
     }
   ],
   "item": [
     {
-      "name": "Authentication",
+      "name": "Public App Auth",
       "item": [
         {
           "name": "Register Tourist",
@@ -67,14 +79,10 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Tourist\",\n  \"lastName\": \"Example\",\n  \"email\": \"tourist@example.com\",\n  \"password\": \"TouristPass2026!\",\n  \"phone\": \"70000000\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
+              "raw": "{{base_url}}/api/auth/register",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
               ],
               "path": [
                 "api",
@@ -82,26 +90,35 @@
                 "register"
               ]
             },
-            "description": "Registers a new user with the TOURIST role."
+            "description": "Public app registration. Creates a TOURIST user automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Tourist\",\n  \"lastName\": \"Example\",\n  \"email\": \"tourist.{{$timestamp}}@turisclick.local\",\n  \"password\": \"{{tourist_password}}\",\n  \"phone\": \"70000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
-          "response": []
-        },
-        {
-          "name": "Tourist App Login",
+          "response": [],
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set(\"touristToken\", response.token);",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set(\"tourist_authorization_secret\", json.token);",
                   "}"
                 ]
               }
             }
-          ],
+          ]
+        },
+        {
+          "name": "Tourist Login",
           "request": {
             "auth": {
               "type": "noauth"
@@ -113,14 +130,10 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"tourist@example.com\",\n  \"password\": \"TouristPass2026!\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
+              "raw": "{{base_url}}/api/auth/login",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
               ],
               "path": [
                 "api",
@@ -128,30 +141,40 @@
                 "login"
               ]
             },
-            "description": "Tourist-facing application login. Only TOURIST accounts are allowed."
+            "description": "Public app login. Only TOURIST users can log in here.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{tourist_email}}\",\n  \"password\": \"{{tourist_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
-          "response": []
-        },
-        {
-          "name": "Backoffice Admin Login",
+          "response": [],
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Login succeeded\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set(\"adminToken\", response.token);",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set(\"tourist_authorization_secret\", json.token);",
                   "}"
                 ]
               }
             }
-          ],
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Backoffice Auth",
+      "item": [
+        {
+          "name": "Admin Login",
           "request": {
             "auth": {
               "type": "noauth"
@@ -163,14 +186,10 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/backoffice/auth/login",
+              "raw": "{{base_url}}/api/backoffice/auth/login",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
               ],
               "path": [
                 "api",
@@ -179,81 +198,39 @@
                 "login"
               ]
             },
-            "description": "Backoffice login for ADMIN and PROVIDER accounts. The response token is saved as adminToken."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Admin Users",
-      "auth": {
-        "type": "bearer",
-        "bearer": [
-          {
-            "key": "token",
-            "value": "{{adminToken}}",
-            "type": "string"
-          }
-        ]
-      },
-      "item": [
-        {
-          "name": "List Users",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "users"
-              ]
+            "description": "Backoffice login for ADMIN users. Saves token in authorization_secret.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
-          "response": []
-        },
-        {
-          "name": "Get User By ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "users",
-                "{{userId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Create Provider User",
+          "response": [],
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set(\"userId\", response.userId);",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set(\"authorization_secret\", json.token);",
                   "}"
                 ]
               }
             }
-          ],
+          ]
+        },
+        {
+          "name": "Provider Login",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
               {
@@ -261,130 +238,59 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Provider\",\n  \"lastName\": \"Example\",\n  \"email\": \"provider@example.com\",\n  \"password\": \"ProviderPass2026!\",\n  \"phone\": \"71111111\",\n  \"role\": \"PROVIDER\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/users",
+              "raw": "{{base_url}}/api/backoffice/auth/login",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
               ],
               "path": [
                 "api",
-                "admin",
-                "users"
+                "backoffice",
+                "auth",
+                "login"
               ]
             },
-            "description": "Creates a user and stores the returned userId as a collection variable."
-          },
-          "response": []
-        },
-        {
-          "name": "Update User Profile",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+            "description": "Backoffice login for PROVIDER users. Saves token in provider_authorization_secret.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{provider_email}}\",\n  \"password\": \"{{provider_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Updated Provider\",\n  \"lastName\": \"Example\",\n  \"email\": \"provider@example.com\",\n  \"phone\": \"72222222\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "users",
-                "{{userId}}"
-              ]
             }
           },
-          "response": []
-        },
-        {
-          "name": "Change User Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set(\"provider_authorization_secret\", json.token);",
+                  "}"
+                ]
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/{{userId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "users",
-                "{{userId}}",
-                "status"
-              ]
-            },
-            "description": "Allowed values: ACTIVE, INACTIVE, BLOCKED."
-          },
-          "response": []
-        },
-        {
-          "name": "Change User Role",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"role\": \"PROVIDER\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/{{userId}}/role",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "users",
-                "{{userId}}",
-                "role"
-              ]
-            },
-            "description": "Allowed values: ADMIN, TOURIST, PROVIDER."
-          },
-          "response": []
+            }
+          ]
         }
       ]
     },
     {
-      "name": "Providers",
+      "name": "Backoffice Users - ADMIN",
       "item": [
         {
-          "name": "Admin - List Providers",
+          "name": "Get Users",
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{authorization_secret}}",
                   "type": "string"
                 }
               ]
@@ -392,9 +298,270 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/backoffice/providers",
+              "raw": "{{base_url}}/api/backoffice/users",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "users"
+              ]
+            },
+            "description": "ADMIN only. Lists users without password_hash."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User By Id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authorization_secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/backoffice/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "ADMIN only. Gets one user by id."
+          },
+          "response": []
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authorization_secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/backoffice/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "users"
+              ]
+            },
+            "description": "ADMIN only. Creates a user with role ADMIN, TOURIST, or PROVIDER.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Backoffice\",\n  \"lastName\": \"User\",\n  \"email\": \"user.{{$timestamp}}@turisclick.local\",\n  \"password\": \"UserPass2026!\",\n  \"phone\": \"70000001\",\n  \"role\": \"TOURIST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.userId !== undefined) pm.collectionVariables.set(\"user_id\", json.userId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authorization_secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/backoffice/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "ADMIN only. Updates basic user data.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"User\",\n  \"email\": \"updated.user@example.com\",\n  \"phone\": \"70000002\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change User Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authorization_secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/backoffice/users/{{user_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "users",
+                "{{user_id}}",
+                "status"
+              ]
+            },
+            "description": "ADMIN only. Allowed statuses: ACTIVE, INACTIVE, BLOCKED.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change User Role",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authorization_secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/backoffice/users/{{user_id}}/role",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "backoffice",
+                "users",
+                "{{user_id}}",
+                "role"
+              ]
+            },
+            "description": "ADMIN only. Allowed roles: ADMIN, TOURIST, PROVIDER.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"PROVIDER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Backoffice Providers",
+      "item": [
+        {
+          "name": "Admin - Get Providers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authorization_secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/backoffice/providers",
+              "host": [
+                "{{base_url}}"
               ],
               "path": [
                 "api",
@@ -414,7 +581,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{authorization_secret}}",
                   "type": "string"
                 }
               ]
@@ -422,45 +589,30 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/backoffice/providers/{{providerId}}",
+              "raw": "{{base_url}}/api/backoffice/providers/{{provider_id}}",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
               ],
               "path": [
                 "api",
                 "backoffice",
                 "providers",
-                "{{providerId}}"
+                "{{provider_id}}"
               ]
             },
-            "description": "ADMIN only. Gets a provider company by id."
+            "description": "ADMIN only. Gets one provider company by id."
           },
           "response": []
         },
         {
           "name": "Admin - Create Provider With User",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const json = pm.response.json();",
-                  "  pm.collectionVariables.set(\"providerId\", json.providerId);",
-                  "  pm.collectionVariables.set(\"userId\", json.userId);",
-                  "}"
-                ]
-              }
-            }
-          ],
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{authorization_secret}}",
                   "type": "string"
                 }
               ]
@@ -472,14 +624,10 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Carlos\",\n  \"lastName\": \"Mamani\",\n  \"email\": \"{{providerEmail}}\",\n  \"password\": \"{{providerPassword}}\",\n  \"phone\": \"76543210\",\n  \"companyName\": \"Andes Travel Bolivia\",\n  \"nit\": \"123456789\",\n  \"description\": \"Tourism company focused on cultural and adventure experiences in Bolivia.\",\n  \"contactPhone\": \"76543210\",\n  \"contactEmail\": \"contact@andestravel.bo\",\n  \"address\": \"La Paz, Bolivia\",\n  \"logoUrl\": \"https://example.com/logos/andes-travel.png\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/backoffice/providers",
+              "raw": "{{base_url}}/api/backoffice/providers",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
               ],
               "path": [
                 "api",
@@ -487,9 +635,44 @@
                 "providers"
               ]
             },
-            "description": "ADMIN only. Creates both the PROVIDER user account and its provider company profile in one request."
+            "description": "ADMIN only. Creates the PROVIDER user and company profile in one transaction.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Carlos\",\n  \"lastName\": \"Mamani\",\n  \"email\": \"{{provider_email}}\",\n  \"password\": \"{{provider_password}}\",\n  \"phone\": \"76543210\",\n  \"companyName\": \"Andes Travel Bolivia\",\n  \"nit\": \"NIT-{{$timestamp}}\",\n  \"description\": \"Tourism company focused on cultural and adventure experiences in Bolivia.\",\n  \"contactPhone\": \"76543210\",\n  \"contactEmail\": \"contact.{{$timestamp}}@andestravel.bo\",\n  \"address\": \"La Paz, Bolivia\",\n  \"logoUrl\": \"https://example.com/logos/andes-travel.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const email = `provider.${Date.now()}@turisclick.local`;",
+                  "pm.collectionVariables.set(\"provider_email\", email);",
+                  "pm.collectionVariables.set(\"provider_password\", \"ProviderPass2026!\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.providerId !== undefined) pm.collectionVariables.set(\"provider_id\", json.providerId);",
+                  "  if (json.userId !== undefined) pm.collectionVariables.set(\"user_id\", json.userId);",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Admin - Update Provider",
@@ -499,7 +682,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{authorization_secret}}",
                   "type": "string"
                 }
               ]
@@ -511,23 +694,28 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"companyName\": \"Andes Travel Bolivia Updated\",\n  \"nit\": \"123456789\",\n  \"description\": \"Updated company description.\",\n  \"contactPhone\": \"76543211\",\n  \"contactEmail\": \"updated@andestravel.bo\",\n  \"address\": \"Calle Sagarnaga, La Paz, Bolivia\",\n  \"logoUrl\": \"https://example.com/logos/andes-travel-updated.png\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/backoffice/providers/{{providerId}}",
+              "raw": "{{base_url}}/api/backoffice/providers/{{provider_id}}",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
               ],
               "path": [
                 "api",
                 "backoffice",
                 "providers",
-                "{{providerId}}"
+                "{{provider_id}}"
               ]
             },
-            "description": "ADMIN only. Updates company data for any provider."
+            "description": "ADMIN only. Updates any provider company data.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"Andes Travel Bolivia Updated\",\n  \"nit\": \"NIT-UPDATED-{{$timestamp}}\",\n  \"description\": \"Updated company description.\",\n  \"contactPhone\": \"76543211\",\n  \"contactEmail\": \"updated.{{$timestamp}}@andestravel.bo\",\n  \"address\": \"Calle Sagarnaga, La Paz, Bolivia\",\n  \"logoUrl\": \"https://example.com/logos/andes-travel-updated.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "response": []
         },
@@ -539,7 +727,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{authorization_secret}}",
                   "type": "string"
                 }
               ]
@@ -551,71 +739,29 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/backoffice/providers/{{providerId}}/status",
+              "raw": "{{base_url}}/api/backoffice/providers/{{provider_id}}/status",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
               ],
               "path": [
                 "api",
                 "backoffice",
                 "providers",
-                "{{providerId}}",
+                "{{provider_id}}",
                 "status"
               ]
             },
-            "description": "ADMIN only. Allowed status values: ACTIVE, INACTIVE, BLOCKED."
-          },
-          "response": []
-        },
-        {
-          "name": "Backoffice Provider Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "  const json = pm.response.json();",
-                  "  pm.collectionVariables.set(\"providerToken\", json.token);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "description": "ADMIN only. Allowed statuses: ACTIVE, INACTIVE, BLOCKED.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{providerEmail}}\",\n  \"password\": \"{{providerPassword}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/backoffice/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "backoffice",
-                "auth",
-                "login"
-              ]
-            },
-            "description": "Logs in with the provider account created by the admin provider creation request."
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "response": []
         },
@@ -627,7 +773,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{providerToken}}",
+                  "value": "{{provider_authorization_secret}}",
                   "type": "string"
                 }
               ]
@@ -635,9 +781,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/backoffice/provider/profile",
+              "raw": "{{base_url}}/api/backoffice/provider/profile",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
               ],
               "path": [
                 "api",
@@ -646,7 +792,7 @@
                 "profile"
               ]
             },
-            "description": "PROVIDER only. Gets the authenticated provider company profile."
+            "description": "PROVIDER only. Gets the provider company attached to the authenticated user."
           },
           "response": []
         },
@@ -658,7 +804,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{providerToken}}",
+                  "value": "{{provider_authorization_secret}}",
                   "type": "string"
                 }
               ]
@@ -670,14 +816,10 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"companyName\": \"My Tourism Company\",\n  \"nit\": \"987654321\",\n  \"description\": \"My updated company information.\",\n  \"contactPhone\": \"71234567\",\n  \"contactEmail\": \"mycompany@example.com\",\n  \"address\": \"Santa Cruz, Bolivia\",\n  \"logoUrl\": \"https://example.com/logos/my-company.png\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/backoffice/provider/profile",
+              "raw": "{{base_url}}/api/backoffice/provider/profile",
               "host": [
-                "{{baseUrl}}"
+                "{{base_url}}"
               ],
               "path": [
                 "api",
@@ -686,7 +828,16 @@
                 "profile"
               ]
             },
-            "description": "PROVIDER only. Updates the authenticated provider company profile. No userId or providerId is sent."
+            "description": "PROVIDER only. Updates own company. No user_id or provider_id is sent.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"My Tourism Company\",\n  \"nit\": \"MY-NIT-{{$timestamp}}\",\n  \"description\": \"My updated company information.\",\n  \"contactPhone\": \"71234567\",\n  \"contactEmail\": \"mycompany.{{$timestamp}}@example.com\",\n  \"address\": \"Santa Cruz, Bolivia\",\n  \"logoUrl\": \"https://example.com/logos/my-company.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "response": []
         }
