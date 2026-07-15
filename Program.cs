@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Serilog;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.OpenApi;
 using TurisClick.Api.Modules.Auth.Repositories;
@@ -12,8 +13,11 @@ using TurisClick.Api.Modules.Users.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext());
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -65,7 +69,12 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter a valid JWT bearer token."
+        Description = "Paste only the JWT token. Do not include the 'Bearer' prefix; Swagger adds it automatically."
+    });
+
+    options.AddSecurityRequirement(openApiDocument => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", openApiDocument, null)] = []
     });
 
     options.OperationFilter<AuthorizeOperationFilter>();
@@ -78,6 +87,12 @@ await DatabaseSeeder.SeedTemporaryAdminAsync(
     app.Configuration,
     app.Logger);
 
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate =
+        "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -88,6 +103,7 @@ app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "TurisClick API v1");
     options.RoutePrefix = "swagger";
+    options.EnablePersistAuthorization();
 });
 
 app.UseHttpsRedirection();

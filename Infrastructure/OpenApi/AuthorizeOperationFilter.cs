@@ -10,27 +10,24 @@ public class AuthorizeOperationFilter : IOperationFilter
     {
         var metadata = context.ApiDescription.ActionDescriptor.EndpointMetadata;
 
-        if (metadata.OfType<IAllowAnonymous>().Any() ||
-            !metadata.OfType<IAuthorizeData>().Any())
+        if (metadata.OfType<IAllowAnonymous>().Any())
         {
+            operation.Security = [];
             return;
         }
 
-        operation.Security ??= [];
-        operation.Security.Add(new OpenApiSecurityRequirement
+        if (metadata.OfType<IAuthorizeData>().Any())
         {
-            [new OpenApiSecuritySchemeReference("Bearer", null, null)] = []
-        });
+            operation.Responses ??= new OpenApiResponses();
+            operation.Responses.TryAdd("401", new OpenApiResponse
+            {
+                Description = "Unauthorized"
+            });
 
-        operation.Responses ??= new OpenApiResponses();
-        operation.Responses.TryAdd("401", new OpenApiResponse
-        {
-            Description = "Unauthorized"
-        });
-
-        operation.Responses.TryAdd("403", new OpenApiResponse
-        {
-            Description = "Forbidden"
-        });
+            operation.Responses.TryAdd("403", new OpenApiResponse
+            {
+                Description = "Forbidden"
+            });
+        }
     }
 }
