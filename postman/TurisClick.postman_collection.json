@@ -1,0 +1,461 @@
+{
+  "info": {
+    "_postman_id": "a3f1e7b0-6c2d-4b8a-9e5a-turisclick0001",
+    "name": "TurisClick API",
+    "description": "Colección organizada por caso de uso (docs/use-cases.md). Cada carpeta agrupa los UC de una oleada. Actualmente: Oleada 0 (Authentication).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "UC-AUTH-01..04 — Oleada 0.",
+      "item": [
+        {
+          "name": "UC-AUTH-01 - Register Tourist - Success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const uniqueEmail = `tourist.${Date.now()}.${Math.floor(Math.random() * 100000)}@turisclick.dev`;",
+                  "pm.collectionVariables.set(\"tourist_email\", uniqueEmail);",
+                  "pm.collectionVariables.set(\"tourist_password\", \"Password123!\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "",
+                  "pm.test(\"Response has accessToken and refreshToken\", function () {",
+                  "    pm.expect(jsonData.accessToken).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(jsonData.refreshToken).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Role is TOURIST\", function () {",
+                  "    pm.expect(jsonData.user.role).to.eql(\"TOURIST\");",
+                  "});",
+                  "",
+                  "pm.test(\"Email matches the one sent\", function () {",
+                  "    pm.expect(jsonData.user.email).to.eql(pm.collectionVariables.get(\"tourist_email\"));",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set(\"user_id\", jsonData.user.id);",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.accessToken);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refreshToken);",
+                  "pm.collectionVariables.set(\"tourist_token\", jsonData.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Turista de Prueba\",\n  \"email\": \"{{tourist_email}}\",\n  \"password\": \"{{tourist_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "UC-AUTH-01. Flujo exitoso: crea un TOURIST y devuelve tokens (auto-login)."
+          }
+        },
+        {
+          "name": "UC-AUTH-01 - Register Tourist - Duplicate Email (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"Problem details reports Conflict\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(409);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Turista de Prueba\",\n  \"email\": \"{{tourist_email}}\",\n  \"password\": \"{{tourist_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "UC-AUTH-01. Excepción: el email ya existe (Regla de negocio: email único)."
+          }
+        },
+        {
+          "name": "UC-AUTH-01 - Register Tourist - Invalid Payload (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"\",\n  \"email\": \"no-es-un-email\",\n  \"password\": \"123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "UC-AUTH-01. Excepción: DataAnnotations rechaza email/nombre/password inválidos antes de llegar al Service."
+          }
+        },
+        {
+          "name": "UC-AUTH-02 - Login - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "",
+                  "pm.test(\"Token exists\", function () {",
+                  "    pm.expect(jsonData.accessToken).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Role is TOURIST\", function () {",
+                  "    pm.expect(jsonData.user.role).to.eql(\"TOURIST\");",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.accessToken);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refreshToken);",
+                  "pm.collectionVariables.set(\"tourist_token\", jsonData.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{tourist_email}}\",\n  \"password\": \"{{tourist_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "UC-AUTH-02. Flujo exitoso con el usuario creado en UC-AUTH-01."
+          }
+        },
+        {
+          "name": "UC-AUTH-02 - Login - Wrong Password (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{tourist_email}}\",\n  \"password\": \"PasswordIncorrecta1!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "UC-AUTH-02. Excepción: contraseña incorrecta."
+          }
+        },
+        {
+          "name": "UC-AUTH-02 - Login - Unknown Email (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{$randomEmail}}\",\n  \"password\": \"CualquierCosa123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "UC-AUTH-02. Excepción: no existe una cuenta con ese email (misma respuesta que password incorrecto, por diseño)."
+          }
+        },
+        {
+          "name": "UC-AUTH-03 - Refresh Token - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "",
+                  "pm.test(\"New access token returned\", function () {",
+                  "    pm.expect(jsonData.accessToken).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Refresh token was rotated\", function () {",
+                  "    pm.expect(jsonData.refreshToken).to.not.eql(pm.collectionVariables.get(\"refresh_token\"));",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.accessToken);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refreshToken);",
+                  "pm.collectionVariables.set(\"tourist_token\", jsonData.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "UC-AUTH-03. Flujo exitoso: rota el refresh token (el usado queda revocado)."
+          }
+        },
+        {
+          "name": "UC-AUTH-03 - Refresh Token - Invalid Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"esto-no-existe-en-la-base\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "UC-AUTH-03. Excepción: refresh token inexistente."
+          }
+        },
+        {
+          "name": "UC-AUTH-04 - Logout - Without Access Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "UC-AUTH-04. Excepción: el endpoint requiere [Authorize], sin token no se puede identificar al usuario."
+          }
+        },
+        {
+          "name": "UC-AUTH-04 - Logout - Success (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "",
+                  "pm.test(\"Response body is empty\", function () {",
+                  "    pm.expect(pm.response.text()).to.have.lengthOf(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "UC-AUTH-04. Flujo exitoso: revoca el refresh token vigente (guardado por UC-AUTH-03)."
+          }
+        },
+        {
+          "name": "UC-AUTH-03 - Refresh Token - After Logout, Revoked (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"Detail mentions invalid/expired token\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.detail).to.be.a(\"string\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "UC-AUTH-03 + UC-AUTH-04. Confirma que el refresh token revocado por Logout ya no sirve (cierra el ciclo)."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5288" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "tourist_token", "value": "" },
+    { "key": "provider_token", "value": "" },
+    { "key": "admin_token", "value": "" },
+    { "key": "user_id", "value": "" },
+    { "key": "company_id", "value": "" },
+    { "key": "experience_id", "value": "" },
+    { "key": "package_id", "value": "" },
+    { "key": "reservation_id", "value": "" },
+    { "key": "tourist_email", "value": "" },
+    { "key": "tourist_password", "value": "" }
+  ]
+}

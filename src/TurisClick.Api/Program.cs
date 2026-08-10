@@ -1,23 +1,141 @@
-var builder = WebApplication.CreateBuilder(args);
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Serilog;
+using TurisClick.Api.Infrastructure.Database;
+using TurisClick.Api.Infrastructure.Security;
+using TurisClick.Api.Modules.Auth;
+using TurisClick.Api.Shared.Exceptions;
 
-// Add services to the container.
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+try
 {
-    app.MapOpenApi();
+    var builder = WebApplication.CreateBuilder(args);
+
+    builder.Host.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.Console()
+        .WriteTo.File("logs/turisclick-.log", rollingInterval: RollingInterval.Day));
+
+    // ---- Base de datos ----
+    // Lectura perezosa (vía IConfiguration resuelto en el momento de crear el DbContext, no acá arriba):
+    // así WebApplicationFactory puede sobreescribir la connection string en tests de integración
+    // sin pelear con el orden de construcción de ConfigurationManager.
+    builder.Services.AddDbContext<TurisClickDbContext>((sp, options) =>
+    {
+        var connectionString = sp.GetRequiredService<IConfiguration>().GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException(
+                "Falta ConnectionStrings:DefaultConnection. Configurala con: dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"...\"");
+        options.UseNpgsql(connectionString);
+    });
+
+    // ---- JWT ----
+    builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
+
+    builder.Services
+        .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            // Mismo motivo que arriba: se lee builder.Configuration recién acá adentro (delegate diferido
+            // por ASP.NET Core hasta la primera request), no en variables capturadas antes de Build().
+            var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
+                ?? throw new InvalidOperationException("Falta la sección Jwt en appsettings.json.");
+            var jwtKey = builder.Configuration["Jwt:Key"]
+                ?? throw new InvalidOperationException(
+                    "Falta Jwt:Key. Configurala con: dotnet user-secrets set \"Jwt:Key\" \"...\"");
+
+            // Sin esto, JwtBearerHandler remapea "sub" -> ClaimTypes.NameIdentifier automáticamente,
+            // rompiendo la lectura de JwtRegisteredClaimNames.Sub en CurrentUserContext.
+            options.MapInboundClaims = false;
+
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidateAudience = true,
+                ValidAudience = jwtSettings.Audience,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromSeconds(30)
+            };
+        });
+
+    // ---- Autorización por rol (ADMIN / PROVIDER / TOURIST) ----
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("RequireAdmin", p => p.RequireRole("ADMIN"));
+        options.AddPolicy("RequireProvider", p => p.RequireRole("PROVIDER"));
+        options.AddPolicy("RequireTourist", p => p.RequireRole("TOURIST"));
+    });
+
+    // ---- Infraestructura + módulos ----
+    builder.Services.AddSecurityInfrastructure();
+    builder.Services.AddAuthModule();
+
+    // ---- Manejo global de errores ----
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
+
+    builder.Services.AddControllers();
+
+    // ---- Swagger/OpenAPI ----
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.SwaggerDoc("v1", new OpenApiInfo { Title = "TurisClick API", Version = "v1" });
+
+        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description = "Ingresá el access token JWT (sin el prefijo 'Bearer ')."
+        });
+        options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+        {
+            { new OpenApiSecuritySchemeReference("Bearer", document), new List<string>() }
+        });
+    });
+
+    var app = builder.Build();
+
+    app.UseExceptionHandler();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    app.UseSerilogRequestLogging();
+    app.UseHttpsRedirection();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.MapControllers();
+
+    app.Run();
+}
+catch (Exception ex) when (ex is not HostAbortedException)
+{
+    // HostAbortedException: lo lanza `dotnet ef` a propósito al construir el host para leer el DbContext.
+    Log.Fatal(ex, "TurisClick.Api terminó inesperadamente durante el arranque");
+}
+finally
+{
+    Log.CloseAndFlush();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
+/// <summary>Necesaria para que WebApplicationFactory (tests de integración) encuentre el entry point.</summary>
+public partial class Program;
