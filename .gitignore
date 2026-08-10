@@ -1,0 +1,79 @@
+## .NET / Visual Studio / Rider / VS Code
+bin/
+obj/
+out/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.sln.iml
+*.DotSettings.user
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## EF Core
+*.mdf
+*.ldf
+*.ndf
+
+## Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+TestResults/
+
+## Node (por si más adelante hay frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+
+## Logs de la aplicación (Serilog)
+logs/
+*.log
+
+## Secretos y configuración local — NUNCA versionar
+.env
+.env.*
+!.env.example
+*.pfx
+*.key
+*.pem
+appsettings.*.local.json
+secrets.json
+
+## Azure
+*.PublishSettings
+.azure/
+
+## Configuración local de herramientas de IA (específica de la máquina/sesión)
+.claude/settings.local.json
+
+## Archivos temporales / SO
+*.tmp
+*.temp
+*.bak
+*.swp
+Thumbs.db
+.DS_Store
