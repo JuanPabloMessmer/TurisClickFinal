@@ -4,7 +4,8 @@ namespace TurisClick.Api.Modules.Auth.Entities;
 public class User
 {
     public Guid Id { get; set; }
-    public string FullName { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; set; }
@@ -19,4 +20,7 @@ public class User
     public DateTimeOffset CreatedAt { get; set; }
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
+    /// <summary>Calculado, no persistido — evita guardar FullName como columna redundante (ver docs/domain-model.md).</summary>
+    public string FullName => $"{FirstName} {LastName}".Trim();
 }

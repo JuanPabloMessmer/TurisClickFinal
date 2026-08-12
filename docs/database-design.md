@@ -67,7 +67,8 @@ CREATE TABLE companies (
 
 CREATE TABLE users (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  full_name      varchar(150) NOT NULL,
+  first_name     varchar(100) NOT NULL,
+  last_name      varchar(100) NOT NULL,
   email          varchar(255) NOT NULL,
   password_hash  varchar(255) NOT NULL,
   role           user_role NOT NULL,
@@ -531,7 +532,8 @@ Table companies {
 
 Table users {
   id uuid [pk]
-  full_name varchar(150) [not null]
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
   email varchar(255) [not null, unique]
   password_hash varchar(255) [not null]
   role user_role [not null]

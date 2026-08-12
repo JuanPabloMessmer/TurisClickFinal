@@ -12,7 +12,12 @@ public class AuthResultResponse
 public class UserSummaryResponse
 {
     public Guid Id { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+
+    /// <summary>Calculado (FirstName + LastName), no es un campo propio del usuario — conveniencia para la UI.</summary>
     public string FullName { get; set; } = string.Empty;
+
     public string Email { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
 }

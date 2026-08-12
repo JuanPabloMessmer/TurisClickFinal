@@ -48,6 +48,12 @@
                   "    pm.expect(jsonData.user.email).to.eql(pm.collectionVariables.get(\"tourist_email\"));",
                   "});",
                   "",
+                  "pm.test(\"firstName/lastName match the request and fullName is computed from them\", function () {",
+                  "    pm.expect(jsonData.user.firstName).to.eql(\"Turista\");",
+                  "    pm.expect(jsonData.user.lastName).to.eql(\"De Prueba\");",
+                  "    pm.expect(jsonData.user.fullName).to.eql(\"Turista De Prueba\");",
+                  "});",
+                  "",
                   "pm.collectionVariables.set(\"user_id\", jsonData.user.id);",
                   "pm.collectionVariables.set(\"access_token\", jsonData.accessToken);",
                   "pm.collectionVariables.set(\"refresh_token\", jsonData.refreshToken);",
@@ -63,7 +69,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fullName\": \"Turista de Prueba\",\n  \"email\": \"{{tourist_email}}\",\n  \"password\": \"{{tourist_password}}\"\n}"
+              "raw": "{\n  \"firstName\": \"Turista\",\n  \"lastName\": \"De Prueba\",\n  \"email\": \"{{tourist_email}}\",\n  \"password\": \"{{tourist_password}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/auth/register",
@@ -100,7 +106,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fullName\": \"Turista de Prueba\",\n  \"email\": \"{{tourist_email}}\",\n  \"password\": \"{{tourist_password}}\"\n}"
+              "raw": "{\n  \"firstName\": \"Turista\",\n  \"lastName\": \"De Prueba\",\n  \"email\": \"{{tourist_email}}\",\n  \"password\": \"{{tourist_password}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/auth/register",
@@ -132,7 +138,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fullName\": \"\",\n  \"email\": \"no-es-un-email\",\n  \"password\": \"123\"\n}"
+              "raw": "{\n  \"firstName\": \"\",\n  \"lastName\": \"\",\n  \"email\": \"no-es-un-email\",\n  \"password\": \"123\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/auth/register",

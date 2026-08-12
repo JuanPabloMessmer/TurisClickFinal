@@ -24,10 +24,18 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnName("id")
             .HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(u => u.FullName)
-            .HasColumnName("full_name")
-            .HasMaxLength(150)
+        builder.Property(u => u.FirstName)
+            .HasColumnName("first_name")
+            .HasMaxLength(100)
             .IsRequired();
+
+        builder.Property(u => u.LastName)
+            .HasColumnName("last_name")
+            .HasMaxLength(100)
+            .IsRequired();
+
+        // Calculado en memoria a partir de FirstName/LastName — no tiene columna propia.
+        builder.Ignore(u => u.FullName);
 
         builder.Property(u => u.Email)
             .HasColumnName("email")

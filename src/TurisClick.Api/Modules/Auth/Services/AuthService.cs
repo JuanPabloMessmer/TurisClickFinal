@@ -24,7 +24,8 @@ public class AuthService(
         var user = new User
         {
             Id = Guid.NewGuid(),
-            FullName = request.FullName.Trim(),
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
             Email = normalizedEmail,
             PasswordHash = passwordHasher.Hash(request.Password),
             Role = UserRole.TOURIST,
@@ -115,6 +116,8 @@ public class AuthService(
             User = new UserSummaryResponse
             {
                 Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
                 FullName = user.FullName,
                 Email = user.Email,
                 Role = user.Role.ToString()

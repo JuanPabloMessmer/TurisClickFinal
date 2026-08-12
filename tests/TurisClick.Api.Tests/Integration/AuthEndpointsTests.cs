@@ -30,7 +30,7 @@ public class AuthEndpointsTests : IClassFixture<TurisClickApiFactory>
     {
         var response = await _client.PostAsJsonAsync("/api/auth/register", new
         {
-            fullName = "Test Tourist",
+            firstName = "Test", lastName = "Tourist",
             email = UniqueEmail(),
             password = "Password123!"
         });
@@ -41,12 +41,15 @@ public class AuthEndpointsTests : IClassFixture<TurisClickApiFactory>
         Assert.False(string.IsNullOrWhiteSpace(body!.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(body.RefreshToken));
         Assert.Equal("TOURIST", body.User.Role);
+        Assert.Equal("Test", body.User.FirstName);
+        Assert.Equal("Tourist", body.User.LastName);
+        Assert.Equal("Test Tourist", body.User.FullName);
     }
 
     [Fact]
     public async Task Register_WithDuplicateEmail_Returns409()
     {
-        var payload = new { fullName = "Test Tourist", email = UniqueEmail(), password = "Password123!" };
+        var payload = new { firstName = "Test", lastName = "Tourist", email = UniqueEmail(), password = "Password123!" };
 
         await _client.PostAsJsonAsync("/api/auth/register", payload);
         var second = await _client.PostAsJsonAsync("/api/auth/register", payload);
@@ -58,7 +61,7 @@ public class AuthEndpointsTests : IClassFixture<TurisClickApiFactory>
     public async Task Register_WithInvalidPayload_Returns400()
     {
         var response = await _client.PostAsJsonAsync("/api/auth/register",
-            new { fullName = "", email = "no-es-un-email", password = "123" });
+            new { firstName = "", lastName = "", email = "no-es-un-email", password = "123" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -67,7 +70,7 @@ public class AuthEndpointsTests : IClassFixture<TurisClickApiFactory>
     public async Task Login_WithValidCredentials_Returns200WithTokens()
     {
         var email = UniqueEmail();
-        await _client.PostAsJsonAsync("/api/auth/register", new { fullName = "Test Tourist", email, password = "Password123!" });
+        await _client.PostAsJsonAsync("/api/auth/register", new { firstName = "Test", lastName = "Tourist", email, password = "Password123!" });
 
         var response = await _client.PostAsJsonAsync("/api/auth/login", new { email, password = "Password123!" });
 
@@ -81,7 +84,7 @@ public class AuthEndpointsTests : IClassFixture<TurisClickApiFactory>
     public async Task Login_WithWrongPassword_Returns401()
     {
         var email = UniqueEmail();
-        await _client.PostAsJsonAsync("/api/auth/register", new { fullName = "Test Tourist", email, password = "Password123!" });
+        await _client.PostAsJsonAsync("/api/auth/register", new { firstName = "Test", lastName = "Tourist", email, password = "Password123!" });
 
         var response = await _client.PostAsJsonAsync("/api/auth/login", new { email, password = "OtraPassword!" });
 
@@ -100,7 +103,7 @@ public class AuthEndpointsTests : IClassFixture<TurisClickApiFactory>
     public async Task Refresh_WithValidToken_Returns200WithNewTokens()
     {
         var email = UniqueEmail();
-        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", new { fullName = "Test Tourist", email, password = "Password123!" });
+        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", new { firstName = "Test", lastName = "Tourist", email, password = "Password123!" });
         var registerBody = await registerResponse.Content.ReadFromJsonAsync<AuthResultResponse>(JsonOptions);
 
         var response = await _client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = registerBody!.RefreshToken });
@@ -123,7 +126,7 @@ public class AuthEndpointsTests : IClassFixture<TurisClickApiFactory>
     public async Task Refresh_AfterBeingUsedOnce_Returns401_DueToRotation()
     {
         var email = UniqueEmail();
-        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", new { fullName = "Test Tourist", email, password = "Password123!" });
+        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", new { firstName = "Test", lastName = "Tourist", email, password = "Password123!" });
         var registerBody = await registerResponse.Content.ReadFromJsonAsync<AuthResultResponse>(JsonOptions);
 
         await _client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = registerBody!.RefreshToken });
@@ -144,7 +147,7 @@ public class AuthEndpointsTests : IClassFixture<TurisClickApiFactory>
     public async Task Logout_WithValidAccessToken_Returns204AndRevokesRefreshToken()
     {
         var email = UniqueEmail();
-        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", new { fullName = "Test Tourist", email, password = "Password123!" });
+        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", new { firstName = "Test", lastName = "Tourist", email, password = "Password123!" });
         var registerBody = await registerResponse.Content.ReadFromJsonAsync<AuthResultResponse>(JsonOptions);
 
         var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/auth/logout")

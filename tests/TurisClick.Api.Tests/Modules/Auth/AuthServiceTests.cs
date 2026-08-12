@@ -52,7 +52,7 @@ public class AuthServiceTests
             .ReturnsAsync(false);
         _passwordHasher.Setup(p => p.Hash("Password123!")).Returns("hashed-password");
 
-        var request = new RegisterTouristRequest { FullName = "Ana Pérez", Email = "nuevo@turisclick.dev", Password = "Password123!" };
+        var request = new RegisterTouristRequest { FirstName = "Ana", LastName = "Pérez", Email = "nuevo@turisclick.dev", Password = "Password123!" };
 
         var result = await _sut.RegisterTouristAsync(request, CancellationToken.None);
 
@@ -60,9 +60,13 @@ public class AuthServiceTests
         Assert.Equal("fake-refresh-token-plain", result.RefreshToken);
         Assert.Equal("TOURIST", result.User.Role);
         Assert.Equal("nuevo@turisclick.dev", result.User.Email);
+        Assert.Equal("Ana", result.User.FirstName);
+        Assert.Equal("Pérez", result.User.LastName);
+        Assert.Equal("Ana Pérez", result.User.FullName);
 
         _userRepository.Verify(r => r.AddAsync(
-            It.Is<User>(u => u.Email == "nuevo@turisclick.dev" && u.Role == UserRole.TOURIST && u.CompanyId == null),
+            It.Is<User>(u => u.Email == "nuevo@turisclick.dev" && u.Role == UserRole.TOURIST && u.CompanyId == null
+                && u.FirstName == "Ana" && u.LastName == "Pérez"),
             It.IsAny<CancellationToken>()), Times.Once);
         _refreshTokenRepository.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -73,7 +77,7 @@ public class AuthServiceTests
         _userRepository.Setup(r => r.EmailExistsAsync("ya-existe@turisclick.dev", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var request = new RegisterTouristRequest { FullName = "Ana Pérez", Email = "ya-existe@turisclick.dev", Password = "Password123!" };
+        var request = new RegisterTouristRequest { FirstName = "Ana", LastName = "Pérez", Email = "ya-existe@turisclick.dev", Password = "Password123!" };
 
         await Assert.ThrowsAsync<ConflictAppException>(() => _sut.RegisterTouristAsync(request, CancellationToken.None));
         _userRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);

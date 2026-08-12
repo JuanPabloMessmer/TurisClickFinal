@@ -21,13 +21,16 @@ Soporta UC-AUTH-01..04, UC-A-06, y es el punto de partida de TOURIST/PROVIDER/AD
 | Atributo | Descripción |
 |---|---|
 | Id | Identificador único |
-| FullName | Nombre completo |
+| FirstName | Nombre |
+| LastName | Apellido |
 | Email | Único en el sistema |
 | PasswordHash | Hash de contraseña |
 | Role | `UserRole`: `TOURIST`, `PROVIDER`, `ADMIN` |
 | Status | `UserStatus`: `ACTIVE`, `SUSPENDED` |
 | CompanyId | FK opcional a `Company` — solo aplica si `Role = PROVIDER` |
 | CreatedAt | — |
+
+`FullName` **no** es un atributo propio: se calcula como `FirstName + " " + LastName` donde haga falta mostrarlo (UI, notificaciones), sin guardarlo como columna redundante.
 
 **Relaciones:**
 - `User (PROVIDER)` **N—1** `Company` (decisión 5: una empresa puede tener varios usuarios PROVIDER a futuro; hoy normalmente uno).
