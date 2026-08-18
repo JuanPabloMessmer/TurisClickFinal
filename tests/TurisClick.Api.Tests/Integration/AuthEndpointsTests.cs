@@ -12,7 +12,8 @@ namespace TurisClick.Api.Tests.Integration;
 /// Tests de integración end-to-end (HTTP real vía TestServer + Postgres real turisclick_v2_test)
 /// de UC-AUTH-01..04. Cada test usa un email único para no colisionar con `uq_users_email`.
 /// </summary>
-public class AuthEndpointsTests : IClassFixture<TurisClickApiFactory>
+[Collection(ApiCollection.Name)]
+public class AuthEndpointsTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly HttpClient _client;

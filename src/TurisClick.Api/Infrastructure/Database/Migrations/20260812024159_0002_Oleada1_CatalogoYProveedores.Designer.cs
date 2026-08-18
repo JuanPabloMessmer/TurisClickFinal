@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TurisClick.Api.Infrastructure.Database;
@@ -11,9 +12,11 @@ using TurisClick.Api.Infrastructure.Database;
 namespace TurisClick.Api.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(TurisClickDbContext))]
-    partial class TurisClickDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260812024159_0002_Oleada1_CatalogoYProveedores")]
+    partial class _0002_Oleada1_CatalogoYProveedores
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

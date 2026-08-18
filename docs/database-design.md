@@ -114,12 +114,20 @@ CREATE TABLE destinations (
   created_at  timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT ck_destinations_country_no_parent
     CHECK ( (type = 'COUNTRY' AND parent_id IS NULL)
-         OR (type <> 'COUNTRY' AND parent_id IS NOT NULL) ),
-  CONSTRAINT uq_destinations_name_parent_type UNIQUE (name, parent_id, type)
+         OR (type <> 'COUNTRY' AND parent_id IS NOT NULL) )
 );
 
 CREATE INDEX ix_destinations_parent_id ON destinations(parent_id);
 CREATE INDEX ix_destinations_type ON destinations(type);
+
+-- Corrección detectada durante la implementación (Oleada 1): un solo UNIQUE(name, parent_id, type)
+-- no alcanza porque Postgres trata cada NULL como distinto — dos países con el mismo nombre
+-- (parent_id NULL en ambos) no chocarían contra ese índice. Se separa en dos índices únicos
+-- parciales: uno para nodos raíz y otro para el resto.
+CREATE UNIQUE INDEX uq_destinations_name_parent_type ON destinations(name, parent_id, type)
+  WHERE parent_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_destinations_name_type_root ON destinations(name, type)
+  WHERE parent_id IS NULL;
 
 CREATE TABLE categories (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),

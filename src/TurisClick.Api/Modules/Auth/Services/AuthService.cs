@@ -35,7 +35,7 @@ public class AuthService(
         };
 
         await userRepository.AddAsync(user, ct);
-        var result = await IssueTokensAsync(user, ct);
+        var result = await IssueTokensForUserAsync(user, ct);
         await db.SaveChangesAsync(ct);
         return result;
     }
@@ -52,7 +52,7 @@ public class AuthService(
         if (user.Status == UserStatus.SUSPENDED)
             throw new ForbiddenAppException("Esta cuenta está suspendida.");
 
-        var result = await IssueTokensAsync(user, ct);
+        var result = await IssueTokensForUserAsync(user, ct);
         await db.SaveChangesAsync(ct);
         return result;
     }
@@ -76,7 +76,7 @@ public class AuthService(
         // Rotación: se revoca el refresh token usado y se emite uno nuevo.
         existing.RevokedAt = DateTimeOffset.UtcNow;
 
-        var result = await IssueTokensAsync(user, ct);
+        var result = await IssueTokensForUserAsync(user, ct);
         await db.SaveChangesAsync(ct);
         return result;
     }
@@ -93,7 +93,7 @@ public class AuthService(
         await db.SaveChangesAsync(ct);
     }
 
-    private async Task<AuthResultResponse> IssueTokensAsync(User user, CancellationToken ct)
+    public async Task<AuthResultResponse> IssueTokensForUserAsync(User user, CancellationToken ct)
     {
         var accessToken = tokenService.GenerateAccessToken(user);
         var refreshTokenPlain = tokenService.GenerateRefreshToken();
@@ -120,7 +120,8 @@ public class AuthService(
                 LastName = user.LastName,
                 FullName = user.FullName,
                 Email = user.Email,
-                Role = user.Role.ToString()
+                Role = user.Role.ToString(),
+                CompanyId = user.CompanyId
             }
         };
     }

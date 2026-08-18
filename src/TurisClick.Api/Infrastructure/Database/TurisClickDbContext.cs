@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Modules.Auth.Entities;
+using TurisClick.Api.Modules.Categories.Entities;
+using TurisClick.Api.Modules.Companies.Entities;
+using TurisClick.Api.Modules.Destinations.Entities;
 
 namespace TurisClick.Api.Infrastructure.Database;
 
@@ -11,6 +14,9 @@ public class TurisClickDbContext(DbContextOptions<TurisClickDbContext> options) 
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Destination> Destinations => Set<Destination>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Company> Companies => Set<Company>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

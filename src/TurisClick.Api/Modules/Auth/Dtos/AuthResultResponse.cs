@@ -20,4 +20,7 @@ public class UserSummaryResponse
 
     public string Email { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
+
+    /// <summary>Solo tiene valor si Role = PROVIDER.</summary>
+    public Guid? CompanyId { get; set; }
 }

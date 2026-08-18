@@ -7,6 +7,9 @@ using Serilog;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Auth;
+using TurisClick.Api.Modules.Categories;
+using TurisClick.Api.Modules.Companies;
+using TurisClick.Api.Modules.Destinations;
 using TurisClick.Api.Shared.Exceptions;
 
 Log.Logger = new LoggerConfiguration()
@@ -79,6 +82,9 @@ try
     // ---- Infraestructura + módulos ----
     builder.Services.AddSecurityInfrastructure();
     builder.Services.AddAuthModule();
+    builder.Services.AddDestinationsModule();
+    builder.Services.AddCategoriesModule();
+    builder.Services.AddCompaniesModule();
 
     // ---- Manejo global de errores ----
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
