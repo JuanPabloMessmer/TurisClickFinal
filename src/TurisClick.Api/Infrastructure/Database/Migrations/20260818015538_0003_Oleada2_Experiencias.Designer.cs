@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TurisClick.Api.Infrastructure.Database;
@@ -11,9 +12,11 @@ using TurisClick.Api.Infrastructure.Database;
 namespace TurisClick.Api.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(TurisClickDbContext))]
-    partial class TurisClickDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260818015538_0003_Oleada2_Experiencias")]
+    partial class _0003_Oleada2_Experiencias
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -485,163 +488,6 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.ToTable("experience_images", (string)null);
                 });
 
-            modelBuilder.Entity("TurisClick.Api.Modules.Reservations.Entities.Reservation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<Guid?>("AiItineraryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("ai_itinerary_id");
-
-                    b.Property<DateTimeOffset?>("CancelledAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("cancelled_at");
-
-                    b.Property<DateTimeOffset?>("ConfirmedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("confirmed_at");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<DateTimeOffset?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("PENDING_PAYMENT")
-                        .HasColumnName("status");
-
-                    b.Property<Guid>("TouristId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tourist_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AiItineraryId")
-                        .HasDatabaseName("ix_reservations_ai_itinerary_id");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_reservations_status");
-
-                    b.HasIndex("TouristId")
-                        .HasDatabaseName("ix_reservations_tourist_id");
-
-                    b.ToTable("reservations", (string)null);
-                });
-
-            modelBuilder.Entity("TurisClick.Api.Modules.Reservations.Entities.ReservationItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<Guid>("CompanyId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("company_id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasColumnName("currency");
-
-                    b.Property<int?>("DayNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("day_number");
-
-                    b.Property<Guid?>("ExperienceAvailabilityId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("experience_availability_id");
-
-                    b.Property<Guid?>("ExperienceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("experience_id");
-
-                    b.Property<Guid?>("PackageAvailabilityId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("package_availability_id");
-
-                    b.Property<Guid?>("PackageId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("package_id");
-
-                    b.Property<string>("ProductType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("product_type");
-
-                    b.Property<Guid>("ReservationId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("reservation_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("PENDING_PAYMENT")
-                        .HasColumnName("status");
-
-                    b.Property<decimal>("Subtotal")
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("subtotal");
-
-                    b.Property<int>("Travelers")
-                        .HasColumnType("integer")
-                        .HasColumnName("travelers");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("unit_price");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExperienceAvailabilityId")
-                        .HasDatabaseName("ix_reservation_items_experience_availability");
-
-                    b.HasIndex("ExperienceId");
-
-                    b.HasIndex("PackageAvailabilityId")
-                        .HasDatabaseName("ix_reservation_items_package_availability");
-
-                    b.HasIndex("ReservationId")
-                        .HasDatabaseName("ix_reservation_items_reservation_id");
-
-                    b.HasIndex(new[] { "CompanyId", "Status" }, "ix_reservation_items_company_status");
-
-                    b.ToTable("reservation_items", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_reservation_items_amounts", "unit_price >= 0 AND subtotal >= 0");
-
-                            t.HasCheckConstraint("ck_reservation_items_currency", "currency ~ '^[A-Z]{3}$'");
-
-                            t.HasCheckConstraint("ck_reservation_items_product_shape", "(product_type = 'EXPERIENCE' AND experience_id IS NOT NULL AND package_id IS NULL AND experience_availability_id IS NOT NULL AND package_availability_id IS NULL) OR (product_type = 'PACKAGE' AND package_id IS NOT NULL AND experience_id IS NULL AND package_availability_id IS NOT NULL AND experience_availability_id IS NULL)");
-
-                            t.HasCheckConstraint("ck_reservation_items_travelers", "travelers > 0");
-                        });
-                });
-
             modelBuilder.Entity("experience_categories", b =>
                 {
                     b.Property<Guid>("experience_id")
@@ -740,50 +586,6 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.Navigation("Experience");
                 });
 
-            modelBuilder.Entity("TurisClick.Api.Modules.Reservations.Entities.Reservation", b =>
-                {
-                    b.HasOne("TurisClick.Api.Modules.Auth.Entities.User", "Tourist")
-                        .WithMany()
-                        .HasForeignKey("TouristId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Tourist");
-                });
-
-            modelBuilder.Entity("TurisClick.Api.Modules.Reservations.Entities.ReservationItem", b =>
-                {
-                    b.HasOne("TurisClick.Api.Modules.Companies.Entities.Company", "Company")
-                        .WithMany()
-                        .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("TurisClick.Api.Modules.Experiences.Entities.ExperienceAvailability", "ExperienceAvailability")
-                        .WithMany()
-                        .HasForeignKey("ExperienceAvailabilityId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("TurisClick.Api.Modules.Experiences.Entities.Experience", "Experience")
-                        .WithMany()
-                        .HasForeignKey("ExperienceId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("TurisClick.Api.Modules.Reservations.Entities.Reservation", "Reservation")
-                        .WithMany("Items")
-                        .HasForeignKey("ReservationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Company");
-
-                    b.Navigation("Experience");
-
-                    b.Navigation("ExperienceAvailability");
-
-                    b.Navigation("Reservation");
-                });
-
             modelBuilder.Entity("experience_categories", b =>
                 {
                     b.HasOne("TurisClick.Api.Modules.Categories.Entities.Category", null)
@@ -819,11 +621,6 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.Navigation("Availabilities");
 
                     b.Navigation("Images");
-                });
-
-            modelBuilder.Entity("TurisClick.Api.Modules.Reservations.Entities.Reservation", b =>
-                {
-                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

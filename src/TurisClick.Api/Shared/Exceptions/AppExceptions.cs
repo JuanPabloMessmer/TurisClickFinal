@@ -14,3 +14,9 @@ public class UnauthorizedAppException(string message) : Exception(message);
 
 /// <summary>Regla de negocio inválida que no corresponde a una validación de ModelState. Se mapea a 400.</summary>
 public class ValidationAppException(string message) : Exception(message);
+
+/// <summary>
+/// El recurso existió pero ya no es utilizable (ej. UC-T-08: un slot de disponibilidad cerrado o con
+/// fecha vencida) — distinto de NotFound porque el recurso no es inexistente, quedó obsoleto. Se mapea a 410.
+/// </summary>
+public class GoneAppException(string message) : Exception(message);

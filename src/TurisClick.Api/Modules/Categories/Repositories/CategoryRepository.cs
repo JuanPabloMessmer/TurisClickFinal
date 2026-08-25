@@ -12,6 +12,11 @@ public class CategoryRepository(TurisClickDbContext db) : ICategoryRepository
     public Task<List<Category>> ListAsync(CancellationToken ct) =>
         db.Categories.OrderBy(c => c.Name).ToListAsync(ct);
 
+    public Task<List<Category>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+        ids.Count == 0
+            ? Task.FromResult(new List<Category>())
+            : db.Categories.Where(c => ids.Contains(c.Id)).ToListAsync(ct);
+
     public Task<bool> ExistsWithNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
         var query = db.Categories.Where(c => c.Name == name);

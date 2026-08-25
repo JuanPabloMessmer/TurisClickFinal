@@ -60,4 +60,17 @@ internal static class TestClients
 
     public static void UseBearerToken(HttpClient client, string token) =>
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+    /// <summary>Registra un Provider y aprueba su empresa de inmediato (usa un HttpClient de ADMIN aparte) — atajo para tests de Experiences/Reservations que requieren Company APPROVED.</summary>
+    public static async Task<RegisterProviderResponse> RegisterApprovedProviderAsync(
+        HttpClient providerClient, HttpClient adminClient, string emailPrefix)
+    {
+        var provider = await RegisterProviderAsync(providerClient, emailPrefix);
+
+        UseBearerToken(adminClient, await LoginAsAdminAsync(adminClient));
+        var approveResponse = await adminClient.PostAsync($"/api/admin/companies/{provider.Company.Id}/approve", null);
+        approveResponse.EnsureSuccessStatusCode();
+
+        return provider;
+    }
 }

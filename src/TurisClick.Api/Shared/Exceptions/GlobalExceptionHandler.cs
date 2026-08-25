@@ -18,6 +18,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             ForbiddenAppException => (StatusCodes.Status403Forbidden, "Acceso denegado"),
             UnauthorizedAppException => (StatusCodes.Status401Unauthorized, "No autorizado"),
             ValidationAppException => (StatusCodes.Status400BadRequest, "Solicitud inválida"),
+            GoneAppException => (StatusCodes.Status410Gone, "Recurso ya no disponible"),
             _ => (StatusCodes.Status500InternalServerError, "Error interno del servidor")
         };
 

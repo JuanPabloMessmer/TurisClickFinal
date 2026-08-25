@@ -9,6 +9,7 @@ public static class DestinationsModuleExtensions
     {
         services.AddScoped<IDestinationRepository, DestinationRepository>();
         services.AddScoped<IDestinationService, DestinationService>();
+        services.AddScoped<IPublicDestinationService, PublicDestinationService>();
         return services;
     }
 }

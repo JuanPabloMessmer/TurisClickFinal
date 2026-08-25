@@ -10,6 +10,8 @@ using TurisClick.Api.Modules.Auth;
 using TurisClick.Api.Modules.Categories;
 using TurisClick.Api.Modules.Companies;
 using TurisClick.Api.Modules.Destinations;
+using TurisClick.Api.Modules.Experiences;
+using TurisClick.Api.Modules.Reservations;
 using TurisClick.Api.Shared.Exceptions;
 
 Log.Logger = new LoggerConfiguration()
@@ -85,6 +87,8 @@ try
     builder.Services.AddDestinationsModule();
     builder.Services.AddCategoriesModule();
     builder.Services.AddCompaniesModule();
+    builder.Services.AddExperiencesModule();
+    builder.Services.AddReservationsModule();
 
     // ---- Manejo global de errores ----
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
