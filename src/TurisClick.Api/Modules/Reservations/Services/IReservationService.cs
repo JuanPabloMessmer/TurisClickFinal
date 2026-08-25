@@ -19,4 +19,7 @@ public interface IReservationService
 
     /// <summary>UC-P-13 — detalle de un ReservationItem recibido (403 si no pertenece a la empresa del PROVIDER).</summary>
     Task<ReservationItemResponse> GetReceivedItemByIdAsync(Guid itemId, CancellationToken ct);
+
+    /// <summary>UC-T-19/UC-SYS-02/UC-SYS-07 — pagar una reserva propia en PENDING_PAYMENT (403 si no es dueño).</summary>
+    Task<ReservationResponse> PayAsync(Guid id, PayReservationRequest request, CancellationToken ct);
 }

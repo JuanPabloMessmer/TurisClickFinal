@@ -5450,6 +5450,938 @@
               }
             }
           ]
+        },
+        {
+          "name": "Setup - Create Availability For Payment Tests (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experiences/{{res_experience_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experiences",
+                "{{res_experience_id}}",
+                "availability"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{res_availability_pay_date}}\",\n  \"totalSlots\": 10\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(); d.setDate(d.getDate() + 12);",
+                  "pm.collectionVariables.set(\"res_availability_pay_date\", d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"res_availability_pay_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Reservation For Payment Success (Tourist A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"experienceAvailabilityId\": \"{{res_availability_pay_id}}\",\n  \"travelers\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"res_reservation_pay_ok_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Reservation For Payment Declined (Tourist A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"experienceAvailabilityId\": \"{{res_availability_pay_id}}\",\n  \"travelers\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"res_reservation_pay_declined_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-19 - Pay Reservation (Success)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{res_reservation_pay_ok_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{res_reservation_pay_ok_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}"
+            },
+            "description": "UC-T-19 con success=true — pago simulado aprobado, confirmación automática (Decisión 6)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Status is CONFIRMED\", function () { pm.expect(jsonData.status).to.eql(\"CONFIRMED\"); });",
+                  "pm.test(\"ConfirmedAt is set\", function () { pm.expect(jsonData.confirmedAt).to.not.be.null; });",
+                  "pm.test(\"paymentApproved is true\", function () { pm.expect(jsonData.paymentApproved).to.be.true; });",
+                  "pm.test(\"Items are CONFIRMED too (UC-SYS-07)\", function () {",
+                  "    pm.expect(jsonData.items.every(i => i.status === \"CONFIRMED\")).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-19 - Pay Reservation - Declined (success=false)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{res_reservation_pay_declined_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{res_reservation_pay_declined_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": false\n}"
+            },
+            "description": "UC-T-19 con success=false — pago simulado rechazado. La reserva NO pasa a PAYMENT_FAILED ni pierde el cupo: sigue PENDING_PAYMENT y admite reintentar (ver el siguiente request)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Status stays PENDING_PAYMENT (no libera cupo, permite reintentar)\", function () {",
+                  "    pm.expect(jsonData.status).to.eql(\"PENDING_PAYMENT\");",
+                  "});",
+                  "pm.test(\"ConfirmedAt stays null\", function () { pm.expect(jsonData.confirmedAt).to.be.null; });",
+                  "pm.test(\"paymentApproved is false with a failure reason\", function () {",
+                  "    pm.expect(jsonData.paymentApproved).to.be.false;",
+                  "    pm.expect(jsonData.paymentFailureReason).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Items stay PENDING_PAYMENT\", function () {",
+                  "    pm.expect(jsonData.items.every(i => i.status === \"PENDING_PAYMENT\")).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-19 - Pay Reservation - Already Confirmed (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{res_reservation_pay_ok_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{res_reservation_pay_ok_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}"
+            },
+            "description": "Estado incompatible: ya está CONFIRMED, no admite un segundo pago."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-19 - Pay Reservation - Retry After Decline (Success)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{res_reservation_pay_declined_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{res_reservation_pay_declined_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}"
+            },
+            "description": "Un rechazo previo no bloquea reintentar mientras la reserva no haya expirado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Status is CONFIRMED on retry\", function () { pm.expect(jsonData.status).to.eql(\"CONFIRMED\"); });",
+                  "pm.test(\"paymentApproved is true\", function () { pm.expect(jsonData.paymentApproved).to.be.true; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-19 - Pay Reservation - Nonexistent (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/00000000-0000-0000-0000-000000000000/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "00000000-0000-0000-0000-000000000000",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-19 - Pay Reservation As Another Tourist (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_b_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{res_reservation_pay_ok_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{res_reservation_pay_ok_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}"
+            },
+            "description": "Ownership: un TOURIST nunca puede pagar la reserva de otro."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-19 - Pay Reservation Without Auth (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{res_reservation_pay_ok_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{res_reservation_pay_ok_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-19 - Pay Reservation As Provider (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{res_reservation_pay_ok_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{res_reservation_pay_ok_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}"
+            },
+            "description": "Rol incorrecto: RequireTourist rechaza a un PROVIDER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Second Experience For Price Revalidation (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Tour Revalidación de Precio {{res_suffix}}\",\n  \"description\": \"Experiencia usada específicamente para probar UC-SYS-02 en el pago.\",\n  \"destinationId\": \"{{res_city_id}}\",\n  \"categoryIds\": [],\n  \"price\": 40,\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"res_price_experience_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Availability For Price Revalidation (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experiences/{{res_price_experience_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experiences",
+                "{{res_price_experience_id}}",
+                "availability"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{res_availability_pay_date}}\",\n  \"totalSlots\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"res_price_availability_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Publish Experience For Price Revalidation (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experiences/{{res_price_experience_id}}/publish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experiences",
+                "{{res_price_experience_id}}",
+                "publish"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Reservation For Price Revalidation (Tourist A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"experienceAvailabilityId\": \"{{res_price_availability_id}}\",\n  \"travelers\": 2\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"res_price_reservation_id\", jsonData.id);",
+                  "pm.collectionVariables.set(\"res_price_frozen_subtotal\", jsonData.items[0].subtotal);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Provider Raises The Price (Owner)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experiences/{{res_price_experience_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experiences",
+                "{{res_price_experience_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Tour Revalidación de Precio {{res_suffix}}\",\n  \"description\": \"Experiencia usada específicamente para probar UC-SYS-02 en el pago.\",\n  \"destinationId\": \"{{res_city_id}}\",\n  \"categoryIds\": [],\n  \"price\": 999,\n  \"currency\": \"USD\"\n}"
+            },
+            "description": "Cambia el precio vigente DESPUÉS de que el TOURIST ya reservó — el pago debe informar el cambio pero cobrar el precio congelado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-SYS-02 - Pay Without Accepting Price Change Does Not Charge (Blocked)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{res_price_reservation_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{res_price_reservation_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}"
+            },
+            "description": "Sin acceptPriceChanges: el precio vigente (999) difiere del congelado (40) — Pay se detiene antes de llamar al gateway y devuelve el precio vigente para que el turista decida."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"requiresPriceAcceptance is true\", function () { pm.expect(jsonData.requiresPriceAcceptance).to.be.true; });",
+                  "pm.test(\"Status stays PENDING_PAYMENT — no se cobró ni confirmó nada\", function () {",
+                  "    pm.expect(jsonData.status).to.eql(\"PENDING_PAYMENT\");",
+                  "});",
+                  "pm.test(\"paymentApproved is null (el gateway nunca fue invocado)\", function () {",
+                  "    pm.expect(jsonData.paymentApproved).to.be.null;",
+                  "});",
+                  "pm.test(\"Item reports the live price without touching the frozen amount\", function () {",
+                  "    pm.expect(jsonData.items[0].priceChanged).to.be.true;",
+                  "    pm.expect(jsonData.items[0].currentUnitPrice).to.eql(999);",
+                  "    pm.expect(jsonData.items[0].subtotal).to.eql(pm.collectionVariables.get(\"res_price_frozen_subtotal\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-SYS-02 - Pay With Accepted Price Change Confirms At New Price",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{res_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{res_price_reservation_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{res_price_reservation_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true,\n  \"acceptPriceChanges\": true\n}"
+            },
+            "description": "Con acceptPriceChanges=true: se recongela UnitPrice/Subtotal al precio vigente y recién ahí se cobra/confirma."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"requiresPriceAcceptance is now false\", function () { pm.expect(jsonData.requiresPriceAcceptance).to.be.false; });",
+                  "pm.test(\"Status is CONFIRMED\", function () { pm.expect(jsonData.status).to.eql(\"CONFIRMED\"); });",
+                  "pm.test(\"Item was recongelado al precio aceptado (999 x 2 viajeros)\", function () {",
+                  "    pm.expect(jsonData.items[0].priceChanged).to.be.false;",
+                  "    pm.expect(jsonData.items[0].unitPrice).to.eql(999);",
+                  "    pm.expect(jsonData.items[0].subtotal).to.eql(1998);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     }
@@ -5689,6 +6621,38 @@
     },
     {
       "key": "res_reservation_item_id",
+      "value": ""
+    },
+    {
+      "key": "res_availability_pay_date",
+      "value": ""
+    },
+    {
+      "key": "res_availability_pay_id",
+      "value": ""
+    },
+    {
+      "key": "res_reservation_pay_ok_id",
+      "value": ""
+    },
+    {
+      "key": "res_reservation_pay_declined_id",
+      "value": ""
+    },
+    {
+      "key": "res_price_experience_id",
+      "value": ""
+    },
+    {
+      "key": "res_price_availability_id",
+      "value": ""
+    },
+    {
+      "key": "res_price_reservation_id",
+      "value": ""
+    },
+    {
+      "key": "res_price_frozen_subtotal",
       "value": ""
     }
   ]

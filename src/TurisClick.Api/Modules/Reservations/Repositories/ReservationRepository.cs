@@ -18,6 +18,14 @@ public class ReservationRepository(TurisClickDbContext db) : IReservationReposit
             .Include(r => r.Items).ThenInclude(i => i.ExperienceAvailability)
             .FirstOrDefaultAsync(r => r.Id == id, ct);
 
+    public Task<Reservation?> GetByIdForPaymentAsync(Guid id, CancellationToken ct) =>
+        db.Reservations
+            .AsSplitQuery()
+            .Include(r => r.Items).ThenInclude(i => i.Company)
+            .Include(r => r.Items).ThenInclude(i => i.Experience)
+            .Include(r => r.Items).ThenInclude(i => i.ExperienceAvailability)
+            .FirstOrDefaultAsync(r => r.Id == id, ct);
+
     public async Task<(List<Reservation> Items, int TotalCount)> ListByTouristAsync(
         Guid touristId, int page, int pageSize, CancellationToken ct)
     {

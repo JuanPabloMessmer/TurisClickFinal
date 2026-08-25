@@ -36,4 +36,12 @@ public class ReservationsController(IReservationService reservationService) : Co
         var result = await reservationService.GetByIdForTouristAsync(id, ct);
         return Ok(result);
     }
+
+    /// <summary>UC-T-19 — pagar una reserva propia en PENDING_PAYMENT.</summary>
+    [HttpPost("{id:guid}/pay")]
+    public async Task<ActionResult<ReservationResponse>> Pay(Guid id, [FromBody] PayReservationRequest request, CancellationToken ct)
+    {
+        var result = await reservationService.PayAsync(id, request, ct);
+        return Ok(result);
+    }
 }

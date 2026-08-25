@@ -1,3 +1,4 @@
+using TurisClick.Api.Modules.Reservations.Payments;
 using TurisClick.Api.Modules.Reservations.Repositories;
 using TurisClick.Api.Modules.Reservations.Services;
 
@@ -10,6 +11,10 @@ public static class ReservationsModuleExtensions
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IReservationItemRepository, ReservationItemRepository>();
         services.AddScoped<IReservationService, ReservationService>();
+
+        // Placeholder hasta integrar una pasarela real — ver IPaymentGateway.
+        services.AddScoped<IPaymentGateway, SimulatedPaymentGateway>();
+
         return services;
     }
 }

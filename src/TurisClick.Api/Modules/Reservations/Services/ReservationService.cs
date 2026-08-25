@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Experiences.Repositories;
 using TurisClick.Api.Modules.Reservations.Dtos;
 using TurisClick.Api.Modules.Reservations.Entities;
+using TurisClick.Api.Modules.Reservations.Payments;
 using TurisClick.Api.Modules.Reservations.Repositories;
 using TurisClick.Api.Shared.Exceptions;
 using TurisClick.Api.Shared.Responses;
@@ -15,8 +17,10 @@ public class ReservationService(
     IReservationRepository reservationRepository,
     IReservationItemRepository reservationItemRepository,
     IExperienceAvailabilityRepository availabilityRepository,
+    IPaymentGateway paymentGateway,
     ICurrentUserContext currentUser,
     ICompanyOwnershipGuard ownershipGuard,
+    ILogger<ReservationService> logger,
     TurisClickDbContext db) : IReservationService
 {
     /// <summary>Ventana del hold de cupo mientras la reserva está PENDING_PAYMENT. La liberación efectiva por expiración es UC-SYS-08 (Oleada 8) — acá solo se registra el límite.</summary>
@@ -109,7 +113,7 @@ public class ReservationService(
 
         return new PagedResult<ReservationResponse>
         {
-            Items = items.Select(ToResponse).ToList(),
+            Items = items.Select(r => ToResponse(r)).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = totalCount
@@ -128,7 +132,7 @@ public class ReservationService(
 
         return new PagedResult<ReservationItemResponse>
         {
-            Items = items.Select(ToItemResponse).ToList(),
+            Items = items.Select(i => ToItemResponse(i)).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = totalCount
@@ -145,7 +149,103 @@ public class ReservationService(
         return ToItemResponse(item);
     }
 
-    private static ReservationResponse ToResponse(Reservation reservation) => new()
+    public async Task<ReservationResponse> PayAsync(Guid id, PayReservationRequest request, CancellationToken ct)
+    {
+        var reservation = await reservationRepository.GetByIdForPaymentAsync(id, ct)
+            ?? throw new NotFoundAppException("Reserva no encontrada.");
+
+        if (reservation.TouristId != currentUser.UserId)
+            throw new ForbiddenAppException("Esta reserva no te pertenece.");
+
+        if (reservation.Status != ReservationStatus.PENDING_PAYMENT)
+            throw new ConflictAppException($"La reserva está en estado {reservation.Status}; no admite pago.");
+
+        var now = DateTimeOffset.UtcNow;
+
+        // Precondición documentada de UC-T-19 ("no expirada"): distinto del 409 anterior — acá el estado
+        // sigue siendo PENDING_PAYMENT, pero el hold de cupo (ExpiresAt) ya venció.
+        if (reservation.ExpiresAt is { } expiresAt && expiresAt < now)
+            throw new GoneAppException("La reserva expiró; el cupo retenido ya no es válido para pagar.");
+
+        // UC-SYS-02: revalidación de precio contra el valor vigente de cada Experience.
+        var revalidationByItemId = reservation.Items.ToDictionary(
+            i => i.Id,
+            i => i.Experience is { } experience
+                ? new PriceRevalidation(experience.Price != i.UnitPrice || experience.Currency != i.Currency, experience.Price, experience.Currency)
+                : new PriceRevalidation(false, i.UnitPrice, i.Currency));
+
+        var anyPriceChanged = revalidationByItemId.Values.Any(r => r.Changed);
+
+        if (anyPriceChanged && !request.AcceptPriceChanges)
+        {
+            // Bloqueante: no se llama al gateway ni se persiste nada — se le devuelve el precio vigente
+            // al caller para que el turista lo acepte explícitamente antes de cobrar/confirmar.
+            logger.LogInformation(
+                "Pago de la reserva {ReservationId} detenido: el precio vigente cambió y no fue aceptado.", reservation.Id);
+            return ToResponse(reservation, revalidationByItemId, requiresPriceAcceptance: true);
+        }
+
+        if (anyPriceChanged)
+        {
+            // El turista aceptó explícitamente el nuevo precio: se recongela antes de cobrar/confirmar.
+            foreach (var item in reservation.Items)
+            {
+                var revalidation = revalidationByItemId[item.Id];
+                if (!revalidation.Changed) continue;
+
+                item.UnitPrice = revalidation.CurrentUnitPrice;
+                item.Currency = revalidation.CurrentCurrency;
+                item.Subtotal = revalidation.CurrentUnitPrice * item.Travelers;
+            }
+        }
+
+        // Oleada 2/3: una reserva directa siempre tiene un único Item/moneda; agregación multi-moneda
+        // queda para cuando exista una reserva de itinerario IA con varios proveedores.
+        var amount = reservation.Items.Sum(i => i.Subtotal);
+        var currency = reservation.Items.First().Currency;
+
+        // El gateway se llama ANTES de abrir la transacción de DB: nunca sostener locks durante I/O externo.
+        var chargeResult = await paymentGateway.ChargeAsync(
+            new PaymentChargeRequest(reservation.Id, amount, currency, request.Success), ct);
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        if (chargeResult.Approved)
+        {
+            // UC-SYS-07: confirmación automática, sin aprobación manual del Provider (Decisión 6).
+            reservation.Status = ReservationStatus.CONFIRMED;
+            reservation.ConfirmedAt = now;
+            foreach (var item in reservation.Items)
+                item.Status = ReservationItemStatus.CONFIRMED;
+        }
+        else
+        {
+            // El rechazo NO cambia Reservation.Status ni ReservationItem.Status: la reserva sigue
+            // PENDING_PAYMENT y admite reintentar el pago mientras no venza ExpiresAt (decisión del
+            // usuario: no liberar el cupo de inmediato en Oleada 3). El fallo solo queda registrado acá
+            // (respuesta) y en el log — cuando exista una entidad Payment, los intentos fallidos se
+            // registrarán ahí sin volver a tocar el estado principal de la reserva.
+            logger.LogWarning(
+                "Pago rechazado para la reserva {ReservationId}: {Reason}", reservation.Id, chargeResult.FailureReason);
+        }
+
+        // Si se aceptó un precio nuevo, ese recongelamiento se persiste aunque el cobro haya sido rechazado.
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        return ToResponse(reservation,
+            paymentApproved: chargeResult.Approved,
+            paymentFailureReason: chargeResult.FailureReason);
+    }
+
+    private sealed record PriceRevalidation(bool Changed, decimal CurrentUnitPrice, string CurrentCurrency);
+
+    private static ReservationResponse ToResponse(
+        Reservation reservation,
+        IReadOnlyDictionary<Guid, PriceRevalidation>? revalidationByItemId = null,
+        bool requiresPriceAcceptance = false,
+        bool? paymentApproved = null,
+        string? paymentFailureReason = null) => new()
     {
         Id = reservation.Id,
         Status = reservation.Status.ToString(),
@@ -153,17 +253,20 @@ public class ReservationService(
         CreatedAt = reservation.CreatedAt,
         ConfirmedAt = reservation.ConfirmedAt,
         CancelledAt = reservation.CancelledAt,
-        Items = [.. reservation.Items.Select(ToItemResponse)],
+        Items = [.. reservation.Items.Select(i => ToItemResponse(i, revalidationByItemId?.GetValueOrDefault(i.Id)))],
         Totals = [.. reservation.Items
             .GroupBy(i => i.Currency)
-            .Select(g => new ReservationTotalResponse { Currency = g.Key, Amount = g.Sum(i => i.Subtotal) })]
+            .Select(g => new ReservationTotalResponse { Currency = g.Key, Amount = g.Sum(i => i.Subtotal) })],
+        RequiresPriceAcceptance = requiresPriceAcceptance,
+        PaymentApproved = paymentApproved,
+        PaymentFailureReason = paymentFailureReason
     };
 
     /// <summary>
     /// item.Reservation viene poblado por fixup de EF Core (mismo query, ver ReservationRepository/ReservationItemRepository)
     /// aunque no siempre incluye Tourist — en la vista del propio TOURIST ese dato es irrelevante y queda vacío.
     /// </summary>
-    private static ReservationItemResponse ToItemResponse(ReservationItem item) => new()
+    private static ReservationItemResponse ToItemResponse(ReservationItem item, PriceRevalidation? revalidation = null) => new()
     {
         Id = item.Id,
         ReservationId = item.ReservationId,
@@ -182,6 +285,9 @@ public class ReservationService(
         Status = item.Status.ToString(),
         Date = item.ExperienceAvailability?.Date,
         StartTime = item.ExperienceAvailability?.StartTime,
-        CreatedAt = item.CreatedAt
+        CreatedAt = item.CreatedAt,
+        PriceChanged = revalidation?.Changed ?? false,
+        CurrentUnitPrice = revalidation?.Changed == true ? revalidation.CurrentUnitPrice : null,
+        CurrentCurrency = revalidation?.Changed == true ? revalidation.CurrentCurrency : null
     };
 }

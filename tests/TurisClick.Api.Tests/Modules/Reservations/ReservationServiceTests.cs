@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Security;
@@ -7,6 +8,7 @@ using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Experiences.Repositories;
 using TurisClick.Api.Modules.Reservations.Dtos;
 using TurisClick.Api.Modules.Reservations.Entities;
+using TurisClick.Api.Modules.Reservations.Payments;
 using TurisClick.Api.Modules.Reservations.Repositories;
 using TurisClick.Api.Modules.Reservations.Services;
 using TurisClick.Api.Shared.Exceptions;
@@ -15,15 +17,18 @@ using Xunit;
 namespace TurisClick.Api.Tests.Modules.Reservations;
 
 /// <summary>
-/// UC-T-08/10, UC-P-12/13 — foco en las validaciones previas a la transacción atómica (que requiere Postgres
-/// real y se cubre con un test de integración de concurrencia, ver ReservationsEndpointsTests) y en el
-/// aislamiento entre TOURIST/PROVIDER dueños y no-dueños.
+/// UC-T-08/10, UC-P-12/13, UC-T-19 — foco en las validaciones previas a la transacción atómica (que
+/// requiere Postgres real y se cubre con tests de integración, ver ReservationsEndpointsTests) y en el
+/// aislamiento entre TOURIST/PROVIDER dueños y no-dueños. El camino feliz de UC-T-19 (aprobado/rechazado,
+/// revalidación de precio) también requiere Postgres — solo se cubren acá las validaciones que lanzan
+/// ANTES de llamar al gateway/abrir la transacción.
 /// </summary>
 public class ReservationServiceTests
 {
     private readonly Mock<IReservationRepository> _reservationRepository = new();
     private readonly Mock<IReservationItemRepository> _reservationItemRepository = new();
     private readonly Mock<IExperienceAvailabilityRepository> _availabilityRepository = new();
+    private readonly Mock<IPaymentGateway> _paymentGateway = new();
     private readonly Mock<ICurrentUserContext> _currentUser = new();
     private readonly ReservationService _sut;
 
@@ -52,8 +57,10 @@ public class ReservationServiceTests
             _reservationRepository.Object,
             _reservationItemRepository.Object,
             _availabilityRepository.Object,
+            _paymentGateway.Object,
             _currentUser.Object,
             ownershipGuard.Object,
+            Mock.Of<ILogger<ReservationService>>(),
             db.Object);
     }
 
@@ -223,5 +230,106 @@ public class ReservationServiceTests
         var result = await _sut.GetReceivedItemByIdAsync(item.Id, CancellationToken.None);
 
         Assert.Equal("CONFIRMED", result.Status);
+    }
+
+    private Reservation PayableReservation(ReservationStatus status = ReservationStatus.PENDING_PAYMENT, DateTimeOffset? expiresAt = null) => new()
+    {
+        Id = Guid.NewGuid(),
+        TouristId = _touristId,
+        Status = status,
+        ExpiresAt = expiresAt ?? DateTimeOffset.UtcNow.AddMinutes(30),
+        Items =
+        [
+            new ReservationItem
+            {
+                Id = Guid.NewGuid(),
+                CompanyId = Guid.NewGuid(),
+                ProductType = ProductType.EXPERIENCE,
+                ExperienceId = _experienceId,
+                UnitPrice = 50,
+                Currency = "USD",
+                Subtotal = 50,
+                Status = ReservationItemStatus.PENDING_PAYMENT,
+                Experience = new Experience { Id = _experienceId, Price = 50, Currency = "USD" }
+            }
+        ]
+    };
+
+    [Fact]
+    public async Task PayAsync_ReservationNotFound_ThrowsNotFound()
+    {
+        var id = Guid.NewGuid();
+        _reservationRepository.Setup(r => r.GetByIdForPaymentAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Reservation?)null);
+
+        await Assert.ThrowsAsync<NotFoundAppException>(() =>
+            _sut.PayAsync(id, new PayReservationRequest { Success = true }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task PayAsync_BelongsToAnotherTourist_ThrowsForbidden()
+    {
+        var reservation = PayableReservation();
+        reservation.TouristId = Guid.NewGuid();
+        _reservationRepository.Setup(r => r.GetByIdForPaymentAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        await Assert.ThrowsAsync<ForbiddenAppException>(() =>
+            _sut.PayAsync(reservation.Id, new PayReservationRequest { Success = true }, CancellationToken.None));
+
+        _paymentGateway.Verify(g => g.ChargeAsync(It.IsAny<PaymentChargeRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(ReservationStatus.CONFIRMED)]
+    [InlineData(ReservationStatus.CANCELLED)]
+    [InlineData(ReservationStatus.PAYMENT_FAILED)]
+    [InlineData(ReservationStatus.EXPIRED)]
+    public async Task PayAsync_IncompatibleStatus_ThrowsConflict(ReservationStatus status)
+    {
+        var reservation = PayableReservation(status);
+        _reservationRepository.Setup(r => r.GetByIdForPaymentAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        await Assert.ThrowsAsync<ConflictAppException>(() =>
+            _sut.PayAsync(reservation.Id, new PayReservationRequest { Success = true }, CancellationToken.None));
+
+        _paymentGateway.Verify(g => g.ChargeAsync(It.IsAny<PaymentChargeRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task PayAsync_Expired_ThrowsGone()
+    {
+        var reservation = PayableReservation(expiresAt: DateTimeOffset.UtcNow.AddMinutes(-5));
+        _reservationRepository.Setup(r => r.GetByIdForPaymentAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        await Assert.ThrowsAsync<GoneAppException>(() =>
+            _sut.PayAsync(reservation.Id, new PayReservationRequest { Success = true }, CancellationToken.None));
+
+        _paymentGateway.Verify(g => g.ChargeAsync(It.IsAny<PaymentChargeRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// UC-SYS-02 — a diferencia de los demás caminos de PayAsync, este devuelve ANTES de llamar al gateway
+    /// o abrir la transacción, así que es seguro cubrirlo con mocks (no necesita Postgres real).
+    /// </summary>
+    [Fact]
+    public async Task PayAsync_PriceChangedWithoutAcceptance_DoesNotChargeAndReturnsCurrentPrice()
+    {
+        var reservation = PayableReservation();
+        reservation.Items.Single().Experience!.Price = 999; // vigente != UnitPrice (50) congelado
+        _reservationRepository.Setup(r => r.GetByIdForPaymentAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        var result = await _sut.PayAsync(reservation.Id, new PayReservationRequest { Success = true, AcceptPriceChanges = false }, CancellationToken.None);
+
+        Assert.True(result.RequiresPriceAcceptance);
+        Assert.Equal("PENDING_PAYMENT", result.Status);
+        Assert.Null(result.PaymentApproved);
+        Assert.True(result.Items[0].PriceChanged);
+        Assert.Equal(999, result.Items[0].CurrentUnitPrice);
+        Assert.Equal(50, result.Items[0].UnitPrice); // el congelado no se toca sin aceptación explícita
+        _paymentGateway.Verify(g => g.ChargeAsync(It.IsAny<PaymentChargeRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

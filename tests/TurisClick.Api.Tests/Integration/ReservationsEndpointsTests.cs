@@ -340,4 +340,236 @@ public class ReservationsEndpointsTests
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    // ---- UC-T-19 / UC-SYS-02 / UC-SYS-07 — pagar una reserva pendiente ----
+
+    private static async Task<ReservationResponse> CreateReservationAsync(HttpClient touristClient, Guid availabilityId, int travelers = 1)
+    {
+        var response = await touristClient.PostAsJsonAsync("/api/reservations",
+            new { experienceAvailabilityId = availabilityId, travelers });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions))!;
+    }
+
+    [Fact]
+    public async Task Pay_Success_ConfirmsReservationAndItems()
+    {
+        var (_, _, availability) = await CreatePublishedExperienceWithAvailabilityAsync("pay-ok", totalSlots: 5);
+        var touristClient = _factory.CreateClient();
+        UseBearerToken(touristClient, await RegisterAndLoginTouristAsync(touristClient, "pay-ok-t"));
+        var reservation = await CreateReservationAsync(touristClient, availability.Id);
+
+        var response = await touristClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = true });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("CONFIRMED", body!.Status);
+        Assert.NotNull(body.ConfirmedAt);
+        Assert.True(body.PaymentApproved);
+        Assert.All(body.Items, i => Assert.Equal("CONFIRMED", i.Status));
+    }
+
+    /// <summary>
+    /// Decisión del usuario tras revisar Oleada 3: un rechazo NO libera el cupo ni bloquea reintentos —
+    /// la reserva sigue PENDING_PAYMENT (el fallo solo se refleja en la respuesta), a diferencia del
+    /// primer diseño que la pasaba a PAYMENT_FAILED. Ver Pay_DeclinedThenRetrySucceeds para el reintento.
+    /// </summary>
+    [Fact]
+    public async Task Pay_Declined_KeepsReservationPendingPayment()
+    {
+        var (_, _, availability) = await CreatePublishedExperienceWithAvailabilityAsync("pay-declined", totalSlots: 5);
+        var touristClient = _factory.CreateClient();
+        UseBearerToken(touristClient, await RegisterAndLoginTouristAsync(touristClient, "pay-declined-t"));
+        var reservation = await CreateReservationAsync(touristClient, availability.Id);
+
+        var response = await touristClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = false });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("PENDING_PAYMENT", body!.Status);
+        Assert.Null(body.ConfirmedAt);
+        Assert.False(body.PaymentApproved);
+        Assert.False(string.IsNullOrWhiteSpace(body.PaymentFailureReason));
+        Assert.All(body.Items, i => Assert.Equal("PENDING_PAYMENT", i.Status));
+    }
+
+    [Fact]
+    public async Task Pay_DeclinedThenRetrySucceeds()
+    {
+        var (_, _, availability) = await CreatePublishedExperienceWithAvailabilityAsync("pay-retry", totalSlots: 5);
+        var touristClient = _factory.CreateClient();
+        UseBearerToken(touristClient, await RegisterAndLoginTouristAsync(touristClient, "pay-retry-t"));
+        var reservation = await CreateReservationAsync(touristClient, availability.Id);
+
+        var declined = await touristClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = false });
+        declined.EnsureSuccessStatusCode();
+
+        var retry = await touristClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = true });
+
+        Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
+        var body = await retry.Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("CONFIRMED", body!.Status);
+        Assert.True(body.PaymentApproved);
+    }
+
+    [Fact]
+    public async Task Pay_ReservationExpired_Returns410()
+    {
+        var (_, _, availability) = await CreatePublishedExperienceWithAvailabilityAsync("pay-expired", totalSlots: 5);
+        var touristClient = _factory.CreateClient();
+        UseBearerToken(touristClient, await RegisterAndLoginTouristAsync(touristClient, "pay-expired-t"));
+        var reservation = await CreateReservationAsync(touristClient, availability.Id);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TurisClickDbContext>();
+            var entity = await db.Reservations.SingleAsync(r => r.Id == reservation.Id);
+            entity.ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await touristClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = true });
+
+        Assert.Equal(HttpStatusCode.Gone, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Pay_NonExistentReservation_Returns404()
+    {
+        var touristClient = _factory.CreateClient();
+        UseBearerToken(touristClient, await RegisterAndLoginTouristAsync(touristClient, "pay-missing-t"));
+
+        var response = await touristClient.PostAsJsonAsync($"/api/reservations/{Guid.NewGuid()}/pay", new { success = true });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Pay_AsAnotherTourist_Returns403()
+    {
+        var (_, _, availability) = await CreatePublishedExperienceWithAvailabilityAsync("pay-other", totalSlots: 5);
+        var ownerClient = _factory.CreateClient();
+        UseBearerToken(ownerClient, await RegisterAndLoginTouristAsync(ownerClient, "pay-other-owner"));
+        var reservation = await CreateReservationAsync(ownerClient, availability.Id);
+
+        var attackerClient = _factory.CreateClient();
+        UseBearerToken(attackerClient, await RegisterAndLoginTouristAsync(attackerClient, "pay-other-attacker"));
+
+        var response = await attackerClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = true });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Pay_Unauthenticated_Returns401()
+    {
+        var (_, _, availability) = await CreatePublishedExperienceWithAvailabilityAsync("pay-anon", totalSlots: 5);
+        var touristClient = _factory.CreateClient();
+        UseBearerToken(touristClient, await RegisterAndLoginTouristAsync(touristClient, "pay-anon-t"));
+        var reservation = await CreateReservationAsync(touristClient, availability.Id);
+
+        var anonymousClient = _factory.CreateClient();
+        var response = await anonymousClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = true });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Pay_AsProvider_Returns403()
+    {
+        var (providerClient, _, availability) = await CreatePublishedExperienceWithAvailabilityAsync("pay-role", totalSlots: 5);
+        var touristClient = _factory.CreateClient();
+        UseBearerToken(touristClient, await RegisterAndLoginTouristAsync(touristClient, "pay-role-t"));
+        var reservation = await CreateReservationAsync(touristClient, availability.Id);
+
+        var response = await providerClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = true });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Pay_AlreadyConfirmed_Returns409()
+    {
+        var (_, _, availability) = await CreatePublishedExperienceWithAvailabilityAsync("pay-twice", totalSlots: 5);
+        var touristClient = _factory.CreateClient();
+        UseBearerToken(touristClient, await RegisterAndLoginTouristAsync(touristClient, "pay-twice-t"));
+        var reservation = await CreateReservationAsync(touristClient, availability.Id);
+
+        var first = await touristClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = true });
+        first.EnsureSuccessStatusCode();
+
+        var second = await touristClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = true });
+
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+    }
+
+    /// <summary>
+    /// Decisión del usuario: si el precio cambió, Pay NO cobra ni confirma con el precio viejo — devuelve
+    /// el precio vigente y exige que el caller reenvíe el pago con acceptPriceChanges=true para proceder.
+    /// </summary>
+    [Fact]
+    public async Task Pay_PriceChanged_WithoutAcceptance_DoesNotChargeAndReturnsCurrentPrice()
+    {
+        var (providerClient, experience, availability) = await CreatePublishedExperienceWithAvailabilityAsync("pay-price-block", totalSlots: 5);
+        var touristClient = _factory.CreateClient();
+        UseBearerToken(touristClient, await RegisterAndLoginTouristAsync(touristClient, "pay-price-block-t"));
+        var reservation = await CreateReservationAsync(touristClient, availability.Id, travelers: 2);
+        var frozenSubtotal = reservation.Items[0].Subtotal;
+        var newPrice = experience.Price + 100m;
+
+        var updateResponse = await providerClient.PutAsJsonAsync($"/api/experiences/{experience.Id}", new
+        {
+            title = experience.Title,
+            description = experience.Description,
+            destinationId = experience.DestinationId,
+            categoryIds = Array.Empty<Guid>(),
+            price = newPrice,
+            currency = experience.Currency
+        });
+        updateResponse.EnsureSuccessStatusCode();
+
+        var response = await touristClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay", new { success = true });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.True(body!.RequiresPriceAcceptance);
+        Assert.Equal("PENDING_PAYMENT", body.Status); // no se cobró ni confirmó nada
+        Assert.Null(body.PaymentApproved);
+        Assert.True(body.Items[0].PriceChanged);
+        Assert.Equal(newPrice, body.Items[0].CurrentUnitPrice);
+        Assert.Equal(frozenSubtotal, body.Items[0].Subtotal); // el congelado no se toca sin aceptación
+    }
+
+    [Fact]
+    public async Task Pay_PriceChanged_WithAcceptance_ChargesNewPriceAndConfirms()
+    {
+        var (providerClient, experience, availability) = await CreatePublishedExperienceWithAvailabilityAsync("pay-price-accept", totalSlots: 5);
+        var touristClient = _factory.CreateClient();
+        UseBearerToken(touristClient, await RegisterAndLoginTouristAsync(touristClient, "pay-price-accept-t"));
+        var reservation = await CreateReservationAsync(touristClient, availability.Id, travelers: 2);
+        var newPrice = experience.Price + 100m;
+
+        var updateResponse = await providerClient.PutAsJsonAsync($"/api/experiences/{experience.Id}", new
+        {
+            title = experience.Title,
+            description = experience.Description,
+            destinationId = experience.DestinationId,
+            categoryIds = Array.Empty<Guid>(),
+            price = newPrice,
+            currency = experience.Currency
+        });
+        updateResponse.EnsureSuccessStatusCode();
+
+        var response = await touristClient.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay",
+            new { success = true, acceptPriceChanges = true });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.False(body!.RequiresPriceAcceptance);
+        Assert.Equal("CONFIRMED", body.Status);
+        Assert.True(body.PaymentApproved);
+        Assert.False(body.Items[0].PriceChanged); // ya se recongeló al precio aceptado
+        Assert.Equal(newPrice, body.Items[0].UnitPrice);
+        Assert.Equal(newPrice * 2, body.Items[0].Subtotal);
+    }
 }
