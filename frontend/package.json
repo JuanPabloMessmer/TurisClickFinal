@@ -1,0 +1,13 @@
+{
+  "name": "turisclick-frontend",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "backoffice:dev": "npm run dev --workspace apps/backoffice",
+    "backoffice:build": "npm run build --workspace apps/backoffice",
+    "generate:api-types": "npm run generate:types --workspace @turisclick/api-client"
+  }
+}

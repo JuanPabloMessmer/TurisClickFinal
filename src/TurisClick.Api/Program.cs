@@ -73,6 +73,22 @@ try
             };
         });
 
+    // ---- CORS (frontend local — Backoffice hoy, Tourist Mobile más adelante) ----
+    // Orígenes leídos de configuración (Cors:AllowedOrigins), nunca hardcodeados: en Development,
+    // appsettings.Development.json ya trae el puerto por defecto de Vite (5173); en otros ambientes
+    // se configura por variable de entorno/user-secrets sin tocar código.
+    var corsAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("Frontend", policy =>
+        {
+            if (corsAllowedOrigins.Length > 0)
+                policy.WithOrigins(corsAllowedOrigins).AllowAnyHeader().AllowAnyMethod();
+            // Sin AllowCredentials(): la autenticación viaja por header Authorization (Bearer), no por
+            // cookies, así que no hace falta habilitar credenciales cross-origin.
+        });
+    });
+
     // ---- Autorización por rol (ADMIN / PROVIDER / TOURIST) ----
     builder.Services.AddAuthorization(options =>
     {
@@ -129,6 +145,8 @@ try
 
     app.UseSerilogRequestLogging();
     app.UseHttpsRedirection();
+
+    app.UseCors("Frontend");
 
     app.UseAuthentication();
     app.UseAuthorization();

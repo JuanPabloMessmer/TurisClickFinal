@@ -161,6 +161,16 @@ Los errores de validación de `ModelState` (DataAnnotations) los devuelve autom�
 
 ---
 
+## 5.1. CORS (frontend Backoffice)
+
+El Backoffice (web, React + Vite) corre en un origen distinto (`http://localhost:5173` en dev) y llama a la API desde el navegador — sin CORS habilitado, el browser bloquea esas respuestas aunque el request en sí funcione (a diferencia de Postman/Newman, que no aplican CORS).
+
+- Los orígenes permitidos se leen de configuración (`Cors:AllowedOrigins`, un array), nunca hardcodeados en `Program.cs` — `appsettings.Development.json` ya trae `http://localhost:5173`. Para agregar otro origen (otro puerto, otro ambiente) se edita configuración, no código.
+- La policy `"Frontend"` habilita cualquier header/método pero **no** `AllowCredentials()`: la sesión viaja por header `Authorization: Bearer ...`, no por cookies, así que no hace falta CORS con credenciales (evita la combinación `AllowAnyOrigin` + `AllowCredentials`, que ni siquiera es válida en ASP.NET Core).
+- **Tourist Mobile (React Native/Expo) no necesita esta policy**: CORS es un mecanismo del navegador, y una app nativa no está sujeta a esa restricción — sus requests a la API no pasan por el chequeo de CORS del backend.
+
+---
+
 ## 6. Autorización por ADMIN / PROVIDER / TOURIST
 
 Autorización basada en el claim `role` del JWT, con policies explícitas (más legible que `[Authorize(Roles = "...")]` repetido):

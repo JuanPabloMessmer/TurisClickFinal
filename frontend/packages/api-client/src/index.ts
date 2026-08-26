@@ -1,0 +1,9 @@
+export { createHttpClient } from './http'
+export * from './types'
+
+export * as authApi from './modules/auth'
+export * as categoriesApi from './modules/categories'
+export * as companiesApi from './modules/companies'
+export * as destinationsApi from './modules/destinations'
+export * as experiencesApi from './modules/experiences'
+export * as reservationsApi from './modules/reservations'

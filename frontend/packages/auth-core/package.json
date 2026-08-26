@@ -1,0 +1,15 @@
+{
+  "name": "@turisclick/auth-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@turisclick/api-client": "*",
+    "axios": "^1.19.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}
