@@ -30,6 +30,51 @@ public class AdminCompaniesEndpointsTests
     }
 
     [Fact]
+    public async Task List_SearchByName_ReturnsOnlyMatchingCompany()
+    {
+        var client = _factory.CreateClient();
+        var target = await RegisterProviderAsync(client, "admin-search-name");
+        await RegisterProviderAsync(client, "admin-search-other");
+        UseBearerToken(client, await LoginAsAdminAsync(client));
+
+        var response = await client.GetAsync($"/api/admin/companies?search={Uri.EscapeDataString(target.Company.Name)}&pageSize=100");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<CompanyResponse>>(JsonOptions);
+        Assert.Contains(body!.Items, c => c.Id == target.Company.Id);
+        Assert.All(body.Items, c => Assert.Contains(target.Company.Name, c.Name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task List_SearchByLegalDocument_ReturnsMatchingCompanyRegardlessOfCase()
+    {
+        var client = _factory.CreateClient();
+        var provider = await RegisterProviderAsync(client, "admin-search-doc");
+        UseBearerToken(client, await LoginAsAdminAsync(client));
+        var fullDoc = await client.GetAsync($"/api/admin/companies/{provider.Company.Id}");
+        var company = await fullDoc.Content.ReadFromJsonAsync<CompanyResponse>(JsonOptions);
+
+        var response = await client.GetAsync($"/api/admin/companies?search={company!.LegalDocument.ToLowerInvariant()}&pageSize=100");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<CompanyResponse>>(JsonOptions);
+        Assert.Contains(body!.Items, c => c.Id == provider.Company.Id);
+    }
+
+    [Fact]
+    public async Task List_SearchWithNoMatches_ReturnsEmpty()
+    {
+        var client = _factory.CreateClient();
+        UseBearerToken(client, await LoginAsAdminAsync(client));
+
+        var response = await client.GetAsync($"/api/admin/companies?search=zzz-no-existe-{Guid.NewGuid():N}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<CompanyResponse>>(JsonOptions);
+        Assert.Empty(body!.Items);
+    }
+
+    [Fact]
     public async Task Approve_PendingCompany_Returns200WithApprovedStatus()
     {
         var client = _factory.CreateClient();

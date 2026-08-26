@@ -10,7 +10,7 @@ public interface ICompanyService
     Task<RegisterProviderResponse> RegisterProviderAsync(RegisterProviderRequest request, CancellationToken ct);
 
     /// <summary>UC-A-01. status = null lista todas las empresas, sin filtrar.</summary>
-    Task<PagedResult<CompanyResponse>> ListAsync(CompanyStatus? status, int page, int pageSize, CancellationToken ct);
+    Task<PagedResult<CompanyResponse>> ListAsync(CompanyStatus? status, string? search, int page, int pageSize, CancellationToken ct);
 
     /// <summary>Detalle de una empresa para ADMIN (complementa UC-A-01).</summary>
     Task<CompanyResponse> GetByIdAsync(Guid id, CancellationToken ct);

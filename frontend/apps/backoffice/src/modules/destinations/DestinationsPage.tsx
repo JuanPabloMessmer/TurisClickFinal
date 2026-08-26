@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { DestinationResponse } from '@turisclick/api-client'
-import { MapPinned, Pencil, Trash2 } from 'lucide-react'
+import { MapPinned, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,33 +34,10 @@ const typeLabel: Record<string, string> = { COUNTRY: 'País', REGION: 'Región',
 
 export function DestinationsPage() {
   const { data: destinations = [], isLoading } = useDestinations()
-  const createMutation = useCreateDestination()
   const deleteMutation = useDeleteDestination()
-  const [createError, setCreateError] = useState<string | null>(null)
-  const [renaming, setRenaming] = useState<DestinationResponse | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-
-  const form = useForm<CreateFormValues>({
-    resolver: zodResolver(createSchema),
-    defaultValues: { name: '', type: 'COUNTRY', parentId: undefined },
-  })
-  const selectedType = form.watch('type')
-  const requiredParentType = parentTypeFor[selectedType]
-  const parentOptions = destinations.filter((d) => d.type === requiredParentType)
-
-  const onCreate = async (values: CreateFormValues) => {
-    setCreateError(null)
-    try {
-      await createMutation.mutateAsync({
-        name: values.name,
-        type: values.type,
-        parentId: requiredParentType ? values.parentId : undefined,
-      })
-      form.reset({ name: '', type: values.type, parentId: undefined })
-    } catch (error) {
-      setCreateError(getErrorMessage(error))
-    }
-  }
+  const [creating, setCreating] = useState(false)
+  const [renaming, setRenaming] = useState<DestinationResponse | null>(null)
 
   const onDelete = async (id: string) => {
     setDeleteError(null)
@@ -73,65 +50,16 @@ export function DestinationsPage() {
 
   return (
     <div>
-      <PageHeader title="Destinos" description="UC-A-04 — jerarquía País → Región → Ciudad." />
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">Nuevo destino</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="flex flex-wrap items-end gap-4" onSubmit={form.handleSubmit(onCreate)} noValidate>
-            <div className="flex flex-col gap-1.5">
-              <Label>Nombre</Label>
-              <Input {...form.register('name')} className="w-56" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Tipo</Label>
-              <Select
-                value={selectedType}
-                onValueChange={(value) => {
-                  form.setValue('type', value as CreateFormValues['type'])
-                  form.setValue('parentId', undefined)
-                }}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="COUNTRY">País</SelectItem>
-                  <SelectItem value="REGION">Región</SelectItem>
-                  <SelectItem value="CITY">Ciudad</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {requiredParentType && (
-              <div className="flex flex-col gap-1.5">
-                <Label>Padre ({requiredParentType === 'COUNTRY' ? 'País' : 'Región'})</Label>
-                <Select value={form.watch('parentId')} onValueChange={(value) => form.setValue('parentId', value)}>
-                  <SelectTrigger className="w-56">
-                    <SelectValue placeholder="Seleccioná el padre" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {parentOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id!}>
-                        {option.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <Button type="submit" disabled={form.formState.isSubmitting || (!!requiredParentType && !form.watch('parentId'))}>
-              Crear
-            </Button>
-          </form>
-          {createError && (
-            <Alert variant="destructive" className="mt-4">
-              {createError}
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+      <PageHeader
+        title="Destinos"
+        description="UC-A-04 — jerarquía País → Región → Ciudad."
+        actions={
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Crear destino
+          </Button>
+        }
+      />
 
       {deleteError && (
         <Alert variant="destructive" className="mb-4">
@@ -152,7 +80,7 @@ export function DestinationsPage() {
           <TableBody>
             {isLoading && <TableLoadingRow colSpan={4} />}
             {!isLoading && destinations.length === 0 && (
-              <TableEmptyRow colSpan={4} icon={MapPinned} title="No hay destinos todavía" description="Creá el primero con el formulario de arriba." />
+              <TableEmptyRow colSpan={4} icon={MapPinned} title="No hay destinos todavía" description="Usá 'Crear destino' para dar de alta el primero." />
             )}
             {destinations.map((destination) => (
               <TableRow key={destination.id}>
@@ -165,7 +93,7 @@ export function DestinationsPage() {
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={() => setRenaming(destination)}>
                       <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                      Renombrar
+                      Editar
                     </Button>
                     <Button variant="destructive" size="sm" onClick={() => void onDelete(destination.id!)}>
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -179,8 +107,116 @@ export function DestinationsPage() {
         </Table>
       </Card>
 
+      <CreateDialog open={creating} onClose={() => setCreating(false)} destinations={destinations} />
       <RenameDialog destination={renaming} onClose={() => setRenaming(null)} />
     </div>
+  )
+}
+
+function CreateDialog({ open, onClose, destinations }: { open: boolean; onClose: () => void; destinations: DestinationResponse[] }) {
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      {/* El unmount/mount natural del "open &&" ya resetea el form cada vez que se vuelve a abrir. */}
+      {open && <CreateDialogContent onClose={onClose} destinations={destinations} />}
+    </Dialog>
+  )
+}
+
+function CreateDialogContent({
+  onClose,
+  destinations,
+}: {
+  onClose: () => void
+  destinations: DestinationResponse[]
+}) {
+  const createMutation = useCreateDestination()
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const form = useForm<CreateFormValues>({
+    resolver: zodResolver(createSchema),
+    defaultValues: { name: '', type: 'COUNTRY', parentId: undefined },
+  })
+  const selectedType = form.watch('type')
+  const requiredParentType = parentTypeFor[selectedType]
+  const parentOptions = destinations.filter((d) => d.type === requiredParentType)
+
+  const onSubmit = async (values: CreateFormValues) => {
+    setSubmitError(null)
+    try {
+      await createMutation.mutateAsync({
+        name: values.name,
+        type: values.type,
+        parentId: requiredParentType ? values.parentId : undefined,
+      })
+      onClose()
+    } catch (error) {
+      setSubmitError(getErrorMessage(error))
+    }
+  }
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Crear destino</DialogTitle>
+      </DialogHeader>
+      <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
+        <div className="flex flex-col gap-1.5">
+          <Label>Nombre</Label>
+          <Input {...form.register('name')} autoFocus />
+          {form.formState.errors.name && <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Tipo</Label>
+          <Select
+            value={selectedType}
+            onValueChange={(value) => {
+              form.setValue('type', value as CreateFormValues['type'])
+              form.setValue('parentId', undefined)
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="COUNTRY">País</SelectItem>
+              <SelectItem value="REGION">Región</SelectItem>
+              <SelectItem value="CITY">Ciudad</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {requiredParentType && (
+          <div className="flex flex-col gap-1.5">
+            <Label>Padre ({requiredParentType === 'COUNTRY' ? 'País' : 'Región'})</Label>
+            <Select value={form.watch('parentId')} onValueChange={(value) => form.setValue('parentId', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccioná el padre" />
+              </SelectTrigger>
+              <SelectContent>
+                {parentOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id!}>
+                    {option.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {submitError && <Alert variant="destructive">{submitError}</Alert>}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={form.formState.isSubmitting || (!!requiredParentType && !form.watch('parentId'))}>
+            Crear
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
   )
 }
 
@@ -216,11 +252,12 @@ function RenameDialogContent({ destination, onClose }: { destination: Destinatio
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Renombrar destino</DialogTitle>
+        <DialogTitle>Editar destino</DialogTitle>
       </DialogHeader>
       <div className="flex flex-col gap-1.5">
         <Label>Nombre</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} />
+        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        <p className="text-xs text-muted-foreground">Solo se puede editar el nombre — tipo y padre son estructurales.</p>
       </div>
       {error && (
         <Alert variant="destructive" className="mt-2">

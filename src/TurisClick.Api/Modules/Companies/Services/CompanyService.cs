@@ -72,12 +72,12 @@ public class CompanyService(
         };
     }
 
-    public async Task<PagedResult<CompanyResponse>> ListAsync(CompanyStatus? status, int page, int pageSize, CancellationToken ct)
+    public async Task<PagedResult<CompanyResponse>> ListAsync(CompanyStatus? status, string? search, int page, int pageSize, CancellationToken ct)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
-        var (items, totalCount) = await companyRepository.ListAsync(status, page, pageSize, ct);
+        var (items, totalCount) = await companyRepository.ListAsync(status, search, page, pageSize, ct);
 
         return new PagedResult<CompanyResponse>
         {

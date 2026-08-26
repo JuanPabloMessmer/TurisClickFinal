@@ -14,12 +14,19 @@ namespace TurisClick.Api.Modules.Companies.Controllers;
 [Authorize(Policy = "RequireAdmin")]
 public class AdminCompaniesController(ICompanyService companyService, ICurrentUserContext currentUser) : ControllerBase
 {
-    /// <summary>UC-A-01. status es opcional; sin filtro devuelve todas las empresas.</summary>
+    /// <summary>
+    /// UC-A-01. status es opcional; sin filtro devuelve todas las empresas. search (opcional, agregado
+    /// para el Backoffice) busca por coincidencia parcial en Name/LegalDocument/ContactEmail.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<PagedResult<CompanyResponse>>> List(
-        [FromQuery] CompanyStatus? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        [FromQuery] CompanyStatus? status,
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
     {
-        var result = await companyService.ListAsync(status, page, pageSize, ct);
+        var result = await companyService.ListAsync(status, search, page, pageSize, ct);
         return Ok(result);
     }
 

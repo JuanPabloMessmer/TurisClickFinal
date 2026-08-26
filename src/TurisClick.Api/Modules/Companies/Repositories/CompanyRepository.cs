@@ -13,12 +13,23 @@ public class CompanyRepository(TurisClickDbContext db) : ICompanyRepository
         db.Companies.AnyAsync(c => c.LegalDocument == legalDocument, ct);
 
     public async Task<(List<Company> Items, int TotalCount)> ListAsync(
-        CompanyStatus? status, int page, int pageSize, CancellationToken ct)
+        CompanyStatus? status, string? search, int page, int pageSize, CancellationToken ct)
     {
         var query = db.Companies.AsQueryable();
 
         if (status.HasValue)
             query = query.Where(c => c.Status == status);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            // ILIKE (Postgres, case-insensitive) — patrón simple "%term%", suficiente para el volumen
+            // de empresas que maneja el panel de un ADMIN; no hace falta full-text search todavía.
+            var pattern = $"%{search.Trim()}%";
+            query = query.Where(c =>
+                EF.Functions.ILike(c.Name, pattern) ||
+                EF.Functions.ILike(c.LegalDocument, pattern) ||
+                EF.Functions.ILike(c.ContactEmail, pattern));
+        }
 
         var totalCount = await query.CountAsync(ct);
 

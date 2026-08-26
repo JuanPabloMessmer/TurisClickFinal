@@ -1,39 +1,68 @@
-import type { CompanyResponse } from '@turisclick/api-client'
-import { Building2, Check, X } from 'lucide-react'
-import { useState } from 'react'
+import { Building2, Check, Search, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/PageHeader'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableEmptyRow, TableHead, TableHeader, TableLoadingRow, TableRow } from '@/components/ui/table'
-import { Textarea } from '@/components/ui/textarea'
 import { getErrorMessage } from '@/lib/errors'
-import { useApproveCompany, useCompanies, useRejectCompany } from './api'
+import { RejectDialog } from './RejectDialog'
+import { useApproveCompany, useCompanies } from './api'
 
-const statusVariant: Record<string, 'success' | 'warning' | 'destructive' | 'neutral'> = {
+export const statusVariant: Record<string, 'success' | 'warning' | 'destructive' | 'neutral'> = {
   APPROVED: 'success',
   PENDING_APPROVAL: 'warning',
   REJECTED: 'destructive',
   SUSPENDED: 'destructive',
 }
 
-const statusLabel: Record<string, string> = {
+export const statusLabel: Record<string, string> = {
   APPROVED: 'Aprobada',
   PENDING_APPROVAL: 'Pendiente',
   REJECTED: 'Rechazada',
   SUSPENDED: 'Suspendida',
 }
 
+const PAGE_SIZE = 20
+
 export function CompaniesApprovalPage() {
-  const [statusFilter, setStatusFilter] = useState<string>('PENDING_APPROVAL')
-  const { data, isLoading } = useCompanies(statusFilter === 'ALL' ? undefined : statusFilter)
+  // Filtros en la URL: refrescar la página (o volver con el botón atrás) conserva estado/búsqueda/página.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const statusFilter = searchParams.get('status') ?? 'ALL'
+  const page = Number(searchParams.get('page') ?? '1')
+  const urlSearch = searchParams.get('search') ?? ''
+
+  const [searchInput, setSearchInput] = useState(urlSearch)
+
+  // Debounce: escribir en la URL (y por lo tanto disparar la query) 350ms después de la última tecla.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      if (searchInput === urlSearch) return
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (searchInput) next.set('search', searchInput)
+        else next.delete('search')
+        next.set('page', '1')
+        return next
+      })
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, 350)
+    return () => clearTimeout(handle)
+  }, [searchInput])
+
+  const { data, isLoading, isPlaceholderData } = useCompanies({
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+    search: urlSearch || undefined,
+    page,
+    pageSize: PAGE_SIZE,
+  })
   const approveMutation = useApproveCompany()
   const [actionError, setActionError] = useState<string | null>(null)
-  const [rejecting, setRejecting] = useState<CompanyResponse | null>(null)
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
 
   const onApprove = async (id: string) => {
     setActionError(null)
@@ -44,24 +73,49 @@ export function CompaniesApprovalPage() {
     }
   }
 
+  const setStatusFilter = (status: string) =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('status', status)
+      next.set('page', '1')
+      return next
+    })
+
+  const setPage = (nextPage: number) =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('page', String(nextPage))
+      return next
+    })
+
   const companies = data?.items ?? []
+  const totalPages = data?.totalPages ?? 1
+  const totalCount = data?.totalCount ?? 0
 
   return (
     <div>
       <PageHeader title="Empresas" description="UC-A-01/02/03 — revisar, aprobar y rechazar solicitudes de Provider." />
 
-      <div className="mb-4 flex items-center gap-2">
-        <Label className="shrink-0">Estado</Label>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Buscar por nombre, NIT o email…"
+            className="pl-9"
+          />
+        </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-56">
+          <SelectTrigger className="sm:w-56">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="PENDING_APPROVAL">Pendientes de aprobación</SelectItem>
+            <SelectItem value="ALL">Todas</SelectItem>
+            <SelectItem value="PENDING_APPROVAL">Pendientes</SelectItem>
             <SelectItem value="APPROVED">Aprobadas</SelectItem>
             <SelectItem value="REJECTED">Rechazadas</SelectItem>
             <SelectItem value="SUSPENDED">Suspendidas</SelectItem>
-            <SelectItem value="ALL">Todas</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -86,7 +140,12 @@ export function CompaniesApprovalPage() {
           <TableBody>
             {isLoading && <TableLoadingRow colSpan={5} />}
             {!isLoading && companies.length === 0 && (
-              <TableEmptyRow colSpan={5} icon={Building2} title="No hay empresas en este estado" />
+              <TableEmptyRow
+                colSpan={5}
+                icon={Building2}
+                title="No hay empresas que coincidan"
+                description={urlSearch || statusFilter !== 'ALL' ? 'Probá ajustar la búsqueda o el filtro de estado.' : undefined}
+              />
             )}
             {companies.map((company) => (
               <TableRow key={company.id}>
@@ -99,21 +158,23 @@ export function CompaniesApprovalPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  {company.status === 'PENDING_APPROVAL' && (
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" onClick={() => void onApprove(company.id!)}>
-                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                        Aprobar
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => setRejecting(company)}>
-                        <X className="h-3.5 w-3.5" aria-hidden="true" />
-                        Rechazar
-                      </Button>
-                    </div>
-                  )}
-                  {company.status === 'REJECTED' && company.rejectionReason && (
-                    <span className="text-xs text-muted-foreground">Motivo: {company.rejectionReason}</span>
-                  )}
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {company.status === 'PENDING_APPROVAL' && (
+                      <>
+                        <Button size="sm" onClick={() => void onApprove(company.id!)}>
+                          <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                          Aprobar
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => setRejectingId(company.id!)}>
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                          Rechazar
+                        </Button>
+                      </>
+                    )}
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/admin/companies/${company.id}`}>Ver detalle</Link>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -121,65 +182,23 @@ export function CompaniesApprovalPage() {
         </Table>
       </Card>
 
-      <RejectDialog company={rejecting} onClose={() => setRejecting(null)} />
-    </div>
-  )
-}
-
-function RejectDialog({ company, onClose }: { company: CompanyResponse | null; onClose: () => void }) {
-  return (
-    <Dialog
-      open={!!company}
-      onOpenChange={(open) => {
-        if (!open) onClose()
-      }}
-    >
-      {company && <RejectDialogContent key={company.id} company={company} onClose={onClose} />}
-    </Dialog>
-  )
-}
-
-function RejectDialogContent({ company, onClose }: { company: CompanyResponse; onClose: () => void }) {
-  const rejectMutation = useRejectCompany()
-  const [reason, setReason] = useState('')
-  const [error, setError] = useState<string | null>(null)
-
-  const onConfirm = async () => {
-    setError(null)
-    if (reason.trim().length < 5) {
-      setError('El motivo debe tener al menos 5 caracteres.')
-      return
-    }
-    try {
-      await rejectMutation.mutateAsync({ id: company.id!, body: { reason } })
-      onClose()
-    } catch (err) {
-      setError(getErrorMessage(err))
-    }
-  }
-
-  return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Rechazar solicitud de {company.name}</DialogTitle>
-      </DialogHeader>
-      <div className="flex flex-col gap-1.5">
-        <Label>Motivo</Label>
-        <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
-      </div>
-      {error && (
-        <Alert variant="destructive" className="mt-2">
-          {error}
-        </Alert>
+      {totalCount > 0 && (
+        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Página {page} de {totalPages} · {totalCount} {totalCount === 1 ? 'empresa' : 'empresas'}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              Anterior
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages || isPlaceholderData} onClick={() => setPage(page + 1)}>
+              Siguiente
+            </Button>
+          </div>
+        </div>
       )}
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button variant="destructive" onClick={() => void onConfirm()} disabled={rejectMutation.isPending}>
-          Rechazar
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+
+      <RejectDialog companyId={rejectingId} onClose={() => setRejectingId(null)} />
+    </div>
   )
 }

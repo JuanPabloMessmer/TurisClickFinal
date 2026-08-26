@@ -258,6 +258,20 @@ Serilog configurado en `Infrastructure/Logging/SerilogConfigurator.cs`, iniciali
 
 ---
 
+## 12.1. Seed de datos de DEVELOPMENT
+
+`Infrastructure/Database/Seed/DevelopmentSeeder.cs` reemplaza los inserts manuales ad hoc: admin de prueba, categorías base y la jerarquía real de destinos de Bolivia (País → Departamento → Ciudad, desde `bolivia-cities.json`).
+
+- **Se ejecuta solo si `IsDevelopment() && Seed:Enabled=true`** (doble gate a propósito, AND no OR) — `appsettings.Development.json` ya trae `Seed:Enabled: true`; nunca corre en Production porque ese flag no existe en `appsettings.json`.
+- **Idempotente**: cada paso comprueba existencia antes de insertar (por email, por nombre de categoría, por nombre+tipo+padre de destino) — correr el seed en cada arranque de `dotnet run` en dev no duplica nada.
+- **La contraseña del admin nunca está en código**: se lee de `Seed:AdminPassword` vía `dotnet user-secrets` — si falta, el seed omite *solo* ese paso (loguea un warning) y sigue con categorías/destinos. Configurarla una vez por máquina:
+  ```bash
+  dotnet user-secrets set "Seed:AdminPassword" "AdminPassword123!"
+  ```
+- El hash se genera con el mismo `IPasswordHasherService` que usa `AuthService` — no hay una segunda implementación de hashing para seeds.
+
+---
+
 ## 13. Transacciones para reservas y control de cupos
 
 Este es el punto más sensible a condiciones de carrera (UC-SYS-06). Enfoque: **transacción de EF Core + UPDATE condicional atómico**, sin necesidad de locks explícitos (`SELECT ... FOR UPDATE`):

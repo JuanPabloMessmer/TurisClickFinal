@@ -1,13 +1,10 @@
-import { zodResolver } from '@hookform/resolvers/zod'
 import type { CategoryResponse } from '@turisclick/api-client'
-import { Pencil, Tags, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Tags, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
 import { PageHeader } from '@/components/PageHeader'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,31 +12,13 @@ import { Table, TableBody, TableCell, TableEmptyRow, TableHead, TableHeader, Tab
 import { getErrorMessage } from '@/lib/errors'
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from './api'
 
-const schema = z.object({
-  name: z.string().min(2).max(100),
-  description: z.string().max(500).optional().or(z.literal('')),
-})
-type FormValues = z.infer<typeof schema>
+type DialogState = { mode: 'create' } | { mode: 'edit'; category: CategoryResponse } | null
 
 export function CategoriesPage() {
   const { data: categories = [], isLoading } = useCategories()
-  const createMutation = useCreateCategory()
   const deleteMutation = useDeleteCategory()
-  const [createError, setCreateError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [editing, setEditing] = useState<CategoryResponse | null>(null)
-
-  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { name: '', description: '' } })
-
-  const onCreate = async (values: FormValues) => {
-    setCreateError(null)
-    try {
-      await createMutation.mutateAsync({ name: values.name, description: values.description || undefined })
-      form.reset()
-    } catch (error) {
-      setCreateError(getErrorMessage(error))
-    }
-  }
+  const [dialog, setDialog] = useState<DialogState>(null)
 
   const onDelete = async (id: string) => {
     setDeleteError(null)
@@ -52,33 +31,16 @@ export function CategoriesPage() {
 
   return (
     <div>
-      <PageHeader title="Categorías" description="UC-A-05." />
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">Nueva categoría</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="flex flex-wrap items-end gap-4" onSubmit={form.handleSubmit(onCreate)} noValidate>
-            <div className="flex flex-col gap-1.5">
-              <Label>Nombre</Label>
-              <Input {...form.register('name')} className="w-56" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Descripción (opcional)</Label>
-              <Input {...form.register('description')} className="w-72" />
-            </div>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              Crear
-            </Button>
-          </form>
-          {createError && (
-            <Alert variant="destructive" className="mt-4">
-              {createError}
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+      <PageHeader
+        title="Categorías"
+        description="UC-A-05."
+        actions={
+          <Button onClick={() => setDialog({ mode: 'create' })}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Crear categoría
+          </Button>
+        }
+      />
 
       {deleteError && (
         <Alert variant="destructive" className="mb-4">
@@ -98,7 +60,7 @@ export function CategoriesPage() {
           <TableBody>
             {isLoading && <TableLoadingRow colSpan={3} />}
             {!isLoading && categories.length === 0 && (
-              <TableEmptyRow colSpan={3} icon={Tags} title="No hay categorías todavía" description="Creá la primera con el formulario de arriba." />
+              <TableEmptyRow colSpan={3} icon={Tags} title="No hay categorías todavía" description="Usá 'Crear categoría' para dar de alta la primera." />
             )}
             {categories.map((category) => (
               <TableRow key={category.id}>
@@ -106,7 +68,7 @@ export function CategoriesPage() {
                 <TableCell className="text-muted-foreground">{category.description ?? '—'}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setEditing(category)}>
+                    <Button variant="outline" size="sm" onClick={() => setDialog({ mode: 'edit', category })}>
                       <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       Editar
                     </Button>
@@ -122,34 +84,43 @@ export function CategoriesPage() {
         </Table>
       </Card>
 
-      <EditDialog category={editing} onClose={() => setEditing(null)} />
+      <CategoryDialog state={dialog} onClose={() => setDialog(null)} />
     </div>
   )
 }
 
-function EditDialog({ category, onClose }: { category: CategoryResponse | null; onClose: () => void }) {
+function CategoryDialog({ state, onClose }: { state: DialogState; onClose: () => void }) {
   return (
     <Dialog
-      open={!!category}
+      open={!!state}
       onOpenChange={(open) => {
         if (!open) onClose()
       }}
     >
-      {category && <EditDialogContent key={category.id} category={category} onClose={onClose} />}
+      {state?.mode === 'create' && <CategoryDialogContent key="create" onClose={onClose} />}
+      {state?.mode === 'edit' && <CategoryDialogContent key={state.category.id} category={state.category} onClose={onClose} />}
     </Dialog>
   )
 }
 
-function EditDialogContent({ category, onClose }: { category: CategoryResponse; onClose: () => void }) {
+function CategoryDialogContent({ category, onClose }: { category?: CategoryResponse; onClose: () => void }) {
+  const isEdit = !!category
+  const createMutation = useCreateCategory()
   const updateMutation = useUpdateCategory()
-  const [name, setName] = useState(category.name ?? '')
-  const [description, setDescription] = useState(category.description ?? '')
+  const [name, setName] = useState(category?.name ?? '')
+  const [description, setDescription] = useState(category?.description ?? '')
   const [error, setError] = useState<string | null>(null)
+
+  const isPending = createMutation.isPending || updateMutation.isPending
 
   const onSave = async () => {
     setError(null)
     try {
-      await updateMutation.mutateAsync({ id: category.id!, body: { name, description: description || undefined } })
+      if (isEdit) {
+        await updateMutation.mutateAsync({ id: category.id!, body: { name, description: description || undefined } })
+      } else {
+        await createMutation.mutateAsync({ name, description: description || undefined })
+      }
       onClose()
     } catch (err) {
       setError(getErrorMessage(err))
@@ -159,15 +130,15 @@ function EditDialogContent({ category, onClose }: { category: CategoryResponse; 
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Editar categoría</DialogTitle>
+        <DialogTitle>{isEdit ? 'Editar categoría' : 'Crear categoría'}</DialogTitle>
       </DialogHeader>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label>Nombre</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label>Descripción</Label>
+          <Label>Descripción (opcional)</Label>
           <Input value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
       </div>
@@ -180,7 +151,7 @@ function EditDialogContent({ category, onClose }: { category: CategoryResponse; 
         <Button variant="outline" onClick={onClose}>
           Cancelar
         </Button>
-        <Button onClick={() => void onSave()} disabled={updateMutation.isPending}>
+        <Button onClick={() => void onSave()} disabled={isPending || name.trim().length < 2}>
           Guardar
         </Button>
       </DialogFooter>

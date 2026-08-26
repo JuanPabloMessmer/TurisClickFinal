@@ -22,4 +22,11 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Fuente del seed de desarrollo (DevelopmentSeeder) — se copia al output para leerla en runtime. -->
+    <Content Update="Infrastructure\Database\Seed\bolivia-cities.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

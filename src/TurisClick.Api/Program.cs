@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
 using TurisClick.Api.Infrastructure.Database;
+using TurisClick.Api.Infrastructure.Database.Seed;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Auth;
 using TurisClick.Api.Modules.Categories;
@@ -152,6 +153,13 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+
+    // ---- Seed de datos de desarrollo ----
+    // Doble gate a propósito (AND, no OR): solo corre si el entorno ES Development Y el flag está
+    // explícito en config — nunca en Production, ni por accidente si alguien copia el flag a otro
+    // appsettings. Ver Infrastructure/Database/Seed/DevelopmentSeeder.cs.
+    if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("Seed:Enabled"))
+        await DevelopmentSeeder.SeedAsync(app.Services);
 
     app.Run();
 }

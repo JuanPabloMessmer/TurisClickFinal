@@ -10,6 +10,7 @@ import { queryClient } from '@/lib/queryClient'
 import { ExperienceAvailabilityPage } from '@/modules/availability/ExperienceAvailabilityPage'
 import { CategoriesPage } from '@/modules/categories/CategoriesPage'
 import { CompaniesApprovalPage } from '@/modules/companies/CompaniesApprovalPage'
+import { CompanyDetailPage } from '@/modules/companies/CompanyDetailPage'
 import { DestinationsPage } from '@/modules/destinations/DestinationsPage'
 import { ExperienceFormPage } from '@/modules/experiences/ExperienceFormPage'
 import { ExperiencesPage } from '@/modules/experiences/ExperiencesPage'
@@ -32,6 +33,7 @@ export default function App() {
                 <Route path="/admin/destinations" element={<DestinationsPage />} />
                 <Route path="/admin/categories" element={<CategoriesPage />} />
                 <Route path="/admin/companies" element={<CompaniesApprovalPage />} />
+                <Route path="/admin/companies/:id" element={<CompanyDetailPage />} />
               </Route>
             </Route>
 

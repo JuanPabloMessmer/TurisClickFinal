@@ -15,6 +15,7 @@ export interface paths {
             parameters: {
                 query?: {
                     status?: components["schemas"]["CompanyStatus"];
+                    search?: string;
                     page?: number;
                     pageSize?: number;
                 };
