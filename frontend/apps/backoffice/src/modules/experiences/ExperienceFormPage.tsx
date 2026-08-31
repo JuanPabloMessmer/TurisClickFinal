@@ -121,7 +121,13 @@ export function ExperienceFormPage() {
               <Label>Destino (ciudad)</Label>
               <Select
                 value={form.watch('destinationId')}
-                onValueChange={(value) => form.setValue('destinationId', value, { shouldValidate: true })}
+                onValueChange={(value) => {
+                  // Radix Select puede disparar onValueChange("") una vez justo después de montar,
+                  // antes de que sus SelectItem terminen de registrarse — aplicar ese valor vacío
+                  // pisaba el destinationId ya cargado en edición (bug encontrado en Oleada 4).
+                  // No hay ninguna opción "vacía" real en esta lista, así que ignorar "" es seguro.
+                  if (value) form.setValue('destinationId', value, { shouldValidate: true })
+                }}
                 disabled={loadingCities}
               >
                 <SelectTrigger>
@@ -150,7 +156,13 @@ export function ExperienceFormPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label>Moneda</Label>
-                <Select value={form.watch('currency')} onValueChange={(value) => form.setValue('currency', value, { shouldValidate: true })}>
+                <Select
+                  value={form.watch('currency')}
+                  onValueChange={(value) => {
+                    // Mismo guard que destinationId — ver comentario arriba.
+                    if (value) form.setValue('currency', value, { shouldValidate: true })
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

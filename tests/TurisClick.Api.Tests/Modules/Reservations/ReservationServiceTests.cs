@@ -6,6 +6,8 @@ using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Experiences.Repositories;
+using TurisClick.Api.Modules.Packages.Entities;
+using TurisClick.Api.Modules.Packages.Repositories;
 using TurisClick.Api.Modules.Reservations.Dtos;
 using TurisClick.Api.Modules.Reservations.Entities;
 using TurisClick.Api.Modules.Reservations.Payments;
@@ -28,6 +30,7 @@ public class ReservationServiceTests
     private readonly Mock<IReservationRepository> _reservationRepository = new();
     private readonly Mock<IReservationItemRepository> _reservationItemRepository = new();
     private readonly Mock<IExperienceAvailabilityRepository> _availabilityRepository = new();
+    private readonly Mock<IPackageAvailabilityRepository> _packageAvailabilityRepository = new();
     private readonly Mock<IPaymentGateway> _paymentGateway = new();
     private readonly Mock<ICurrentUserContext> _currentUser = new();
     private readonly ReservationService _sut;
@@ -36,6 +39,8 @@ public class ReservationServiceTests
     private readonly Guid _myCompanyId = Guid.NewGuid();
     private readonly Guid _experienceId = Guid.NewGuid();
     private readonly Guid _availabilityId = Guid.NewGuid();
+    private readonly Guid _packageId = Guid.NewGuid();
+    private readonly Guid _packageAvailabilityId = Guid.NewGuid();
 
     public ReservationServiceTests()
     {
@@ -57,6 +62,7 @@ public class ReservationServiceTests
             _reservationRepository.Object,
             _reservationItemRepository.Object,
             _availabilityRepository.Object,
+            _packageAvailabilityRepository.Object,
             _paymentGateway.Object,
             _currentUser.Object,
             ownershipGuard.Object,
@@ -128,6 +134,74 @@ public class ReservationServiceTests
             .ReturnsAsync(availability);
 
         var request = new CreateReservationRequest { ExperienceAvailabilityId = _availabilityId, Travelers = 2 };
+
+        await Assert.ThrowsAsync<GoneAppException>(() => _sut.CreateAsync(request, CancellationToken.None));
+    }
+
+    private PackageAvailability BookablePackageAvailability() => new()
+    {
+        Id = _packageAvailabilityId,
+        PackageId = _packageId,
+        DepartureDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(5),
+        TotalSlots = 10,
+        ReservedSlots = 0,
+        Status = AvailabilitySlotStatus.OPEN,
+        Package = new Package
+        {
+            Id = _packageId,
+            CompanyId = Guid.NewGuid(),
+            Status = PublicationStatus.PUBLISHED,
+            Price = 500,
+            Currency = "USD"
+        }
+    };
+
+    [Fact]
+    public async Task CreateAsync_PackageAvailabilityNotFound_ThrowsNotFound()
+    {
+        _packageAvailabilityRepository.Setup(r => r.GetByIdWithPackageAsync(_packageAvailabilityId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PackageAvailability?)null);
+
+        var request = new CreateReservationRequest { PackageAvailabilityId = _packageAvailabilityId, Travelers = 2 };
+
+        await Assert.ThrowsAsync<NotFoundAppException>(() => _sut.CreateAsync(request, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateAsync_PackageNotPublished_ThrowsNotFound()
+    {
+        var availability = BookablePackageAvailability();
+        availability.Package!.Status = PublicationStatus.DRAFT;
+        _packageAvailabilityRepository.Setup(r => r.GetByIdWithPackageAsync(_packageAvailabilityId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(availability);
+
+        var request = new CreateReservationRequest { PackageAvailabilityId = _packageAvailabilityId, Travelers = 2 };
+
+        await Assert.ThrowsAsync<NotFoundAppException>(() => _sut.CreateAsync(request, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateAsync_PackageAvailabilityClosed_ThrowsGone()
+    {
+        var availability = BookablePackageAvailability();
+        availability.Status = AvailabilitySlotStatus.CLOSED;
+        _packageAvailabilityRepository.Setup(r => r.GetByIdWithPackageAsync(_packageAvailabilityId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(availability);
+
+        var request = new CreateReservationRequest { PackageAvailabilityId = _packageAvailabilityId, Travelers = 2 };
+
+        await Assert.ThrowsAsync<GoneAppException>(() => _sut.CreateAsync(request, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateAsync_PackageAvailabilityDateInPast_ThrowsGone()
+    {
+        var availability = BookablePackageAvailability();
+        availability.DepartureDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+        _packageAvailabilityRepository.Setup(r => r.GetByIdWithPackageAsync(_packageAvailabilityId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(availability);
+
+        var request = new CreateReservationRequest { PackageAvailabilityId = _packageAvailabilityId, Travelers = 2 };
 
         await Assert.ThrowsAsync<GoneAppException>(() => _sut.CreateAsync(request, CancellationToken.None));
     }

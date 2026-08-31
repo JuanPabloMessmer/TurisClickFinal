@@ -485,6 +485,239 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.ToTable("experience_images", (string)null);
                 });
 
+            modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.Package", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<string>("ConditionsText")
+                        .HasColumnType("text")
+                        .HasColumnName("conditions_text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("DestinationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("destination_id");
+
+                    b.Property<int>("DurationDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_days");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("price");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("DRAFT")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId")
+                        .HasDatabaseName("ix_packages_company_id");
+
+                    b.HasIndex("DestinationId")
+                        .HasDatabaseName("ix_packages_destination_id");
+
+                    b.HasIndex("Status", "DestinationId")
+                        .HasDatabaseName("ix_packages_status_destination");
+
+                    b.ToTable("packages", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_packages_currency", "currency ~ '^[A-Z]{3}$'");
+
+                            t.HasCheckConstraint("ck_packages_duration", "duration_days > 0");
+
+                            t.HasCheckConstraint("ck_packages_price", "price >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.PackageAvailability", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateOnly>("DepartureDate")
+                        .HasColumnType("date")
+                        .HasColumnName("departure_date");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("package_id");
+
+                    b.Property<int>("ReservedSlots")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("reserved_slots");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("OPEN")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TotalSlots")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_slots");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "PackageId", "DepartureDate" }, "ix_package_availabilities_package_date");
+
+                    b.HasIndex(new[] { "PackageId", "DepartureDate" }, "uq_package_availabilities_departure")
+                        .IsUnique();
+
+                    b.ToTable("package_availabilities", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_package_availabilities_slots", "total_slots > 0 AND reserved_slots >= 0 AND reserved_slots <= total_slots");
+                        });
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.PackageImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<bool>("IsCover")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_cover");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("package_id");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("url");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "PackageId" }, "ix_package_images_package_id");
+
+                    b.HasIndex(new[] { "PackageId" }, "ux_package_images_one_cover")
+                        .IsUnique()
+                        .HasFilter("is_cover = true");
+
+                    b.ToTable("package_images", (string)null);
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.PackageItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<int>("DayNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("day_number");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<Guid?>("ExperienceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("experience_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("package_id");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExperienceId")
+                        .HasDatabaseName("ix_package_items_experience_id");
+
+                    b.HasIndex("PackageId")
+                        .HasDatabaseName("ix_package_items_package_id");
+
+                    b.ToTable("package_items", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_package_items_day", "day_number >= 1");
+
+                            t.HasCheckConstraint("ck_package_items_descriptive_title", "kind <> 'DESCRIPTIVE' OR title IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_package_items_kind_shape", "(kind = 'EXPERIENCE_REFERENCE' AND experience_id IS NOT NULL) OR (kind = 'DESCRIPTIVE' AND experience_id IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("TurisClick.Api.Modules.Reservations.Entities.Reservation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -625,6 +858,8 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.HasIndex("PackageAvailabilityId")
                         .HasDatabaseName("ix_reservation_items_package_availability");
 
+                    b.HasIndex("PackageId");
+
                     b.HasIndex("ReservationId")
                         .HasDatabaseName("ix_reservation_items_reservation_id");
 
@@ -656,6 +891,22 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                         .HasDatabaseName("ix_experience_categories_category_id");
 
                     b.ToTable("experience_categories", (string)null);
+                });
+
+            modelBuilder.Entity("package_categories", b =>
+                {
+                    b.Property<Guid>("package_id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("category_id")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("package_id", "category_id");
+
+                    b.HasIndex("category_id")
+                        .HasDatabaseName("ix_package_categories_category_id");
+
+                    b.ToTable("package_categories", (string)null);
                 });
 
             modelBuilder.Entity("TurisClick.Api.Modules.Auth.Entities.RefreshToken", b =>
@@ -740,6 +991,65 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.Navigation("Experience");
                 });
 
+            modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.Package", b =>
+                {
+                    b.HasOne("TurisClick.Api.Modules.Companies.Entities.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TurisClick.Api.Modules.Destinations.Entities.Destination", "Destination")
+                        .WithMany()
+                        .HasForeignKey("DestinationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Destination");
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.PackageAvailability", b =>
+                {
+                    b.HasOne("TurisClick.Api.Modules.Packages.Entities.Package", "Package")
+                        .WithMany("Availabilities")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.PackageImage", b =>
+                {
+                    b.HasOne("TurisClick.Api.Modules.Packages.Entities.Package", "Package")
+                        .WithMany("Images")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.PackageItem", b =>
+                {
+                    b.HasOne("TurisClick.Api.Modules.Experiences.Entities.Experience", "Experience")
+                        .WithMany()
+                        .HasForeignKey("ExperienceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TurisClick.Api.Modules.Packages.Entities.Package", "Package")
+                        .WithMany("Items")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Experience");
+
+                    b.Navigation("Package");
+                });
+
             modelBuilder.Entity("TurisClick.Api.Modules.Reservations.Entities.Reservation", b =>
                 {
                     b.HasOne("TurisClick.Api.Modules.Auth.Entities.User", "Tourist")
@@ -769,6 +1079,16 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                         .HasForeignKey("ExperienceId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("TurisClick.Api.Modules.Packages.Entities.PackageAvailability", "PackageAvailability")
+                        .WithMany()
+                        .HasForeignKey("PackageAvailabilityId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TurisClick.Api.Modules.Packages.Entities.Package", "Package")
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("TurisClick.Api.Modules.Reservations.Entities.Reservation", "Reservation")
                         .WithMany("Items")
                         .HasForeignKey("ReservationId")
@@ -780,6 +1100,10 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.Navigation("Experience");
 
                     b.Navigation("ExperienceAvailability");
+
+                    b.Navigation("Package");
+
+                    b.Navigation("PackageAvailability");
 
                     b.Navigation("Reservation");
                 });
@@ -795,6 +1119,21 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.HasOne("TurisClick.Api.Modules.Experiences.Entities.Experience", null)
                         .WithMany()
                         .HasForeignKey("experience_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("package_categories", b =>
+                {
+                    b.HasOne("TurisClick.Api.Modules.Categories.Entities.Category", null)
+                        .WithMany()
+                        .HasForeignKey("category_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TurisClick.Api.Modules.Packages.Entities.Package", null)
+                        .WithMany()
+                        .HasForeignKey("package_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -819,6 +1158,15 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.Navigation("Availabilities");
 
                     b.Navigation("Images");
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.Package", b =>
+                {
+                    b.Navigation("Availabilities");
+
+                    b.Navigation("Images");
+
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("TurisClick.Api.Modules.Reservations.Entities.Reservation", b =>

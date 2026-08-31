@@ -1,13 +1,10 @@
 using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
+using TurisClick.Api.Modules.Packages.Entities;
 
 namespace TurisClick.Api.Modules.Reservations.Entities;
 
-/// <summary>
-/// Una línea reservable de un solo proveedor (decisión 2). En Oleada 2 siempre ProductType = EXPERIENCE;
-/// PackageId/PackageAvailabilityId ya existen en el modelo (sin FK física, la tabla packages no existe
-/// hasta Oleada 4) para no tener que romper este modelo cuando se agregue esa oleada.
-/// </summary>
+/// <summary>Una línea reservable de un solo proveedor (decisión 2). ProductType = EXPERIENCE o PACKAGE (Oleada 4).</summary>
 public class ReservationItem
 {
     public Guid Id { get; set; }
@@ -24,14 +21,14 @@ public class ReservationItem
     public Guid? ExperienceId { get; set; }
     public Experience? Experience { get; set; }
 
-    /// <summary>Sin FK física todavía — la tabla packages no existe hasta Oleada 4.</summary>
     public Guid? PackageId { get; set; }
+    public Package? Package { get; set; }
 
     public Guid? ExperienceAvailabilityId { get; set; }
     public ExperienceAvailability? ExperienceAvailability { get; set; }
 
-    /// <summary>Sin FK física todavía — la tabla package_availabilities no existe hasta Oleada 4.</summary>
     public Guid? PackageAvailabilityId { get; set; }
+    public PackageAvailability? PackageAvailability { get; set; }
 
     public int Travelers { get; set; }
 
@@ -42,7 +39,7 @@ public class ReservationItem
 
     public ReservationItemStatus Status { get; set; } = ReservationItemStatus.PENDING_PAYMENT;
 
-    /// <summary>Solo tiene sentido si Reservation.AiItineraryId no es nulo (orden del viaje) — Oleada 2 lo deja nulo.</summary>
+    /// <summary>Solo tiene sentido si Reservation.AiItineraryId no es nulo (orden del viaje) — todavía nulo hasta Oleada 5+.</summary>
     public int? DayNumber { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }

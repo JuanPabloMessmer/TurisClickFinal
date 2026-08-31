@@ -34,6 +34,13 @@ public static class DevelopmentSeeder
         await SeedCategoriesAsync(db, ct);
         await SeedBoliviaDestinationsAsync(db, logger, ct);
 
+        // Flush acá (no solo al final): CleanupDummyTestDestinationsAsync necesita poder consultar "La
+        // Paz" ya persistida — en una base recién creada, SeedBoliviaDestinationsAsync todavía no la
+        // guardó, solo la dejó trackeada en memoria.
+        await db.SaveChangesAsync(ct);
+
+        await CleanupDummyTestDestinationsAsync(db, logger, ct);
+
         await db.SaveChangesAsync(ct);
     }
 
@@ -149,6 +156,82 @@ public static class DevelopmentSeeder
             "Seed: Bolivia → {Regions} departamentos, {Cities} ciudades nuevas ({Total} en el JSON deduplicado).",
             departmentNames.Count, citiesAdded, deduped.Count);
     }
+
+    /// <summary>
+    /// Nombres que solo puede tener un destino generado por un test/Postman — ningún destino real de
+    /// Bolivia (sembrado desde bolivia-cities.json) empieza con ninguno de estos prefijos seguidos de
+    /// guion. Cubre los cuatro folders de la colección Postman que crean su propia jerarquía de
+    /// destinos (Destinations, Experiences, Packages, Reservations): todos usan la plantilla
+    /// "{Ciudad|Región|País}-{prefijoDeFolder}-{sufijo}" o "{Ciudad|Región|País}-{sufijo}".
+    /// </summary>
+    private static readonly string[] DummyDestinationNamePrefixes = ["Ciudad-", "País-", "Región-"];
+
+    /// <summary>
+    /// Limpieza idempotente de destinos "dummy" que quedan de corridas de Postman/Newman o pruebas
+    /// manuales anteriores. Antes de borrar un destino CITY dummy, reasigna cualquier Experience/Package
+    /// que lo referencie a un destino real (La Paz) — esos productos pueden tener reservas/pagos reales
+    /// encima (creados en pruebas manuales previas) y no deben perderse ni romperse por una FK faltante.
+    /// No hace nada si no encuentra destinos con ese patrón de nombre (corrida ya limpia).
+    /// </summary>
+    private static async Task CleanupDummyTestDestinationsAsync(TurisClickDbContext db, ILogger logger, CancellationToken ct)
+    {
+        var allDestinations = await db.Destinations.ToListAsync(ct);
+        var dummyDestinations = allDestinations
+            .Where(d => DummyDestinationNamePrefixes.Any(prefix => d.Name.StartsWith(prefix, StringComparison.Ordinal)))
+            .ToList();
+
+        if (dummyDestinations.Count == 0)
+            return;
+
+        var dummyCityIds = dummyDestinations
+            .Where(d => d.Type == DestinationType.CITY)
+            .Select(d => d.Id)
+            .ToHashSet();
+
+        var reassignedExperiences = 0;
+        var reassignedPackages = 0;
+
+        if (dummyCityIds.Count > 0)
+        {
+            var realCity = await db.Destinations.FirstOrDefaultAsync(d => d.Type == DestinationType.CITY && d.Name == "La Paz", ct);
+            if (realCity is null)
+            {
+                // No debería pasar en un flujo normal (el seed de Bolivia ya corrió y se flusheó antes
+                // de llamar acá) — pero si alguien borró "La Paz" a mano, es más seguro postergar la
+                // limpieza que reasignar productos reales a un destino inventado.
+                logger.LogWarning(
+                    "Seed: se encontraron {Count} destinos dummy pero no existe 'La Paz' como destino real todavía — se omite la limpieza en esta corrida.",
+                    dummyDestinations.Count);
+                return;
+            }
+
+            var experiencesToReassign = await db.Experiences.Where(e => dummyCityIds.Contains(e.DestinationId)).ToListAsync(ct);
+            foreach (var experience in experiencesToReassign)
+                experience.DestinationId = realCity.Id;
+            reassignedExperiences = experiencesToReassign.Count;
+
+            var packagesToReassign = await db.Packages.Where(p => dummyCityIds.Contains(p.DestinationId)).ToListAsync(ct);
+            foreach (var package in packagesToReassign)
+                package.DestinationId = realCity.Id;
+            reassignedPackages = packagesToReassign.Count;
+        }
+
+        // Orden FK-safe: CITY (hijos) primero, después REGION, después COUNTRY — mismo criterio que
+        // "Orden de creación de tablas" de database-design.md, pero a la inversa para el borrado.
+        foreach (var destination in dummyDestinations.OrderBy(TypeDeletionRank))
+            db.Destinations.Remove(destination);
+
+        logger.LogInformation(
+            "Seed: limpieza de destinos dummy → {Deleted} destinos eliminados, {Experiences} experiencias y {Packages} paquetes reasignados a un destino real (La Paz).",
+            dummyDestinations.Count, reassignedExperiences, reassignedPackages);
+    }
+
+    private static int TypeDeletionRank(Destination destination) => destination.Type switch
+    {
+        DestinationType.CITY => 0,
+        DestinationType.REGION => 1,
+        _ => 2
+    };
 
     private static int ParsePopulation(BoliviaCityRecord record) =>
         int.TryParse(record.Population, out var population) ? population : 0;

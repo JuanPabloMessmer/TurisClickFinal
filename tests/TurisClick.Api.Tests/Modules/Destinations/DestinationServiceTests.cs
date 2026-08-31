@@ -5,15 +5,19 @@ using TurisClick.Api.Modules.Destinations.Dtos;
 using TurisClick.Api.Modules.Destinations.Entities;
 using TurisClick.Api.Modules.Destinations.Repositories;
 using TurisClick.Api.Modules.Destinations.Services;
+using TurisClick.Api.Modules.Experiences.Repositories;
+using TurisClick.Api.Modules.Packages.Repositories;
 using TurisClick.Api.Shared.Exceptions;
 using Xunit;
 
 namespace TurisClick.Api.Tests.Modules.Destinations;
 
-/// <summary>UC-A-04 — reglas de jerarquía Country → Region → City y unicidad por nivel.</summary>
+/// <summary>UC-A-04 — reglas de jerarquía Country → Region → City, unicidad por nivel y borrado seguro.</summary>
 public class DestinationServiceTests
 {
     private readonly Mock<IDestinationRepository> _repository = new();
+    private readonly Mock<IExperienceRepository> _experienceRepository = new();
+    private readonly Mock<IPackageRepository> _packageRepository = new();
     private readonly DestinationService _sut;
 
     public DestinationServiceTests()
@@ -22,7 +26,11 @@ public class DestinationServiceTests
         var db = new Mock<TurisClickDbContext>(options);
         db.Setup(d => d.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        _sut = new DestinationService(_repository.Object, db.Object);
+        // Por defecto, ningún destino está en uso — los tests que necesitan lo contrario lo pisan.
+        _experienceRepository.Setup(r => r.ExistsForDestinationAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        _packageRepository.Setup(r => r.ExistsForDestinationAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+        _sut = new DestinationService(_repository.Object, _experienceRepository.Object, _packageRepository.Object, db.Object);
     }
 
     [Fact]
@@ -157,5 +165,40 @@ public class DestinationServiceTests
         await _sut.DeleteAsync(id, CancellationToken.None);
 
         _repository.Verify(r => r.Remove(destination), Times.Once);
+    }
+
+    /// <summary>
+    /// UC-A-04 — antes esto llegaba a Postgres, violaba la FK Restrict de experiences.destination_id y
+    /// EF Core lo envolvía en un DbUpdateException genérico devuelto tal cual como 500. Ahora se detecta
+    /// antes del DELETE físico y se traduce a un 409 de dominio explícito.
+    /// </summary>
+    [Fact]
+    public async Task DeleteAsync_UsedByExperience_ThrowsConflictWithClearMessage()
+    {
+        var id = Guid.NewGuid();
+        var destination = new Destination { Id = id, Name = "Uyuni", Type = DestinationType.CITY };
+        _repository.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(destination);
+        _repository.Setup(r => r.HasChildrenAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        _experienceRepository.Setup(r => r.ExistsForDestinationAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        var ex = await Assert.ThrowsAsync<ConflictAppException>(() => _sut.DeleteAsync(id, CancellationToken.None));
+
+        Assert.Equal("No se puede eliminar el destino porque está siendo utilizado por experiencias o paquetes.", ex.Message);
+        _repository.Verify(r => r.Remove(It.IsAny<Destination>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UsedByPackage_ThrowsConflictWithClearMessage()
+    {
+        var id = Guid.NewGuid();
+        var destination = new Destination { Id = id, Name = "Uyuni", Type = DestinationType.CITY };
+        _repository.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(destination);
+        _repository.Setup(r => r.HasChildrenAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        _packageRepository.Setup(r => r.ExistsForDestinationAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        var ex = await Assert.ThrowsAsync<ConflictAppException>(() => _sut.DeleteAsync(id, CancellationToken.None));
+
+        Assert.Equal("No se puede eliminar el destino porque está siendo utilizado por experiencias o paquetes.", ex.Message);
+        _repository.Verify(r => r.Remove(It.IsAny<Destination>()), Times.Never);
     }
 }

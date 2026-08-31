@@ -92,9 +92,17 @@ public class ExperienceService(
         foreach (var category in categories)
             experience.Categories.Add(category);
 
-        experience.Images.Clear();
+        // Reemplazo explícito vía el DbSet, NO Clear()+Add() sobre la navegación: con una colección
+        // 1-a-N ya trackeada, EF Core puede emparejar el ítem "borrado" con el "nuevo" en la misma
+        // posición y tratarlo como UPDATE (Modified) en vez de DELETE+INSERT, y SaveChanges lanza
+        // DbUpdateConcurrencyException al no encontrar esa fila (bug encontrado en el equivalente de
+        // Packages, Oleada 4 — ver PackageService.UpdateAsync). Pasar por el DbSet evita la ambigüedad.
+        db.ExperienceImages.RemoveRange(experience.Images);
         foreach (var image in BuildImages(request.Images))
-            experience.Images.Add(image);
+        {
+            image.ExperienceId = experience.Id;
+            db.ExperienceImages.Add(image);
+        }
 
         await db.SaveChangesAsync(ct);
 

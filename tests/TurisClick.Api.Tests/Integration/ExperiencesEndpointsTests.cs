@@ -136,6 +136,56 @@ public class ExperiencesEndpointsTests
         Assert.Equal("City Tour La Paz", stillOwned!.Title);
     }
 
+    /// <summary>
+    /// Regresión: Update() reemplaza la galería completa (imágenes viejas fuera, nuevas adentro) sin
+    /// lanzar DbUpdateConcurrencyException — ver la nota en ExperienceService.UpdateAsync sobre el bug
+    /// de EF Core encontrado en el equivalente de Packages (Oleada 4).
+    /// </summary>
+    [Fact]
+    public async Task Update_ReplacesImageGallery()
+    {
+        var adminClient = _factory.CreateClient();
+        var destinationId = await CreateCityDestinationAsync(adminClient);
+
+        var providerClient = _factory.CreateClient();
+        var provider = await RegisterApprovedProviderAsync(providerClient, _factory.CreateClient(), "exp-update-images");
+        UseBearerToken(providerClient, provider.AccessToken);
+
+        var createPayload = ValidPayload(destinationId, $"ConGaleria-{Guid.NewGuid():N}");
+        var created = await (await providerClient.PostAsJsonAsync("/api/experiences", new
+        {
+            title = "Con Galería",
+            description = "Descripción suficientemente larga para pasar la validación.",
+            destinationId,
+            categoryIds = Array.Empty<Guid>(),
+            price = 45.5m,
+            currency = "USD",
+            images = new object[] { new { url = "https://picsum.photos/seed/old/800/600", isCover = true } }
+        })).Content.ReadFromJsonAsync<ExperienceResponse>(JsonOptions);
+        Assert.Single(created!.Images);
+
+        var updateResponse = await providerClient.PutAsJsonAsync($"/api/experiences/{created.Id}", new
+        {
+            title = created.Title,
+            description = created.Description,
+            destinationId,
+            categoryIds = Array.Empty<Guid>(),
+            price = created.Price,
+            currency = created.Currency,
+            images = new object[]
+            {
+                new { url = "https://picsum.photos/seed/new1/800/600", isCover = false },
+                new { url = "https://picsum.photos/seed/new2/800/600", isCover = true }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+        var updated = await updateResponse.Content.ReadFromJsonAsync<ExperienceResponse>(JsonOptions);
+        Assert.Equal(2, updated!.Images.Count);
+        Assert.DoesNotContain(updated.Images, i => i.Url.Contains("old"));
+        Assert.Single(updated.Images, i => i.IsCover);
+    }
+
     [Fact]
     public async Task Publish_WithoutFutureAvailability_Returns409()
     {

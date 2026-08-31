@@ -1,9 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Experiences.Repositories;
+using TurisClick.Api.Modules.Packages.Entities;
+using TurisClick.Api.Modules.Packages.Repositories;
 using TurisClick.Api.Modules.Reservations.Dtos;
 using TurisClick.Api.Modules.Reservations.Entities;
 using TurisClick.Api.Modules.Reservations.Payments;
@@ -16,7 +19,8 @@ namespace TurisClick.Api.Modules.Reservations.Services;
 public class ReservationService(
     IReservationRepository reservationRepository,
     IReservationItemRepository reservationItemRepository,
-    IExperienceAvailabilityRepository availabilityRepository,
+    IExperienceAvailabilityRepository experienceAvailabilityRepository,
+    IPackageAvailabilityRepository packageAvailabilityRepository,
     IPaymentGateway paymentGateway,
     ICurrentUserContext currentUser,
     ICompanyOwnershipGuard ownershipGuard,
@@ -28,7 +32,42 @@ public class ReservationService(
 
     public async Task<ReservationResponse> CreateAsync(CreateReservationRequest request, CancellationToken ct)
     {
-        var availability = await availabilityRepository.GetByIdWithExperienceAsync(request.ExperienceAvailabilityId, ct)
+        // Forma ya garantizada por CreateReservationRequest.Validate: exactamente uno de los dos ids.
+        var (item, tx) = request.ExperienceAvailabilityId.HasValue
+            ? await BuildExperienceReservationItemAsync(request.ExperienceAvailabilityId.Value, request.Travelers, ct)
+            : await BuildPackageReservationItemAsync(request.PackageAvailabilityId!.Value, request.Travelers, ct);
+
+        await using var _ = tx;
+
+        var now = DateTimeOffset.UtcNow;
+
+        var reservation = new Reservation
+        {
+            Id = Guid.NewGuid(),
+            TouristId = currentUser.UserId,
+            Status = ReservationStatus.PENDING_PAYMENT,
+            ExpiresAt = now.Add(HoldWindow),
+            CreatedAt = now
+        };
+
+        item.CreatedAt = now;
+        reservation.Items.Add(item);
+
+        await reservationRepository.AddAsync(reservation, ct);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        var created = await reservationRepository.GetByIdForReadAsync(reservation.Id, ct)
+            ?? throw new InvalidOperationException("La reserva recién creada no pudo leerse.");
+
+        return ToResponse(created);
+    }
+
+    /// <summary>UC-T-08 — reserva directa de una Experience individual. Devuelve la transacción todavía abierta (se cierra en CreateAsync tras persistir la Reservation completa).</summary>
+    private async Task<(ReservationItem Item, IDbContextTransaction Tx)> BuildExperienceReservationItemAsync(
+        Guid experienceAvailabilityId, int travelers, CancellationToken ct)
+    {
+        var availability = await experienceAvailabilityRepository.GetByIdWithExperienceAsync(experienceAvailabilityId, ct)
             ?? throw new NotFoundAppException("Disponibilidad no encontrada.");
 
         var experience = availability.Experience
@@ -46,51 +85,87 @@ public class ReservationService(
             throw new GoneAppException("El slot de disponibilidad ya expiró.");
 
         // UC-SYS-06: UPDATE condicional atómico dentro de una transacción — ver backend-architecture.md §13.
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var tx = await db.Database.BeginTransactionAsync(ct);
 
         var affectedRows = await db.ExperienceAvailabilities
-            .Where(a => a.Id == availability.Id && a.ReservedSlots + request.Travelers <= a.TotalSlots)
-            .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots + request.Travelers), ct);
+            .Where(a => a.Id == availability.Id && a.ReservedSlots + travelers <= a.TotalSlots)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots + travelers), ct);
 
         if (affectedRows == 0)
+        {
+            // Disponer una transacción sin commitear la revierte implícitamente (Npgsql/EF Core) — no
+            // hace falta un RollbackAsync explícito antes.
+            await tx.DisposeAsync();
             throw new ConflictAppException("No hay cupo suficiente para la cantidad de viajeros solicitada.");
-
-        var now = DateTimeOffset.UtcNow;
+        }
 
         // UC-SYS-02: precio y moneda siempre se leen frescos desde Experience — nunca se confía en un valor del cliente.
-        var reservation = new Reservation
+        var item = new ReservationItem
         {
             Id = Guid.NewGuid(),
-            TouristId = currentUser.UserId,
-            Status = ReservationStatus.PENDING_PAYMENT,
-            ExpiresAt = now.Add(HoldWindow),
-            CreatedAt = now
-        };
-
-        reservation.Items.Add(new ReservationItem
-        {
-            Id = Guid.NewGuid(),
-            ReservationId = reservation.Id,
             CompanyId = experience.CompanyId,
             ProductType = ProductType.EXPERIENCE,
             ExperienceId = experience.Id,
             ExperienceAvailabilityId = availability.Id,
-            Travelers = request.Travelers,
+            Travelers = travelers,
             UnitPrice = experience.Price,
             Currency = experience.Currency,
-            Subtotal = experience.Price * request.Travelers,
-            Status = ReservationItemStatus.PENDING_PAYMENT,
-            CreatedAt = now
-        });
+            Subtotal = experience.Price * travelers,
+            Status = ReservationItemStatus.PENDING_PAYMENT
+        };
 
-        await reservationRepository.AddAsync(reservation, ct);
-        await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
+        return (item, tx);
+    }
 
-        var created = await reservationRepository.GetByIdForReadAsync(reservation.Id, ct)
-            ?? throw new InvalidOperationException("La reserva recién creada no pudo leerse.");
+    /// <summary>UC-T-09 — reserva directa de un Package de proveedor. Mismo patrón que la Experience (UC-SYS-01/02/06), sobre PackageAvailability.</summary>
+    private async Task<(ReservationItem Item, IDbContextTransaction Tx)> BuildPackageReservationItemAsync(
+        Guid packageAvailabilityId, int travelers, CancellationToken ct)
+    {
+        var availability = await packageAvailabilityRepository.GetByIdWithPackageAsync(packageAvailabilityId, ct)
+            ?? throw new NotFoundAppException("Disponibilidad no encontrada.");
 
-        return ToResponse(created);
+        var package = availability.Package
+            ?? throw new InvalidOperationException("La disponibilidad no tiene un Package asociado.");
+
+        // UC-T-07/precondición UC-T-09: un Package no publicado no existe para el TOURIST.
+        if (package.Status != PublicationStatus.PUBLISHED)
+            throw new NotFoundAppException("Paquete no encontrado.");
+
+        if (availability.Status != AvailabilitySlotStatus.OPEN)
+            throw new GoneAppException("La salida ya no está disponible.");
+
+        if (availability.DepartureDate < DateOnly.FromDateTime(DateTime.UtcNow))
+            throw new GoneAppException("La salida ya expiró.");
+
+        var tx = await db.Database.BeginTransactionAsync(ct);
+
+        var affectedRows = await db.PackageAvailabilities
+            .Where(a => a.Id == availability.Id && a.ReservedSlots + travelers <= a.TotalSlots)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots + travelers), ct);
+
+        if (affectedRows == 0)
+        {
+            // Disponer una transacción sin commitear la revierte implícitamente (Npgsql/EF Core) — no
+            // hace falta un RollbackAsync explícito antes.
+            await tx.DisposeAsync();
+            throw new ConflictAppException("No hay cupo suficiente para la cantidad de viajeros solicitada.");
+        }
+
+        var item = new ReservationItem
+        {
+            Id = Guid.NewGuid(),
+            CompanyId = package.CompanyId,
+            ProductType = ProductType.PACKAGE,
+            PackageId = package.Id,
+            PackageAvailabilityId = availability.Id,
+            Travelers = travelers,
+            UnitPrice = package.Price,
+            Currency = package.Currency,
+            Subtotal = package.Price * travelers,
+            Status = ReservationItemStatus.PENDING_PAYMENT
+        };
+
+        return (item, tx);
     }
 
     public async Task<ReservationResponse> GetByIdForTouristAsync(Guid id, CancellationToken ct)
@@ -167,12 +242,8 @@ public class ReservationService(
         if (reservation.ExpiresAt is { } expiresAt && expiresAt < now)
             throw new GoneAppException("La reserva expiró; el cupo retenido ya no es válido para pagar.");
 
-        // UC-SYS-02: revalidación de precio contra el valor vigente de cada Experience.
-        var revalidationByItemId = reservation.Items.ToDictionary(
-            i => i.Id,
-            i => i.Experience is { } experience
-                ? new PriceRevalidation(experience.Price != i.UnitPrice || experience.Currency != i.Currency, experience.Price, experience.Currency)
-                : new PriceRevalidation(false, i.UnitPrice, i.Currency));
+        // UC-SYS-02: revalidación de precio contra el valor vigente de cada Experience/Package.
+        var revalidationByItemId = reservation.Items.ToDictionary(i => i.Id, BuildRevalidation);
 
         var anyPriceChanged = revalidationByItemId.Values.Any(r => r.Changed);
 
@@ -199,8 +270,8 @@ public class ReservationService(
             }
         }
 
-        // Oleada 2/3: una reserva directa siempre tiene un único Item/moneda; agregación multi-moneda
-        // queda para cuando exista una reserva de itinerario IA con varios proveedores.
+        // Una reserva directa siempre tiene un único Item/moneda; agregación multi-moneda queda para
+        // cuando exista una reserva de itinerario IA con varios proveedores.
         var amount = reservation.Items.Sum(i => i.Subtotal);
         var currency = reservation.Items.First().Currency;
 
@@ -222,9 +293,9 @@ public class ReservationService(
         {
             // El rechazo NO cambia Reservation.Status ni ReservationItem.Status: la reserva sigue
             // PENDING_PAYMENT y admite reintentar el pago mientras no venza ExpiresAt (decisión del
-            // usuario: no liberar el cupo de inmediato en Oleada 3). El fallo solo queda registrado acá
-            // (respuesta) y en el log — cuando exista una entidad Payment, los intentos fallidos se
-            // registrarán ahí sin volver a tocar el estado principal de la reserva.
+            // usuario: no liberar el cupo de inmediato). El fallo solo queda registrado acá (respuesta)
+            // y en el log — cuando exista una entidad Payment, los intentos fallidos se registrarán ahí
+            // sin volver a tocar el estado principal de la reserva.
             logger.LogWarning(
                 "Pago rechazado para la reserva {ReservationId}: {Reason}", reservation.Id, chargeResult.FailureReason);
         }
@@ -239,6 +310,20 @@ public class ReservationService(
     }
 
     private sealed record PriceRevalidation(bool Changed, decimal CurrentUnitPrice, string CurrentCurrency);
+
+    /// <summary>UC-SYS-02 — precio/moneda vigentes se leen del producto real (Experience o Package), nunca de un valor cacheado.</summary>
+    private static PriceRevalidation BuildRevalidation(ReservationItem item)
+    {
+        var (currentPrice, currentCurrency) = item switch
+        {
+            { ProductType: ProductType.EXPERIENCE, Experience: { } experience } => (experience.Price, experience.Currency),
+            { ProductType: ProductType.PACKAGE, Package: { } package } => (package.Price, package.Currency),
+            _ => (item.UnitPrice, item.Currency)
+        };
+
+        var changed = currentPrice != item.UnitPrice || currentCurrency != item.Currency;
+        return new PriceRevalidation(changed, currentPrice, currentCurrency);
+    }
 
     private static ReservationResponse ToResponse(
         Reservation reservation,
@@ -274,6 +359,8 @@ public class ReservationService(
         ProductType = item.ProductType.ToString(),
         ExperienceId = item.ExperienceId,
         ExperienceTitle = item.Experience?.Title,
+        PackageId = item.PackageId,
+        PackageTitle = item.Package?.Title,
         CompanyId = item.CompanyId,
         CompanyName = item.Company?.Name ?? string.Empty,
         TouristId = item.Reservation?.TouristId ?? Guid.Empty,
@@ -283,7 +370,7 @@ public class ReservationService(
         Currency = item.Currency,
         Subtotal = item.Subtotal,
         Status = item.Status.ToString(),
-        Date = item.ExperienceAvailability?.Date,
+        Date = item.ExperienceAvailability?.Date ?? item.PackageAvailability?.DepartureDate,
         StartTime = item.ExperienceAvailability?.StartTime,
         CreatedAt = item.CreatedAt,
         PriceChanged = revalidation?.Changed ?? false,

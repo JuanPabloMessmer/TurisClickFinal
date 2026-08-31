@@ -2,11 +2,23 @@ using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Destinations.Dtos;
 using TurisClick.Api.Modules.Destinations.Entities;
 using TurisClick.Api.Modules.Destinations.Repositories;
+using TurisClick.Api.Modules.Experiences.Repositories;
+using TurisClick.Api.Modules.Packages.Repositories;
 using TurisClick.Api.Shared.Exceptions;
 
 namespace TurisClick.Api.Modules.Destinations.Services;
 
-public class DestinationService(IDestinationRepository destinationRepository, TurisClickDbContext db) : IDestinationService
+/// <summary>
+/// Depende de IExperienceRepository/IPackageRepository (normalmente el flujo de dependencias entre
+/// módulos va al revés — Experiences/Packages dependen de Destinations) únicamente para poder devolver
+/// un 409 de dominio claro en DeleteAsync antes de que la FK física falle en Postgres. Es la única razón
+/// de este acoplamiento cruzado; no se usa para nada más acá.
+/// </summary>
+public class DestinationService(
+    IDestinationRepository destinationRepository,
+    IExperienceRepository experienceRepository,
+    IPackageRepository packageRepository,
+    TurisClickDbContext db) : IDestinationService
 {
     public async Task<DestinationResponse> CreateAsync(CreateDestinationRequest request, CancellationToken ct)
     {
@@ -63,6 +75,13 @@ public class DestinationService(IDestinationRepository destinationRepository, Tu
 
         if (await destinationRepository.HasChildrenAsync(id, ct))
             throw new ConflictAppException("No se puede eliminar un destino que tiene destinos hijos.");
+
+        // UC-A-04: chequeo explícito antes de intentar el DELETE físico — sin esto, Postgres rechaza el
+        // UPDATE/DELETE por la FK Restrict de experiences.destination_id/packages.destination_id y EF
+        // Core lo envuelve en un DbUpdateException genérico ("An error occurred while saving the entity
+        // changes..."), que el GlobalExceptionHandler devolvía tal cual como 500 sin ningún detalle útil.
+        if (await experienceRepository.ExistsForDestinationAsync(id, ct) || await packageRepository.ExistsForDestinationAsync(id, ct))
+            throw new ConflictAppException("No se puede eliminar el destino porque está siendo utilizado por experiencias o paquetes.");
 
         destinationRepository.Remove(destination);
         await db.SaveChangesAsync(ct);

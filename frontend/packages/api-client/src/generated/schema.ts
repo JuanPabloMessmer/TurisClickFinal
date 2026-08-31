@@ -1233,6 +1233,412 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/packages/{packageId}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    packageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageAvailabilityResponse"][];
+                        "application/json": components["schemas"]["PackageAvailabilityResponse"][];
+                        "text/json": components["schemas"]["PackageAvailabilityResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    packageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreatePackageAvailabilityRequest"];
+                    "text/json": components["schemas"]["CreatePackageAvailabilityRequest"];
+                    "application/*+json": components["schemas"]["CreatePackageAvailabilityRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageAvailabilityResponse"];
+                        "application/json": components["schemas"]["PackageAvailabilityResponse"];
+                        "text/json": components["schemas"]["PackageAvailabilityResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/packages/mine/{packageId}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    packageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageAvailabilityResponse"][];
+                        "application/json": components["schemas"]["PackageAvailabilityResponse"][];
+                        "text/json": components["schemas"]["PackageAvailabilityResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    destinationId?: string;
+                    categoryId?: string;
+                    priceMin?: number;
+                    priceMax?: number;
+                    durationDaysMin?: number;
+                    durationDaysMax?: number;
+                    departureFrom?: string;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageSummaryResponsePagedResult"];
+                        "application/json": components["schemas"]["PackageSummaryResponsePagedResult"];
+                        "text/json": components["schemas"]["PackageSummaryResponsePagedResult"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreatePackageRequest"];
+                    "text/json": components["schemas"]["CreatePackageRequest"];
+                    "application/*+json": components["schemas"]["CreatePackageRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageResponse"];
+                        "application/json": components["schemas"]["PackageResponse"];
+                        "text/json": components["schemas"]["PackageResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/packages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageResponse"];
+                        "application/json": components["schemas"]["PackageResponse"];
+                        "text/json": components["schemas"]["PackageResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePackageRequest"];
+                    "text/json": components["schemas"]["UpdatePackageRequest"];
+                    "application/*+json": components["schemas"]["UpdatePackageRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageResponse"];
+                        "application/json": components["schemas"]["PackageResponse"];
+                        "text/json": components["schemas"]["PackageResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/packages/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageResponse"];
+                        "application/json": components["schemas"]["PackageResponse"];
+                        "text/json": components["schemas"]["PackageResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/packages/{id}/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageResponse"];
+                        "application/json": components["schemas"]["PackageResponse"];
+                        "text/json": components["schemas"]["PackageResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/packages/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageSummaryResponsePagedResult"];
+                        "application/json": components["schemas"]["PackageSummaryResponsePagedResult"];
+                        "text/json": components["schemas"]["PackageSummaryResponsePagedResult"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/packages/mine/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageResponse"];
+                        "application/json": components["schemas"]["PackageResponse"];
+                        "text/json": components["schemas"]["PackageResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/providers/register": {
         parameters: {
             query?: never;
@@ -1622,9 +2028,32 @@ export interface components {
             currency: string;
             images?: components["schemas"]["ExperienceImageRequest"][] | null;
         };
+        CreatePackageAvailabilityRequest: {
+            /** Format: date */
+            departureDate: string;
+            /** Format: int32 */
+            totalSlots?: number;
+        };
+        CreatePackageRequest: {
+            title: string;
+            description: string;
+            /** Format: uuid */
+            destinationId: string;
+            categoryIds?: string[] | null;
+            conditionsText?: string | null;
+            /** Format: int32 */
+            durationDays?: number;
+            /** Format: double */
+            price?: number;
+            currency: string;
+            items?: components["schemas"]["PackageItemRequest"][] | null;
+            images?: components["schemas"]["PackageImageRequest"][] | null;
+        };
         CreateReservationRequest: {
             /** Format: uuid */
-            experienceAvailabilityId: string;
+            experienceAvailabilityId?: string | null;
+            /** Format: uuid */
+            packageAvailabilityId?: string | null;
             /** Format: int32 */
             travelers?: number;
         };
@@ -1731,6 +2160,110 @@ export interface components {
         LogoutRequest: {
             refreshToken: string;
         };
+        PackageAvailabilityResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            packageId?: string;
+            /** Format: date */
+            departureDate?: string;
+            /** Format: int32 */
+            totalSlots?: number;
+            /** Format: int32 */
+            reservedSlots?: number;
+            /** Format: int32 */
+            availableSlots?: number;
+            status?: string | null;
+        };
+        PackageImageRequest: {
+            /** Format: uri */
+            url: string;
+            isCover?: boolean;
+        };
+        PackageImageResponse: {
+            /** Format: uuid */
+            id?: string;
+            url?: string | null;
+            /** Format: int32 */
+            sortOrder?: number;
+            isCover?: boolean;
+        };
+        PackageItemRequest: {
+            /** Format: int32 */
+            dayNumber?: number;
+            /** Format: int32 */
+            sortOrder?: number;
+            /** Format: Enumeration */
+            kind: string;
+            /** Format: uuid */
+            experienceId?: string | null;
+            title?: string | null;
+            description?: string | null;
+        };
+        PackageItemResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: int32 */
+            dayNumber?: number;
+            /** Format: int32 */
+            sortOrder?: number;
+            kind?: string | null;
+            /** Format: uuid */
+            experienceId?: string | null;
+            title?: string | null;
+            description?: string | null;
+        };
+        PackageResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            companyId?: string;
+            companyName?: string | null;
+            /** Format: uuid */
+            destinationId?: string;
+            destinationName?: string | null;
+            title?: string | null;
+            description?: string | null;
+            conditionsText?: string | null;
+            /** Format: int32 */
+            durationDays?: number;
+            /** Format: double */
+            price?: number;
+            currency?: string | null;
+            status?: string | null;
+            categories?: components["schemas"]["CategoryResponse"][] | null;
+            images?: components["schemas"]["PackageImageResponse"][] | null;
+            items?: components["schemas"]["PackageItemResponse"][] | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        PackageSummaryResponse: {
+            /** Format: uuid */
+            id?: string;
+            title?: string | null;
+            destinationName?: string | null;
+            /** Format: int32 */
+            durationDays?: number;
+            /** Format: double */
+            price?: number;
+            currency?: string | null;
+            coverImageUrl?: string | null;
+            companyName?: string | null;
+            status?: string | null;
+        };
+        PackageSummaryResponsePagedResult: {
+            items?: components["schemas"]["PackageSummaryResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            readonly totalPages?: number;
+        };
         PayReservationRequest: {
             success?: boolean;
             acceptPriceChanges?: boolean;
@@ -1800,6 +2333,9 @@ export interface components {
             /** Format: uuid */
             experienceId?: string | null;
             experienceTitle?: string | null;
+            /** Format: uuid */
+            packageId?: string | null;
+            packageTitle?: string | null;
             /** Format: uuid */
             companyId?: string;
             companyName?: string | null;
@@ -1899,6 +2435,21 @@ export interface components {
             price?: number;
             currency: string;
             images?: components["schemas"]["ExperienceImageRequest"][] | null;
+        };
+        UpdatePackageRequest: {
+            title: string;
+            description: string;
+            /** Format: uuid */
+            destinationId: string;
+            categoryIds?: string[] | null;
+            conditionsText?: string | null;
+            /** Format: int32 */
+            durationDays?: number;
+            /** Format: double */
+            price?: number;
+            currency: string;
+            items?: components["schemas"]["PackageItemRequest"][] | null;
+            images?: components["schemas"]["PackageImageRequest"][] | null;
         };
         UserSummaryResponse: {
             /** Format: uuid */

@@ -34,11 +34,8 @@ public class ReservationItemConfiguration : IEntityTypeConfiguration<Reservation
             .IsRequired();
 
         builder.Property(i => i.ExperienceId).HasColumnName("experience_id");
-
-        // Sin FK física: packages/package_availabilities no existen hasta Oleada 4 (ver ReservationItem.cs).
         builder.Property(i => i.PackageId).HasColumnName("package_id");
         builder.Property(i => i.PackageAvailabilityId).HasColumnName("package_availability_id");
-
         builder.Property(i => i.ExperienceAvailabilityId).HasColumnName("experience_availability_id");
 
         builder.Property(i => i.Travelers).HasColumnName("travelers").IsRequired();
@@ -74,6 +71,16 @@ public class ReservationItemConfiguration : IEntityTypeConfiguration<Reservation
         builder.HasOne(i => i.ExperienceAvailability)
             .WithMany()
             .HasForeignKey(i => i.ExperienceAvailabilityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(i => i.Package)
+            .WithMany()
+            .HasForeignKey(i => i.PackageId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(i => i.PackageAvailability)
+            .WithMany()
+            .HasForeignKey(i => i.PackageAvailabilityId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

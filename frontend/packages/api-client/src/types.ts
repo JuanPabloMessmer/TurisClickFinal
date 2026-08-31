@@ -38,6 +38,19 @@ export type ExperienceImageRequest = Schemas['ExperienceImageRequest']
 export type ExperienceAvailabilityResponse = Schemas['ExperienceAvailabilityResponse']
 export type CreateExperienceAvailabilityRequest = Schemas['CreateExperienceAvailabilityRequest']
 
+export type PackageResponse = Schemas['PackageResponse']
+export type PackageSummaryResponse = Schemas['PackageSummaryResponse']
+export type PackageSummaryResponsePagedResult = Schemas['PackageSummaryResponsePagedResult']
+export type CreatePackageRequest = Schemas['CreatePackageRequest']
+export type UpdatePackageRequest = Schemas['UpdatePackageRequest']
+export type PackageItemRequest = Schemas['PackageItemRequest']
+export type PackageItemResponse = Schemas['PackageItemResponse']
+export type PackageImageRequest = Schemas['PackageImageRequest']
+export type PackageImageResponse = Schemas['PackageImageResponse']
+
+export type PackageAvailabilityResponse = Schemas['PackageAvailabilityResponse']
+export type CreatePackageAvailabilityRequest = Schemas['CreatePackageAvailabilityRequest']
+
 export type ReservationItemResponse = Schemas['ReservationItemResponse']
 export type ReservationItemResponsePagedResult = Schemas['ReservationItemResponsePagedResult']
 

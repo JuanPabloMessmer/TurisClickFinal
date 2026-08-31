@@ -12,6 +12,7 @@ using TurisClick.Api.Modules.Categories;
 using TurisClick.Api.Modules.Companies;
 using TurisClick.Api.Modules.Destinations;
 using TurisClick.Api.Modules.Experiences;
+using TurisClick.Api.Modules.Packages;
 using TurisClick.Api.Modules.Reservations;
 using TurisClick.Api.Shared.Exceptions;
 
@@ -105,6 +106,7 @@ try
     builder.Services.AddCategoriesModule();
     builder.Services.AddCompaniesModule();
     builder.Services.AddExperiencesModule();
+    builder.Services.AddPackagesModule();
     builder.Services.AddReservationsModule();
 
     // ---- Manejo global de errores ----

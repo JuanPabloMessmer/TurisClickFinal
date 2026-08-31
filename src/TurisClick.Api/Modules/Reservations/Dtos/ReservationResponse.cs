@@ -38,6 +38,8 @@ public class ReservationItemResponse
     public string ProductType { get; set; } = string.Empty;
     public Guid? ExperienceId { get; set; }
     public string? ExperienceTitle { get; set; }
+    public Guid? PackageId { get; set; }
+    public string? PackageTitle { get; set; }
     public Guid CompanyId { get; set; }
     public string CompanyName { get; set; } = string.Empty;
 

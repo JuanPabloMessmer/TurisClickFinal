@@ -16,6 +16,9 @@ import { ExperienceFormPage } from '@/modules/experiences/ExperienceFormPage'
 import { ExperiencesPage } from '@/modules/experiences/ExperiencesPage'
 import { MyCompanyPage } from '@/modules/my-company/MyCompanyPage'
 import { RequireApprovedCompany } from '@/modules/my-company/RequireApprovedCompany'
+import { PackageAvailabilityPage } from '@/modules/package-availability/PackageAvailabilityPage'
+import { PackageFormPage } from '@/modules/packages/PackageFormPage'
+import { PackagesPage } from '@/modules/packages/PackagesPage'
 import { ProviderReservationDetailPage } from '@/modules/provider-reservations/ProviderReservationDetailPage'
 import { ProviderReservationsPage } from '@/modules/provider-reservations/ProviderReservationsPage'
 
@@ -45,6 +48,10 @@ export default function App() {
                   <Route path="/provider/experiences/new" element={<ExperienceFormPage />} />
                   <Route path="/provider/experiences/:id/edit" element={<ExperienceFormPage />} />
                   <Route path="/provider/experiences/:id/availability" element={<ExperienceAvailabilityPage />} />
+                  <Route path="/provider/packages" element={<PackagesPage />} />
+                  <Route path="/provider/packages/new" element={<PackageFormPage />} />
+                  <Route path="/provider/packages/:id/edit" element={<PackageFormPage />} />
+                  <Route path="/provider/packages/:id/availability" element={<PackageAvailabilityPage />} />
                   <Route path="/provider/reservations" element={<ProviderReservationsPage />} />
                   <Route path="/provider/reservations/:id" element={<ProviderReservationDetailPage />} />
                 </Route>

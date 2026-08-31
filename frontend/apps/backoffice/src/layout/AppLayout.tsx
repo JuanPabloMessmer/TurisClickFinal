@@ -1,4 +1,4 @@
-import { Building, Building2, ClipboardList, Compass, LogOut, MapPinned, Menu, Tags, X } from 'lucide-react'
+import { Building, Building2, ClipboardList, Compass, LogOut, MapPinned, Menu, Package, Tags, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
@@ -14,6 +14,7 @@ const adminLinks = [
 const providerLinks = [
   { to: '/provider/company', label: 'Mi Empresa', icon: Building },
   { to: '/provider/experiences', label: 'Experiencias', icon: Compass },
+  { to: '/provider/packages', label: 'Paquetes', icon: Package },
   { to: '/provider/reservations', label: 'Reservas', icon: ClipboardList },
 ]
 

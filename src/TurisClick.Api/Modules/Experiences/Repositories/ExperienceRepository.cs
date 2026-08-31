@@ -9,6 +9,11 @@ public class ExperienceRepository(TurisClickDbContext db) : IExperienceRepositor
     public Task<Experience?> GetByIdAsync(Guid id, CancellationToken ct) =>
         db.Experiences.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id, ct);
 
+    public Task<List<Experience>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+        ids.Count == 0
+            ? Task.FromResult(new List<Experience>())
+            : db.Experiences.AsNoTracking().Where(e => ids.Contains(e.Id)).ToListAsync(ct);
+
     public Task<Experience?> GetByIdForReadAsync(Guid id, CancellationToken ct) =>
         db.Experiences
             .AsNoTracking()
@@ -93,6 +98,10 @@ public class ExperienceRepository(TurisClickDbContext db) : IExperienceRepositor
             && a.Date >= today
             && a.ReservedSlots < a.TotalSlots, ct);
     }
+
+    /// <summary>UC-A-04 DELETE — usado para dar un 409 de dominio claro en vez de dejar que la FK física falle en Postgres.</summary>
+    public Task<bool> ExistsForDestinationAsync(Guid destinationId, CancellationToken ct) =>
+        db.Experiences.AnyAsync(e => e.DestinationId == destinationId, ct);
 
     public async Task AddAsync(Experience experience, CancellationToken ct) =>
         await db.Experiences.AddAsync(experience, ct);

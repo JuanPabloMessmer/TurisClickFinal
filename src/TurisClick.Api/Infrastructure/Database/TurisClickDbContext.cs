@@ -4,6 +4,7 @@ using TurisClick.Api.Modules.Categories.Entities;
 using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Destinations.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
+using TurisClick.Api.Modules.Packages.Entities;
 using TurisClick.Api.Modules.Reservations.Entities;
 
 namespace TurisClick.Api.Infrastructure.Database;
@@ -22,6 +23,10 @@ public class TurisClickDbContext(DbContextOptions<TurisClickDbContext> options) 
     public DbSet<Experience> Experiences => Set<Experience>();
     public DbSet<ExperienceImage> ExperienceImages => Set<ExperienceImage>();
     public DbSet<ExperienceAvailability> ExperienceAvailabilities => Set<ExperienceAvailability>();
+    public DbSet<Package> Packages => Set<Package>();
+    public DbSet<PackageItem> PackageItems => Set<PackageItem>();
+    public DbSet<PackageImage> PackageImages => Set<PackageImage>();
+    public DbSet<PackageAvailability> PackageAvailabilities => Set<PackageAvailability>();
     public DbSet<Reservation> Reservations => Set<Reservation>();
     public DbSet<ReservationItem> ReservationItems => Set<ReservationItem>();
 

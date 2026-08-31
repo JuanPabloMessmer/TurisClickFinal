@@ -17,6 +17,8 @@ public class ReservationItemRepository(TurisClickDbContext db) : IReservationIte
             .Include(i => i.Reservation).ThenInclude(r => r!.Tourist)
             .Include(i => i.Experience)
             .Include(i => i.ExperienceAvailability)
+            .Include(i => i.Package)
+            .Include(i => i.PackageAvailability)
             .AsSplitQuery()
             .OrderByDescending(i => i.CreatedAt)
             .Skip((page - 1) * pageSize)
@@ -32,6 +34,8 @@ public class ReservationItemRepository(TurisClickDbContext db) : IReservationIte
             .Include(i => i.Reservation).ThenInclude(r => r!.Tourist)
             .Include(i => i.Experience)
             .Include(i => i.ExperienceAvailability)
+            .Include(i => i.Package)
+            .Include(i => i.PackageAvailability)
             .Include(i => i.Company)
             .AsSplitQuery()
             .FirstOrDefaultAsync(i => i.Id == id, ct);

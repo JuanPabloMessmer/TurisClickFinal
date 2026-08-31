@@ -3952,6 +3952,2562 @@
       ]
     },
     {
+      "name": "Packages",
+      "description": "UC-P-07/08/09/11 (Provider), UC-T-06/07/09 (público/reserva) — Oleada 4. Paquetes multi-día combinando Experience reales e ítems descriptivos.",
+      "item": [
+        {
+          "name": "Setup - Create Country Destination (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/destinations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "destinations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"País-Pkg-{{pkg_suffix}}\",\n  \"type\": \"COUNTRY\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"pkg_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_country_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Region Destination (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/destinations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "destinations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Región-Pkg-{{pkg_suffix}}\",\n  \"type\": \"REGION\",\n  \"parentId\": \"{{pkg_country_id}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_region_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create City Destination (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/destinations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "destinations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ciudad-Pkg-{{pkg_suffix}}\",\n  \"type\": \"CITY\",\n  \"parentId\": \"{{pkg_region_id}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_city_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Register Owner Provider",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/providers/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "providers",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Rosa\",\n  \"lastName\": \"Quispe\",\n  \"email\": \"pkg.owner.{{pkg_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Uyuni Tours {{pkg_suffix}}\",\n  \"legalDocument\": \"NIT-PKG-{{pkg_suffix}}\",\n  \"contactEmail\": \"contacto.pkg.{{pkg_suffix}}@turisclick.dev\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_owner_token\", pm.response.json().accessToken);",
+                  "pm.collectionVariables.set(\"pkg_owner_company_id\", pm.response.json().company.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Approve Owner Company (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/companies/{{pkg_owner_company_id}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "companies",
+                "{{pkg_owner_company_id}}",
+                "approve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Register Attacker Provider",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/providers/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "providers",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Otro\",\n  \"lastName\": \"Provider\",\n  \"email\": \"pkg.attacker.{{pkg_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra Empresa Pkg {{pkg_suffix}}\",\n  \"legalDocument\": \"NIT-PKG-ATK-{{pkg_suffix}}\",\n  \"contactEmail\": \"contacto.pkg.atk.{{pkg_suffix}}@turisclick.dev\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_attacker_token\", pm.response.json().accessToken);",
+                  "pm.collectionVariables.set(\"pkg_attacker_company_id\", pm.response.json().company.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Approve Attacker Company (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/companies/{{pkg_attacker_company_id}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "companies",
+                "{{pkg_attacker_company_id}}",
+                "approve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Register Unapproved Provider (For 403 Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/providers/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "providers",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Sin\",\n  \"lastName\": \"Aprobar\",\n  \"email\": \"pkg.unapproved.{{pkg_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Empresa Pendiente Pkg {{pkg_suffix}}\",\n  \"legalDocument\": \"NIT-PKG-PEND-{{pkg_suffix}}\",\n  \"contactEmail\": \"contacto.pkg.pend.{{pkg_suffix}}@turisclick.dev\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_unapproved_token\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Experience (Owner) — reutilizada como PackageItem",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cementerio de Trenes {{pkg_suffix}}\",\n  \"description\": \"Visita guiada al histórico cementerio de trenes de Uyuni.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"price\": 15,\n  \"currency\": \"USD\"\n}"
+            },
+            "description": "Decisión 1 del dominio: un Package puede reutilizar una Experience real (vendible también por separado)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_experience_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Experience (Attacker) — para probar aislamiento por Company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_attacker_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experiences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experiences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Experiencia de otra empresa {{pkg_suffix}}\",\n  \"description\": \"No debería poder incluirse en el paquete del owner.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"price\": 10,\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_attacker_experience_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-07 - Create Package (Success)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Uyuni Experience {{pkg_suffix}} — 3 días / 2 noches\",\n  \"description\": \"Recorrido de tres días por el Salar de Uyuni y alrededores.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"conditionsText\": \"Incluye transporte y guía. No incluye vuelos.\",\n  \"durationDays\": 3,\n  \"price\": 450,\n  \"currency\": \"USD\",\n  \"items\": [\n    { \"dayNumber\": 1, \"sortOrder\": 0, \"kind\": \"EXPERIENCE_REFERENCE\", \"experienceId\": \"{{pkg_experience_id}}\" },\n    { \"dayNumber\": 1, \"sortOrder\": 1, \"kind\": \"DESCRIPTIVE\", \"title\": \"Colchani\", \"description\": \"Parada en el pueblo salinero.\" },\n    { \"dayNumber\": 2, \"sortOrder\": 0, \"kind\": \"DESCRIPTIVE\", \"title\": \"Lagunas Altiplánicas\" },\n    { \"dayNumber\": 2, \"sortOrder\": 1, \"kind\": \"DESCRIPTIVE\", \"title\": \"Desierto de Siloli\" },\n    { \"dayNumber\": 3, \"sortOrder\": 0, \"kind\": \"DESCRIPTIVE\", \"title\": \"Géiseres\" },\n    { \"dayNumber\": 3, \"sortOrder\": 1, \"kind\": \"DESCRIPTIVE\", \"title\": \"Aguas termales\" },\n    { \"dayNumber\": 3, \"sortOrder\": 2, \"kind\": \"DESCRIPTIVE\", \"title\": \"Retorno\" }\n  ],\n  \"images\": [\n    { \"url\": \"https://example.com/photos/uyuni-1.jpg\", \"isCover\": true },\n    { \"url\": \"https://example.com/photos/uyuni-2.jpg\", \"isCover\": false }\n  ]\n}"
+            },
+            "description": "UC-P-07. La Company sale del JWT del Provider, nunca del body. Items e imágenes van integrados en el mismo request."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Status is DRAFT and CompanyId comes from the token\", function () {",
+                  "    pm.expect(jsonData.status).to.eql(\"DRAFT\");",
+                  "    pm.expect(jsonData.companyId).to.eql(pm.collectionVariables.get(\"pkg_owner_company_id\"));",
+                  "});",
+                  "pm.test(\"Has 7 items across 3 days\", function () { pm.expect(jsonData.items.length).to.eql(7); });",
+                  "pm.test(\"EXPERIENCE_REFERENCE item shows the real Experience title\", function () {",
+                  "    const item = jsonData.items.find(i => i.kind === \"EXPERIENCE_REFERENCE\");",
+                  "    pm.expect(item.title).to.include(\"Cementerio de Trenes\");",
+                  "});",
+                  "pm.test(\"Cover image is the one marked isCover\", function () {",
+                  "    const cover = jsonData.images.find(i => i.isCover);",
+                  "    pm.expect(cover.url).to.eql(\"https://example.com/photos/uyuni-1.jpg\");",
+                  "});",
+                  "pm.collectionVariables.set(\"package_id\", jsonData.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-07 - Create Package - Unapproved Company (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_unapproved_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Paquete sin aprobar\",\n  \"description\": \"No debería poder crearse.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"durationDays\": 1,\n  \"price\": 100,\n  \"currency\": \"USD\",\n  \"items\": [],\n  \"images\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-07 - Create Package As Tourist (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Paquete de turista\",\n  \"description\": \"Un TOURIST no puede crear paquetes.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"durationDays\": 1,\n  \"price\": 100,\n  \"currency\": \"USD\",\n  \"items\": [],\n  \"images\": []\n}"
+            },
+            "description": "Reutiliza {{tourist_token}} de UC-AUTH-01 al comienzo de la colección."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-07 - Create Package - Experience From Another Company (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Paquete con experiencia ajena\",\n  \"description\": \"No debería poder incluir una Experience de otra empresa.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"durationDays\": 1,\n  \"price\": 100,\n  \"currency\": \"USD\",\n  \"items\": [\n    { \"dayNumber\": 1, \"sortOrder\": 0, \"kind\": \"EXPERIENCE_REFERENCE\", \"experienceId\": \"{{pkg_attacker_experience_id}}\" }\n  ],\n  \"images\": []\n}"
+            },
+            "description": "docs/domain-model.md regla 3: PackageItem.Experience.CompanyId debe coincidir con Package.CompanyId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-08 - Update Package — Add Items, Add Images, Change Cover (Success)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Uyuni Experience {{pkg_suffix}} — 3 días / 2 noches (editado)\",\n  \"description\": \"Recorrido de tres días por el Salar de Uyuni y alrededores.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"conditionsText\": \"Incluye transporte, guía y alojamiento.\",\n  \"durationDays\": 3,\n  \"price\": 480,\n  \"currency\": \"USD\",\n  \"items\": [\n    { \"dayNumber\": 1, \"sortOrder\": 0, \"kind\": \"EXPERIENCE_REFERENCE\", \"experienceId\": \"{{pkg_experience_id}}\" },\n    { \"dayNumber\": 1, \"sortOrder\": 1, \"kind\": \"DESCRIPTIVE\", \"title\": \"Colchani\", \"description\": \"Parada en el pueblo salinero.\" },\n    { \"dayNumber\": 2, \"sortOrder\": 0, \"kind\": \"DESCRIPTIVE\", \"title\": \"Lagunas Altiplánicas\" },\n    { \"dayNumber\": 2, \"sortOrder\": 1, \"kind\": \"DESCRIPTIVE\", \"title\": \"Desierto de Siloli\" },\n    { \"dayNumber\": 3, \"sortOrder\": 0, \"kind\": \"DESCRIPTIVE\", \"title\": \"Géiseres\" },\n    { \"dayNumber\": 3, \"sortOrder\": 1, \"kind\": \"DESCRIPTIVE\", \"title\": \"Aguas termales\" },\n    { \"dayNumber\": 3, \"sortOrder\": 2, \"kind\": \"DESCRIPTIVE\", \"title\": \"Retorno\" }\n  ],\n  \"images\": [\n    { \"url\": \"https://example.com/photos/uyuni-1.jpg\", \"isCover\": false },\n    { \"url\": \"https://example.com/photos/uyuni-2.jpg\", \"isCover\": true },\n    { \"url\": \"https://example.com/photos/uyuni-3.jpg\", \"isCover\": false }\n  ]\n}"
+            },
+            "description": "UC-P-08 — el mismo endpoint agrega/edita ítems, agrega imágenes y cambia la portada (sin CRUD fragmentado)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Title and price updated\", function () {",
+                  "    pm.expect(jsonData.title).to.include(\"(editado)\");",
+                  "    pm.expect(jsonData.price).to.eql(480);",
+                  "});",
+                  "pm.test(\"Now has 3 images with the new cover\", function () {",
+                  "    pm.expect(jsonData.images.length).to.eql(3);",
+                  "    const cover = jsonData.images.find(i => i.isCover);",
+                  "    pm.expect(cover.url).to.eql(\"https://example.com/photos/uyuni-2.jpg\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-08 - Update Package As Another Provider (403)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_attacker_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Título hackeado\",\n  \"description\": \"Intento de edición ajena.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"durationDays\": 3,\n  \"price\": 1,\n  \"currency\": \"USD\",\n  \"items\": [],\n  \"images\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Package Without Items (For Publish 409 Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Paquete sin ítems {{pkg_suffix}}\",\n  \"description\": \"No debería poder publicarse sin al menos un ítem.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"durationDays\": 1,\n  \"price\": 100,\n  \"currency\": \"USD\",\n  \"items\": [],\n  \"images\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_no_items_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-09 - Publish Package Without Items (409)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{pkg_no_items_id}}/publish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{pkg_no_items_id}}",
+                "publish"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-09 - Publish Package Without Availability (409)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}/publish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}",
+                "publish"
+              ]
+            },
+            "description": "El package_id principal ya tiene ítems (UC-P-08) pero todavía ninguna disponibilidad futura OPEN."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Reason mentions availability\", function () { pm.expect(pm.response.json().detail).to.include(\"disponibilidad\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-11 - Create Availability (Success)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}",
+                "availability"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departureDate\": \"{{pkg_departure_date}}\",\n  \"totalSlots\": 12\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(); d.setDate(d.getDate() + 21);",
+                  "pm.collectionVariables.set(\"pkg_departure_date\", d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"AvailableSlots equals TotalSlots\", function () { pm.expect(jsonData.availableSlots).to.eql(12); });",
+                  "pm.collectionVariables.set(\"package_availability_id\", jsonData.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-11 - Create Availability - Duplicate (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}",
+                "availability"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departureDate\": \"{{pkg_departure_date}}\",\n  \"totalSlots\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-11 - Create Availability - Past Date (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}",
+                "availability"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departureDate\": \"{{pkg_past_date}}\",\n  \"totalSlots\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(); d.setDate(d.getDate() - 5);",
+                  "pm.collectionVariables.set(\"pkg_past_date\", d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-11 - Create Availability As Another Provider (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_attacker_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}",
+                "availability"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departureDate\": \"{{pkg_attacker_date}}\",\n  \"totalSlots\": 999\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(); d.setDate(d.getDate() + 25);",
+                  "pm.collectionVariables.set(\"pkg_attacker_date\", d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-11 - List Owned Availability (Success)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/mine/{{package_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "mine",
+                "{{package_id}}",
+                "availability"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Includes the created departure\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.some(a => a.id === pm.collectionVariables.get(\"package_availability_id\"))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-09 - Publish Package (Success)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}/publish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}",
+                "publish"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Status is PUBLISHED\", function () { pm.expect(pm.response.json().status).to.eql(\"PUBLISHED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-09 - Publish Package As Another Provider (403)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_attacker_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}/publish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}",
+                "publish"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-07 - Get Published Package (Success, público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Itinerary has 3 days worth of items\", function () {",
+                  "    const days = new Set(jsonData.items.map(i => i.dayNumber));",
+                  "    pm.expect(days.size).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-07 - Get Package Without Items Returns 404 (público, sigue DRAFT)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{pkg_no_items_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{pkg_no_items_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-06 - Search Packages By Destination (Success, público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages?destinationId={{pkg_city_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages"
+              ],
+              "query": [
+                {
+                  "key": "destinationId",
+                  "value": "{{pkg_city_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Includes the published package\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.items.some(p => p.id === pm.collectionVariables.get(\"package_id\"))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-06 - Search Packages By Price Range (Success, público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages?priceMin=400&priceMax=500",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages"
+              ],
+              "query": [
+                {
+                  "key": "priceMin",
+                  "value": "400"
+                },
+                {
+                  "key": "priceMax",
+                  "value": "500"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"All results are within the price range\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.items.every(p => p.price >= 400 && p.price <= 500)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-06 - Search Packages By Duration Range (Success, público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages?durationDaysMin=2&durationDaysMax=4",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages"
+              ],
+              "query": [
+                {
+                  "key": "durationDaysMin",
+                  "value": "2"
+                },
+                {
+                  "key": "durationDaysMax",
+                  "value": "4"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Includes the published package (3 días)\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.items.some(p => p.id === pm.collectionVariables.get(\"package_id\"))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/packages/{{package_id}}/availability (Success, público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}",
+                "availability"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Only bookable slots are returned\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.every(a => a.status === \"OPEN\" && a.availableSlots > 0)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/packages/mine (Success)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/mine",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "mine"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Includes packages of any status (DRAFT and PUBLISHED)\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.items.length).to.be.at.least(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Register Tourist For Package Reservations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Turista\",\n  \"lastName\": \"Paquetes\",\n  \"email\": \"pkg.tourist.{{pkg_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_tourist_token\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Availability With Low Capacity (For Insufficient Slots Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}",
+                "availability"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departureDate\": \"{{pkg_lowcap_date}}\",\n  \"totalSlots\": 2\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(); d.setDate(d.getDate() + 30);",
+                  "pm.collectionVariables.set(\"pkg_lowcap_date\", d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_lowcap_availability_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-09 - Reserve Package (Success)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageAvailabilityId\": \"{{package_availability_id}}\",\n  \"travelers\": 2\n}"
+            },
+            "description": "UC-T-09. Reutiliza el mismo POST /api/reservations, ahora con packageAvailabilityId en vez de experienceAvailabilityId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Status is PENDING_PAYMENT\", function () { pm.expect(jsonData.status).to.eql(\"PENDING_PAYMENT\"); });",
+                  "pm.test(\"Item is PACKAGE type referencing the package\", function () {",
+                  "    pm.expect(jsonData.items[0].productType).to.eql(\"PACKAGE\");",
+                  "    pm.expect(jsonData.items[0].packageId).to.eql(pm.collectionVariables.get(\"package_id\"));",
+                  "});",
+                  "pm.test(\"Subtotal is server-side price (480) times travelers (2) = 960, never trusting a client price\", function () {",
+                  "    pm.expect(jsonData.items[0].subtotal).to.eql(960);",
+                  "});",
+                  "pm.collectionVariables.set(\"package_reservation_id\", jsonData.id);",
+                  "pm.collectionVariables.set(\"package_reservation_item_id\", jsonData.items[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-09 - Reserve Package - Nonexistent Availability (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageAvailabilityId\": \"{{$guid}}\",\n  \"travelers\": 1\n}"
+            },
+            "description": "{{$guid}} es una variable dinámica de Postman — genera un UUID aleatorio en cada corrida."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-09 - Reserve Package - Insufficient Slots (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageAvailabilityId\": \"{{pkg_lowcap_availability_id}}\",\n  \"travelers\": 5\n}"
+            },
+            "description": "La disponibilidad de baja capacidad (2 cupos) no alcanza para 5 viajeros."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-09 - Reserve Package As Provider (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageAvailabilityId\": \"{{package_availability_id}}\",\n  \"travelers\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-09 - Reserve Package Without Auth (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageAvailabilityId\": \"{{package_availability_id}}\",\n  \"travelers\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-P-12 - List Company Reservations Includes Package Item (Success, Owner)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/companies/me/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "companies",
+                "me",
+                "reservations"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Includes the PACKAGE reservation item\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.items.some(i => i.id === pm.collectionVariables.get(\"package_reservation_item_id\") && i.productType === \"PACKAGE\")).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Availability For Payment Tests (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{package_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{package_id}}",
+                "availability"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departureDate\": \"{{pkg_pay_date}}\",\n  \"totalSlots\": 10\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(); d.setDate(d.getDate() + 35);",
+                  "pm.collectionVariables.set(\"pkg_pay_date\", d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_pay_availability_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Reservation For Payment Success (Tourist)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageAvailabilityId\": \"{{pkg_pay_availability_id}}\",\n  \"travelers\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"package_reservation_pay_ok_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-19 - Pay Package Reservation (Success)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{package_reservation_pay_ok_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{package_reservation_pay_ok_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}"
+            },
+            "description": "Mismo flujo de pago de Oleada 3 (UC-T-19/UC-SYS-07), ejercitado acá con ProductType=PACKAGE."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Status is CONFIRMED\", function () { pm.expect(jsonData.status).to.eql(\"CONFIRMED\"); });",
+                  "pm.test(\"Items are CONFIRMED too (UC-SYS-07)\", function () {",
+                  "    pm.expect(jsonData.items.every(i => i.status === \"CONFIRMED\")).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Reservation For Payment Declined (Tourist)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageAvailabilityId\": \"{{pkg_pay_availability_id}}\",\n  \"travelers\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"package_reservation_pay_declined_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-19 - Pay Package Reservation - Declined (success=false)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{package_reservation_pay_declined_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{package_reservation_pay_declined_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Status stays PENDING_PAYMENT\", function () { pm.expect(jsonData.status).to.eql(\"PENDING_PAYMENT\"); });",
+                  "pm.test(\"paymentApproved is false\", function () { pm.expect(jsonData.paymentApproved).to.be.false; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Second Package For Price Revalidation (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Paquete Precio Variable {{pkg_suffix}}\",\n  \"description\": \"Usado para probar la revalidación de precio antes de pagar.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"durationDays\": 1,\n  \"price\": 200,\n  \"currency\": \"USD\",\n  \"items\": [\n    { \"dayNumber\": 1, \"sortOrder\": 0, \"kind\": \"EXPERIENCE_REFERENCE\", \"experienceId\": \"{{pkg_experience_id}}\" }\n  ],\n  \"images\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_price_package_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Availability For Price Revalidation (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{pkg_price_package_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{pkg_price_package_id}}",
+                "availability"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departureDate\": \"{{pkg_price_date}}\",\n  \"totalSlots\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(); d.setDate(d.getDate() + 40);",
+                  "pm.collectionVariables.set(\"pkg_price_date\", d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_price_availability_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Publish Package For Price Revalidation (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{pkg_price_package_id}}/publish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{pkg_price_package_id}}",
+                "publish"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create Reservation For Price Revalidation (Tourist)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageAvailabilityId\": \"{{pkg_price_availability_id}}\",\n  \"travelers\": 2\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set(\"pkg_price_reservation_id\", pm.response.json().id);",
+                  "pm.collectionVariables.set(\"pkg_price_frozen_subtotal\", pm.response.json().items[0].subtotal);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Provider Raises The Price (Owner)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/packages/{{pkg_price_package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "packages",
+                "{{pkg_price_package_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Paquete Precio Variable {{pkg_suffix}}\",\n  \"description\": \"Usado para probar la revalidación de precio antes de pagar.\",\n  \"destinationId\": \"{{pkg_city_id}}\",\n  \"categoryIds\": [],\n  \"durationDays\": 1,\n  \"price\": 300,\n  \"currency\": \"USD\",\n  \"items\": [\n    { \"dayNumber\": 1, \"sortOrder\": 0, \"kind\": \"EXPERIENCE_REFERENCE\", \"experienceId\": \"{{pkg_experience_id}}\" }\n  ],\n  \"images\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-SYS-02 - Pay Without Accepting Price Change Does Not Charge (Blocked)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{pkg_price_reservation_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{pkg_price_reservation_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"RequiresPriceAcceptance is true and nothing was charged\", function () {",
+                  "    pm.expect(jsonData.requiresPriceAcceptance).to.be.true;",
+                  "    pm.expect(jsonData.status).to.eql(\"PENDING_PAYMENT\");",
+                  "    pm.expect(jsonData.paymentApproved).to.be.null;",
+                  "});",
+                  "pm.test(\"Frozen subtotal was not touched\", function () {",
+                  "    pm.expect(jsonData.items[0].subtotal).to.eql(pm.collectionVariables.get(\"pkg_price_frozen_subtotal\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-SYS-02 - Pay With Accepted Price Change Confirms At New Price",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pkg_tourist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/{{pkg_price_reservation_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reservations",
+                "{{pkg_price_reservation_id}}",
+                "pay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true,\n  \"acceptPriceChanges\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Confirmed at the new price (300 * 2 = 600)\", function () {",
+                  "    pm.expect(jsonData.status).to.eql(\"CONFIRMED\");",
+                  "    pm.expect(jsonData.items[0].unitPrice).to.eql(300);",
+                  "    pm.expect(jsonData.items[0].subtotal).to.eql(600);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Reservations",
       "item": [
         {
@@ -6653,6 +9209,126 @@
     },
     {
       "key": "res_price_frozen_subtotal",
+      "value": ""
+    },
+    {
+      "key": "pkg_suffix",
+      "value": ""
+    },
+    {
+      "key": "pkg_country_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_region_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_city_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_owner_token",
+      "value": ""
+    },
+    {
+      "key": "pkg_owner_company_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_attacker_token",
+      "value": ""
+    },
+    {
+      "key": "pkg_attacker_company_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_unapproved_token",
+      "value": ""
+    },
+    {
+      "key": "pkg_experience_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_attacker_experience_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_no_items_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_departure_date",
+      "value": ""
+    },
+    {
+      "key": "pkg_past_date",
+      "value": ""
+    },
+    {
+      "key": "pkg_attacker_date",
+      "value": ""
+    },
+    {
+      "key": "package_availability_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_tourist_token",
+      "value": ""
+    },
+    {
+      "key": "pkg_lowcap_date",
+      "value": ""
+    },
+    {
+      "key": "pkg_lowcap_availability_id",
+      "value": ""
+    },
+    {
+      "key": "package_reservation_id",
+      "value": ""
+    },
+    {
+      "key": "package_reservation_item_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_pay_date",
+      "value": ""
+    },
+    {
+      "key": "pkg_pay_availability_id",
+      "value": ""
+    },
+    {
+      "key": "package_reservation_pay_ok_id",
+      "value": ""
+    },
+    {
+      "key": "package_reservation_pay_declined_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_price_package_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_price_date",
+      "value": ""
+    },
+    {
+      "key": "pkg_price_availability_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_price_reservation_id",
+      "value": ""
+    },
+    {
+      "key": "pkg_price_frozen_subtotal",
       "value": ""
     }
   ]

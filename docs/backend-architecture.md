@@ -269,6 +269,7 @@ Serilog configurado en `Infrastructure/Logging/SerilogConfigurator.cs`, iniciali
   dotnet user-secrets set "Seed:AdminPassword" "AdminPassword123!"
   ```
 - El hash se genera con el mismo `IPasswordHasherService` que usa `AuthService` — no hay una segunda implementación de hashing para seeds.
+- **Limpieza de destinos dummy de test/Postman**: además de sembrar datos, el seed también *limpia* — en cada arranque, `CleanupDummyTestDestinationsAsync` busca destinos cuyo nombre empiece con `"Ciudad-"`, `"País-"` o `"Región-"` (el patrón que usan las corridas de Postman/Newman para sus jerarquías descartables) y los borra. Antes de borrar un destino tipo CITY que todavía tiene una `Experience`/`Package` real apuntándole (con reservas/pagos reales encima, típico de pruebas manuales), reasigna esos productos a "La Paz" en vez de dejar que la FK bloquee el borrado o perder esa data. Es un no-op silencioso si no encuentra ningún destino con ese patrón — no hace falta correrlo a mano ni repetirlo.
 
 ---
 
