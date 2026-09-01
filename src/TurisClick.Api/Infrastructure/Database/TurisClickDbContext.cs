@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TurisClick.Api.Modules.Ai.Entities;
 using TurisClick.Api.Modules.Auth.Entities;
 using TurisClick.Api.Modules.Categories.Entities;
 using TurisClick.Api.Modules.Companies.Entities;
@@ -29,10 +30,25 @@ public class TurisClickDbContext(DbContextOptions<TurisClickDbContext> options) 
     public DbSet<PackageAvailability> PackageAvailabilities => Set<PackageAvailability>();
     public DbSet<Reservation> Reservations => Set<Reservation>();
     public DbSet<ReservationItem> ReservationItems => Set<ReservationItem>();
+    public DbSet<AiConversation> AiConversations => Set<AiConversation>();
+    public DbSet<AiMessage> AiMessages => Set<AiMessage>();
+    public DbSet<AiItinerary> AiItineraries => Set<AiItinerary>();
+    public DbSet<AiItineraryItem> AiItineraryItems => Set<AiItineraryItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TurisClickDbContext).Assembly);
+
+        // FK diferida: reservations.ai_itinerary_id → ai_itineraries.id. ai_itineraries no existía hasta
+        // esta oleada (mismo patrón que companies↔users y reservation_items↔packages en oleadas
+        // anteriores) — se agrega acá, fuera de ReservationConfiguration, para no tocar el módulo de
+        // Reservations por una tabla que pertenece a Ai. Sin navegación C# todavía: UC-T-18/UC-SYS-05
+        // (que la usarían) son Oleada 7.
+        modelBuilder.Entity<Reservation>()
+            .HasOne<AiItinerary>()
+            .WithMany()
+            .HasForeignKey(r => r.AiItineraryId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
