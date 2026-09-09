@@ -84,6 +84,77 @@ public class OllamaAiModelClientTests
     }
 
     [Fact]
+    public async Task InterpretModification_ParsesActionAndTargetIds()
+    {
+        var itemId = Guid.NewGuid();
+        var modelJson = $$"""{"action":"REMOVE","targetItemIds":["{{itemId}}"],"targetDays":[2],"addCategories":[]}""";
+        var (client, _) = BuildClient(modelJson);
+
+        var result = await client.InterpretModificationAsync(
+            new ModificationInterpretationRequest([], "Quitá el rafting", EmptySnapshot,
+                [new CurrentItineraryItemView(itemId, 2, "EXPERIENCE", "Rafting", ["Aventura"], 60, "USD", null)], ["Aventura"]),
+            CancellationToken.None);
+
+        Assert.Equal(ModificationAction.REMOVE, result.Action);
+        Assert.Equal(itemId, Assert.Single(result.TargetItemIds));
+        Assert.Equal(2, Assert.Single(result.TargetDays));
+    }
+
+    [Fact]
+    public async Task InterpretModification_UnknownAction_FallsBackToNone()
+    {
+        // Si el modelo inventa una acción que no existe, no se rompe ni se adivina: se trata como
+        // "no es un ajuste", que es el camino seguro.
+        var (client, _) = BuildClient("""{"action":"EXPLOTAR_TODO","targetItemIds":[],"targetDays":[],"addCategories":[]}""");
+
+        var result = await client.InterpretModificationAsync(
+            new ModificationInterpretationRequest([], "hola", EmptySnapshot,
+                [new CurrentItineraryItemView(Guid.NewGuid(), 1, "EXPERIENCE", "Rafting", [], 60, "USD", null)], []),
+            CancellationToken.None);
+
+        Assert.Equal(ModificationAction.NONE, result.Action);
+    }
+
+    [Fact]
+    public async Task InterpretModification_WithoutCurrentItems_DoesNotCallTheModel()
+    {
+        var (client, handler) = BuildClient();
+
+        var result = await client.InterpretModificationAsync(
+            new ModificationInterpretationRequest([], "Quitá algo", EmptySnapshot, [], []),
+            CancellationToken.None);
+
+        Assert.Equal(ModificationAction.NONE, result.Action);
+        handler.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GenerateItemExplanation_ReturnsExplanationText()
+    {
+        var (client, _) = BuildClient("""{"explanation":"Te lo propuse porque coincide con tus intereses."}""");
+
+        var result = await client.GenerateItemExplanationAsync(
+            new ItemExplanationRequest(EmptySnapshot,
+                new CurrentItineraryItemView(Guid.NewGuid(), 1, "EXPERIENCE", "Salar", ["Naturaleza"], 80, "USD", null),
+                ["Coincide con los intereses que indicaste: Naturaleza."]),
+            CancellationToken.None);
+
+        Assert.Contains("intereses", result);
+    }
+
+    [Fact]
+    public async Task GenerateItemExplanation_InvalidJsonTwice_ThrowsInsteadOfInventing()
+    {
+        var (client, _) = BuildClient("no json", "tampoco");
+
+        await Assert.ThrowsAsync<AiModelResponseException>(() =>
+            client.GenerateItemExplanationAsync(
+                new ItemExplanationRequest(EmptySnapshot,
+                    new CurrentItineraryItemView(Guid.NewGuid(), 1, "EXPERIENCE", "Salar", [], 80, "USD", null), []),
+                CancellationToken.None));
+    }
+
+    [Fact]
     public async Task ExtractPreferences_OllamaUnreachable_ThrowsAiModelUnavailableException_NoCrash()
     {
         var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);

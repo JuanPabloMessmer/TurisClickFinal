@@ -190,6 +190,7 @@ public static class DevelopmentSeeder
 
         var reassignedExperiences = 0;
         var reassignedPackages = 0;
+        var reassignedConversations = 0;
 
         if (dummyCityIds.Count > 0)
         {
@@ -214,6 +215,17 @@ public static class DevelopmentSeeder
             foreach (var package in packagesToReassign)
                 package.DestinationId = realCity.Id;
             reassignedPackages = packagesToReassign.Count;
+
+            // Oleada 5 sumó una tercera FK a `destinations` (ai_conversations.preferred_destination_id,
+            // RESTRICT): sin reasignarla, borrar una ciudad dummy que alguna conversación de IA usó como
+            // destino preferido rompe el arranque entero de la app en Development. Se reasigna al mismo
+            // destino real que sus productos, así la conversación y su itinerario quedan coherentes.
+            var conversationsToReassign = await db.AiConversations
+                .Where(c => c.PreferredDestinationId != null && dummyCityIds.Contains(c.PreferredDestinationId!.Value))
+                .ToListAsync(ct);
+            foreach (var conversation in conversationsToReassign)
+                conversation.PreferredDestinationId = realCity.Id;
+            reassignedConversations = conversationsToReassign.Count;
         }
 
         // Orden FK-safe: CITY (hijos) primero, después REGION, después COUNTRY — mismo criterio que
@@ -222,8 +234,8 @@ public static class DevelopmentSeeder
             db.Destinations.Remove(destination);
 
         logger.LogInformation(
-            "Seed: limpieza de destinos dummy → {Deleted} destinos eliminados, {Experiences} experiencias y {Packages} paquetes reasignados a un destino real (La Paz).",
-            dummyDestinations.Count, reassignedExperiences, reassignedPackages);
+            "Seed: limpieza de destinos dummy → {Deleted} destinos eliminados; {Experiences} experiencias, {Packages} paquetes y {Conversations} conversaciones de IA reasignados a un destino real (La Paz).",
+            dummyDestinations.Count, reassignedExperiences, reassignedPackages, reassignedConversations);
     }
 
     private static int TypeDeletionRank(Destination destination) => destination.Type switch

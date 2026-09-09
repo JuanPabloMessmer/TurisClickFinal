@@ -20,7 +20,9 @@ public static class AiModuleExtensions
         services.AddScoped<IAiItineraryRepository, AiItineraryRepository>();
         services.AddScoped<IAiCatalogRepository, AiCatalogRepository>();
         services.AddScoped<IRetrievalService, RetrievalService>();
+        services.AddScoped<IItineraryRevalidationService, ItineraryRevalidationService>();
         services.AddScoped<IAiConversationService, AiConversationService>();
+        services.AddScoped<IAiItineraryService, AiItineraryService>();
 
         var provider = configuration.GetSection(AiOptions.SectionName)["Provider"] ?? "Deterministic";
         if (string.Equals(provider, "Ollama", StringComparison.OrdinalIgnoreCase))

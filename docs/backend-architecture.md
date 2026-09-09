@@ -305,6 +305,14 @@ await tx.CommitAsync();
 - Postgres ya soporta la extensión `pgvector` para almacenar embeddings si se decide un RAG con retrieval vectorial dentro de la misma base de datos (evita sumar una base de datos vectorial separada) — **no se instala todavía**, es solo la opción por defecto a evaluar cuando llegue esa oleada.
 - No se agrega ningún paquete NuGet de IA en el bootstrap (Azure OpenAI SDK, Semantic Kernel, etc.) hasta que el caso de uso correspondiente lo requiera explícitamente.
 
+### Estado real tras Oleadas 5–6 (esta sección arriba es el plan previo)
+
+- `Modules/Ai/` ya está implementado con entidades, Repositories, Services, DTOs y Controllers propios, siguiendo la misma estructura que el resto de los módulos.
+- `IRetrievalService` se implementó con el nombre reservado. `IItineraryComposer` **no** existe como interfaz separada: la composición vive en `IAiModelClient.ComposeItineraryAsync`, porque es la única parte del proceso que delega en el LLM — separar una interfaz más solo agregaba indirección. El resto del pipeline (filtrado, ranking, package-first, validación anti-hallucination, versionado) es código determinístico en `AiConversationService`/`RetrievalService`.
+- Interfaces del módulo: `IAiModelClient` (con dos implementaciones seleccionadas por `Ai:Provider` — `DeterministicAiModelClient`, sin dependencias externas y usado por tests/Newman, y `OllamaAiModelClient`, HTTP contra un Ollama local), `IRetrievalService`, `IItineraryRevalidationService` (Oleada 6, contrasta el snapshot persistido contra el catálogo vigente sin escribir), `IAiConversationService` y `IAiItineraryService`.
+- **No se agregó base de datos vectorial ni `pgvector`**: el retrieval es estructurado en Postgres (destino, fechas, capacidad, categorías, precio) y hasta ahora cubre los casos de uso sin necesidad de embeddings. La opción sigue abierta si aparece una necesidad real de match semántico.
+- Sí se agregaron paquetes de IA: ninguno. `OllamaAiModelClient` habla HTTP/JSON con `HttpClient` y `System.Text.Json`, sin SDK propietario.
+
 ---
 
 Arquitectura documentada y lista para bootstrap. Continúo con **FASE 5 — bootstrap físico del proyecto**.

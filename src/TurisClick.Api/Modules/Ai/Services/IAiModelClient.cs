@@ -16,8 +16,22 @@ public interface IAiModelClient
     /// <summary>Redacta una pregunta natural pidiendo SOLO los campos que el backend ya determinó que faltan (nunca decide qué falta).</summary>
     Task<string> GenerateClarificationReplyAsync(ClarificationRequest request, CancellationToken ct);
 
-    /// <summary>UC-AI-03/04 — dado un set de candidatos reales (con IDs), decide qué candidato va en qué día. Nunca inventa IDs fuera de los candidatos recibidos.</summary>
+    /// <summary>UC-AI-03/04/05 — dado un set de candidatos reales (con IDs), decide qué candidato va en qué día. Nunca inventa IDs fuera de los candidatos recibidos. En una iteración (UC-AI-05) recibe además los ítems preservados y la instrucción del turista.</summary>
     Task<ItineraryCompositionResult> ComposeItineraryAsync(ItineraryCompositionRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// UC-AI-05 — interpreta si el mensaje es un ajuste sobre la propuesta vigente y qué ítems toca.
+    /// Solo puede referirse a ítems por los IDs que el backend le pasó; cualquier otro se descarta.
+    /// Nunca decide el reemplazo acá: eso pasa por retrieval + composición + revalidación.
+    /// </summary>
+    Task<ModificationIntentResult> InterpretModificationAsync(ModificationInterpretationRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// UC-AI-06 — redacta la justificación de un componente. El modelo NO recibe la base ni infiere
+    /// nada: recibe hechos ya calculados por el backend desde Postgres y solo los pone en prosa
+    /// (docs/use-cases.md UC-AI-06: "sin agregar precios o datos no presentes en ellos").
+    /// </summary>
+    Task<string> GenerateItemExplanationAsync(ItemExplanationRequest request, CancellationToken ct);
 }
 
 /// <summary>Un turno de la conversación, para darle contexto al modelo sin que la conversación completa sea la única fuente de verdad.</summary>
@@ -91,12 +105,71 @@ public record CandidatePackage(
     /// <summary>UC-AI-03 — calculado de forma determinística por RetrievalService (no por el LLM) antes de ofrecer los candidatos.</summary>
     bool IsStrongFit);
 
+/// <summary>
+/// Ítem del itinerario vigente que el backend decidió CONSERVAR en una iteración (UC-AI-05, sección 2
+/// de la sesión: "si el usuario dice cambiame el día 2, no regeneres los otros 4"). El modelo lo recibe
+/// como contexto de solo lectura: no debe volver a proponerlo ni reemplazarlo, el backend lo re-inserta
+/// igual (previa revalidación contra Postgres).
+/// </summary>
+public record PreservedItem(int DayNumber, string ProductType, Guid ProductId, string Title);
+
 public record ItineraryCompositionRequest(
     ExtractedPreferencesSnapshot Preferences,
     int TripDurationDays,
     IReadOnlyList<CandidateExperience> CandidateExperiences,
-    IReadOnlyList<CandidatePackage> CandidatePackages);
+    IReadOnlyList<CandidatePackage> CandidatePackages,
+    /// <summary>Vacío en la primera generación (UC-AI-04); poblado al iterar (UC-AI-05).</summary>
+    IReadOnlyList<PreservedItem> PreservedItems,
+    /// <summary>Null en la primera generación; el pedido textual del turista al iterar ("quitá el rafting").</summary>
+    string? ModificationInstruction);
 
 public record ComposedItem(int DayNumber, string ProductType, Guid ProductId, Guid? AvailabilityId);
 
 public record ItineraryCompositionResult(string? Title, IReadOnlyList<ComposedItem> Items, string AssistantExplanation);
+
+/// <summary>Vista de un ítem del itinerario vigente. El Id es la única forma de referirse a él: el backend descarta cualquier id que el modelo no haya recibido acá.</summary>
+public record CurrentItineraryItemView(
+    Guid ItemId,
+    int DayNumber,
+    string ProductType,
+    string Title,
+    IReadOnlyList<string> CategoryNames,
+    decimal EstimatedUnitPrice,
+    string Currency,
+    DateOnly? Date);
+
+/// <summary>Qué tipo de ajuste pidió el turista (UC-AI-05). El backend traduce esto a "qué preservo / qué reemplazo" de forma determinística.</summary>
+public enum ModificationAction
+{
+    /// <summary>No es un ajuste sobre la propuesta vigente — se trata como búsqueda nueva (UC-AI-02/03/04).</summary>
+    NONE,
+    REMOVE,
+    REPLACE,
+    ADD,
+    REDUCE_BUDGET,
+    PREFER_PACKAGE
+}
+
+public record ModificationInterpretationRequest(
+    IReadOnlyList<ConversationTurn> History,
+    string LatestMessage,
+    ExtractedPreferencesSnapshot Preferences,
+    IReadOnlyList<CurrentItineraryItemView> CurrentItems,
+    IReadOnlyList<string> KnownCategoryNames);
+
+public record ModificationIntentResult(
+    ModificationAction Action,
+    /// <summary>Ítems actuales afectados. El backend valida que cada id esté en CurrentItems antes de usarlo.</summary>
+    IReadOnlyList<Guid> TargetItemIds,
+    IReadOnlyList<int> TargetDays,
+    /// <summary>Categorías reales que el turista quiere sumar ("agregá algo de aventura") — se resuelven contra el catálogo, no se inventan.</summary>
+    IReadOnlyList<string> AddCategoryNames);
+
+/// <summary>
+/// UC-AI-06. Facts ya viene calculado por el backend desde Postgres (precio real, cupos reales, encaje
+/// con fechas/presupuesto/intereses). El modelo solo redacta: no puede agregar atributos que no estén acá.
+/// </summary>
+public record ItemExplanationRequest(
+    ExtractedPreferencesSnapshot Preferences,
+    CurrentItineraryItemView Item,
+    IReadOnlyList<string> Facts);

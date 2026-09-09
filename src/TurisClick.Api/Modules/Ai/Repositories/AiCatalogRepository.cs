@@ -66,4 +66,32 @@ public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
             .Take(filter.SqlLimit)
             .ToListAsync(ct);
     }
+
+    public async Task<List<Experience>> GetExperiencesByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0) return [];
+
+        return await db.Experiences
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(e => e.Destination)
+            .Include(e => e.Categories)
+            .Include(e => e.Availabilities)
+            .Where(e => ids.Contains(e.Id))
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<Package>> GetPackagesByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0) return [];
+
+        return await db.Packages
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(p => p.Destination)
+            .Include(p => p.Categories)
+            .Include(p => p.Availabilities)
+            .Where(p => ids.Contains(p.Id))
+            .ToListAsync(ct);
+    }
 }

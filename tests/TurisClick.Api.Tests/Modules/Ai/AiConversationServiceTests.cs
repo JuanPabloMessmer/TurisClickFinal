@@ -30,6 +30,7 @@ public class AiConversationServiceTests
     private readonly Mock<ICategoryRepository> _categoryRepository = new();
     private readonly Mock<IAiModelClient> _aiModelClient = new();
     private readonly Mock<IRetrievalService> _retrievalService = new();
+    private readonly Mock<IItineraryRevalidationService> _revalidationService = new();
     private readonly Mock<ICurrentUserContext> _currentUser = new();
     private readonly AiConversationService _sut;
 
@@ -46,6 +47,9 @@ public class AiConversationServiceTests
         db.Setup(d => d.Set<AiMessage>()).Returns(Mock.Of<DbSet<AiMessage>>());
 
         _currentUser.Setup(c => c.UserId).Returns(_touristId);
+        _revalidationService
+            .Setup(r => r.RevalidateAsync(It.IsAny<AiItinerary>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ItineraryRevalidationResult.Empty);
         _destinationRepository.Setup(r => r.ListAsync(null, DestinationType.CITY, It.IsAny<CancellationToken>())).ReturnsAsync([]);
         _categoryRepository.Setup(r => r.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
@@ -56,6 +60,7 @@ public class AiConversationServiceTests
             _categoryRepository.Object,
             _aiModelClient.Object,
             _retrievalService.Object,
+            _revalidationService.Object,
             _currentUser.Object,
             Mock.Of<ILogger<AiConversationService>>(),
             db.Object);

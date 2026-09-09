@@ -339,7 +339,7 @@ Soporta UC-T-14/16/17/18, UC-AI-03/04/05/06, UC-SYS-05. Es la propuesta persisti
 | TouristId | FK a `User` — denormalizado para listar "Mis itinerarios" (UC-T-17) sin pasar por la conversación |
 | Title | Ej. "Tu viaje a La Paz" |
 | Status | `AiItineraryStatus`: `DRAFT` (transitorio de la sesión), `SAVED` (persistido explícitamente por el turista), `BOOKED` (ya generó una `Reservation`), `DISCARDED` |
-| Version | Se incrementa en cada ajuste (UC-AI-05), para trazabilidad de la iteración conversacional |
+| Version | Se incrementa en cada ajuste (UC-AI-05), para trazabilidad de la iteración conversacional. **Implementación (Oleada 6):** cada ajuste inserta una **fila nueva** con `Version = anterior + 1` en estado `DRAFT`; la versión anterior no se modifica ni se borra (si estaba `SAVED`, sigue `SAVED`), así queda el historial completo de cómo evolucionó la propuesta |
 | CreatedAt, UpdatedAt | — |
 
 **Relaciones:** `AiItinerary` **N—1** `AiConversation`, **N—1** `User`, **1—N** `AiItineraryItem`, **1—1 opcional** `Reservation` (vía `Reservation.AiItineraryId`, una vez reservado).
@@ -360,7 +360,7 @@ Soporta UC-AI-04/05, UC-T-14, UC-SYS-05. Mismo patrón que `ReservationItem` por
 | PackageId | FK opcional — obligatorio si `ProductType = PACKAGE` |
 | ExperienceAvailabilityId | FK opcional a `ExperienceAvailability` — el slot concreto propuesto, una vez que la IA ya fijó fecha/horario; puede quedar `null` mientras la propuesta todavía razona en términos de "Día N" sin una fecha calendario definitiva |
 | PackageAvailabilityId | FK opcional a `PackageAvailability` — análogo, cuando `ProductType = PACKAGE` |
-| EstimatedUnitPrice, Currency | Precio recuperado en el momento de la propuesta (UC-AI-02); se vuelve a validar recién en UC-T-18 antes de reservar |
+| EstimatedUnitPrice, Currency | Precio recuperado en el momento de la propuesta (UC-AI-02). Es un **snapshot histórico: nunca se sobrescribe**, ni al iterar (un ítem preservado viaja a la versión nueva con su precio original) ni al releer. **Implementación (Oleada 6):** además de la validación previa a reservar (UC-T-18), cada lectura (UC-T-14/17) revalida contra el catálogo y expone el estado vigente *al lado* del snapshot (`currentPrice`, `currentCurrency`, `currentAvailableSlots`, `priceChanged`, `availabilityState`, `warnings`), sin escribir en la base |
 
 **Regla de negocio (invariante):**
 - Igual que `ReservationItem` — exactamente uno de `ExperienceId`/`PackageId` según `ProductType`, y (si está presente) el availability correspondiente debe pertenecer a ese mismo producto. Este ítem **nunca** contiene datos inventados: siempre referencia una fila real de `Experience` o `Package`.

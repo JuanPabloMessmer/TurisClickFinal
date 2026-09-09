@@ -78,10 +78,17 @@ public partial class DeterministicAiModelClient : IAiModelClient
     {
         var items = new List<ComposedItem>();
 
+        // UC-AI-05: los días ya ocupados por ítems preservados no se vuelven a llenar — el backend los
+        // re-inserta él mismo, acá solo se completa lo que quedó libre (sección 2: "no regenerar lo que
+        // el usuario no pidió cambiar").
+        var occupiedDays = request.PreservedItems.Select(p => p.DayNumber).ToHashSet();
+
         var strongPackage = request.CandidatePackages.FirstOrDefault(p => p.IsStrongFit);
         var day = 1;
 
-        if (strongPackage is not null)
+        // Un Package cubre varios días: solo se propone si NO hay nada preservado (si el turista pidió
+        // conservar parte del viaje, meter un paquete de N días encima pisaría esos días).
+        if (strongPackage is not null && request.PreservedItems.Count == 0)
         {
             var availability = strongPackage.Availabilities.OrderBy(a => a.Date).FirstOrDefault();
             items.Add(new ComposedItem(day, "PACKAGE", strongPackage.Id, availability?.Id));
@@ -90,6 +97,7 @@ public partial class DeterministicAiModelClient : IAiModelClient
 
         foreach (var experience in request.CandidateExperiences)
         {
+            while (occupiedDays.Contains(day)) day++;
             if (day > request.TripDurationDays) break;
 
             var availability = experience.Availabilities.OrderBy(a => a.Date).FirstOrDefault();
@@ -101,11 +109,93 @@ public partial class DeterministicAiModelClient : IAiModelClient
             ? $"Tu viaje a {destinationName}"
             : "Tu itinerario personalizado";
 
-        var explanation = strongPackage is not null
-            ? $"Te recomiendo el paquete \"{strongPackage.Title}\" porque cubre bien lo que buscás, complementado con experiencias adicionales."
-            : "Armé un itinerario combinando las experiencias reales disponibles que mejor encajan con lo que pediste.";
+        string explanation;
+        if (request.ModificationInstruction is not null)
+        {
+            explanation = request.PreservedItems.Count > 0
+                ? $"Ajusté tu itinerario según lo que pediste y mantuve los {request.PreservedItems.Count} componente(s) que no mencionaste."
+                : "Rearmé tu itinerario según lo que pediste, con productos reales disponibles.";
+        }
+        else
+        {
+            explanation = strongPackage is not null
+                ? $"Te recomiendo el paquete \"{strongPackage.Title}\" porque cubre bien lo que buscás, complementado con experiencias adicionales."
+                : "Armé un itinerario combinando las experiencias reales disponibles que mejor encajan con lo que pediste.";
+        }
 
         return Task.FromResult(new ItineraryCompositionResult(title, items, explanation));
+    }
+
+    /// <summary>
+    /// UC-AI-05 determinístico: keywords → acción, y matching por substring contra los TÍTULOS/CATEGORÍAS
+    /// reales de los ítems vigentes (nunca inventa ids: solo puede devolver ids que recibió). No pretende
+    /// ser NLU real — pretende ser 100% predecible para tests/Newman (sección 12 de la sesión).
+    /// </summary>
+    public Task<ModificationIntentResult> InterpretModificationAsync(ModificationInterpretationRequest request, CancellationToken ct)
+    {
+        var message = request.LatestMessage;
+
+        if (request.CurrentItems.Count == 0)
+            return Task.FromResult(new ModificationIntentResult(ModificationAction.NONE, [], [], []));
+
+        var targetDays = DayRegex().Matches(message)
+            .Select(m => int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+            .Distinct()
+            .ToList();
+
+        // "el último día" no trae número — se resuelve contra el itinerario real, no se adivina.
+        if (LastDayRegex().IsMatch(message))
+        {
+            var lastDay = request.CurrentItems.Max(i => i.DayNumber);
+            if (!targetDays.Contains(lastDay)) targetDays.Add(lastDay);
+        }
+
+        var mentionedCategories = request.KnownCategoryNames
+            .Where(name => message.Contains(name, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        // Ítems mencionados: por categoría real, por título real o por el día que ocupan.
+        var matchedByText = request.CurrentItems
+            .Where(item =>
+                message.Contains(item.Title, StringComparison.OrdinalIgnoreCase)
+                || item.CategoryNames.Any(c => message.Contains(c, StringComparison.OrdinalIgnoreCase)))
+            .Select(i => i.ItemId)
+            .ToList();
+
+        var matchedByDay = request.CurrentItems
+            .Where(i => targetDays.Contains(i.DayNumber))
+            .Select(i => i.ItemId)
+            .ToList();
+
+        var targetItemIds = matchedByText.Concat(matchedByDay).Distinct().ToList();
+
+        if (PreferPackageRegex().IsMatch(message))
+            return Task.FromResult(new ModificationIntentResult(ModificationAction.PREFER_PACKAGE, [], [], []));
+
+        if (ReduceBudgetRegex().IsMatch(message))
+            return Task.FromResult(new ModificationIntentResult(ModificationAction.REDUCE_BUDGET, [], [], []));
+
+        if (RemoveRegex().IsMatch(message) && targetItemIds.Count > 0)
+            return Task.FromResult(new ModificationIntentResult(ModificationAction.REMOVE, targetItemIds, targetDays, []));
+
+        if (AddRegex().IsMatch(message))
+            return Task.FromResult(new ModificationIntentResult(ModificationAction.ADD, [], targetDays, mentionedCategories));
+
+        if (ChangeRegex().IsMatch(message) && targetItemIds.Count > 0)
+            return Task.FromResult(new ModificationIntentResult(ModificationAction.REPLACE, targetItemIds, targetDays, mentionedCategories));
+
+        return Task.FromResult(new ModificationIntentResult(ModificationAction.NONE, [], [], []));
+    }
+
+    /// <summary>
+    /// UC-AI-06 determinístico: los hechos ya vienen calculados por el backend desde Postgres, así que
+    /// "redactar" acá es concatenarlos. Nunca agrega nada que no esté en Facts.
+    /// </summary>
+    public Task<string> GenerateItemExplanationAsync(ItemExplanationRequest request, CancellationToken ct)
+    {
+        var facts = string.Join(" ", request.Facts);
+        var intro = $"Te propuse \"{request.Item.Title}\" para el día {request.Item.DayNumber}.";
+        return Task.FromResult(string.IsNullOrWhiteSpace(facts) ? intro : $"{intro} {facts}");
     }
 
     [GeneratedRegex(@"\d{4}-\d{2}-\d{2}")]
@@ -119,6 +209,27 @@ public partial class DeterministicAiModelClient : IAiModelClient
 
     [GeneratedRegex(@"\b(mi novia|mi novio|mi esposa|mi esposo|en pareja)\b")]
     private static partial Regex CoupleRegex();
+
+    [GeneratedRegex(@"d[ií]a\s*(\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex DayRegex();
+
+    [GeneratedRegex(@"[uú]ltimo d[ií]a", RegexOptions.IgnoreCase)]
+    private static partial Regex LastDayRegex();
+
+    [GeneratedRegex(@"\b(quit[aá]|saca|sacame|elimin[aá]|borr[aá]|no quiero|sin)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RemoveRegex();
+
+    [GeneratedRegex(@"\b(agreg[aá]|añad[ií]|sum[aá]|met[eé]|quiero m[aá]s|algo m[aá]s)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex AddRegex();
+
+    [GeneratedRegex(@"\b(cambi[aá]|reemplaz[aá]|otro|otra|prefiero)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex ChangeRegex();
+
+    [GeneratedRegex(@"\b(gastar menos|m[aá]s barato|m[aá]s econ[oó]mico|reduc[ií] el (presupuesto|gasto)|baj[aá] el (precio|presupuesto))\b", RegexOptions.IgnoreCase)]
+    private static partial Regex ReduceBudgetRegex();
+
+    [GeneratedRegex(@"\b(prefiero un (package|paquete)|mejor un (package|paquete)|un solo (package|paquete))\b", RegexOptions.IgnoreCase)]
+    private static partial Regex PreferPackageRegex();
 
     /// <summary>
     /// Exige contexto de moneda (símbolo o palabra) para no confundir un monto con cualquier otro

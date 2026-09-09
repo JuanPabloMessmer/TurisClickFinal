@@ -46,7 +46,7 @@ public class RetrievalServiceTests
         _catalogRepository.Setup(r => r.SearchCandidatePackagesAsync(It.IsAny<AiCatalogFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync([package]);
         _catalogRepository.Setup(r => r.SearchCandidateExperiencesAsync(It.IsAny<AiCatalogFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
-        var query = new RetrievalQuery(_uyuni.Id, new DateOnly(2026, 9, 10), new DateOnly(2026, 9, 14), 5, 300, "USD", [_aventura.Id]);
+        var query = new RetrievalQuery(_uyuni.Id, new DateOnly(2026, 9, 10), new DateOnly(2026, 9, 14), 5, 300, "USD", [_aventura.Id], []);
 
         var result = await _sut.RetrieveAsync(query, CancellationToken.None);
 
@@ -61,7 +61,7 @@ public class RetrievalServiceTests
         _catalogRepository.Setup(r => r.SearchCandidatePackagesAsync(It.IsAny<AiCatalogFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync([package]);
         _catalogRepository.Setup(r => r.SearchCandidateExperiencesAsync(It.IsAny<AiCatalogFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
-        var query = new RetrievalQuery(_uyuni.Id, null, null, 3, null, null, []);
+        var query = new RetrievalQuery(_uyuni.Id, null, null, 3, null, null, [], []);
 
         var result = await _sut.RetrieveAsync(query, CancellationToken.None);
 
@@ -75,7 +75,7 @@ public class RetrievalServiceTests
         _catalogRepository.Setup(r => r.SearchCandidatePackagesAsync(It.IsAny<AiCatalogFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync([package]);
         _catalogRepository.Setup(r => r.SearchCandidateExperiencesAsync(It.IsAny<AiCatalogFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
-        var query = new RetrievalQuery(_uyuni.Id, null, null, 3, 500, "USD", []);
+        var query = new RetrievalQuery(_uyuni.Id, null, null, 3, 500, "USD", [], []);
 
         var result = await _sut.RetrieveAsync(query, CancellationToken.None);
 
@@ -91,7 +91,7 @@ public class RetrievalServiceTests
         _catalogRepository.Setup(r => r.SearchCandidatePackagesAsync(It.IsAny<AiCatalogFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync([package]);
         _catalogRepository.Setup(r => r.SearchCandidateExperiencesAsync(It.IsAny<AiCatalogFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
-        var query = new RetrievalQuery(_uyuni.Id, null, null, 3, 500, "USD", [_aventura.Id]);
+        var query = new RetrievalQuery(_uyuni.Id, null, null, 3, 500, "USD", [_aventura.Id], []);
 
         var result = await _sut.RetrieveAsync(query, CancellationToken.None);
 
@@ -120,7 +120,7 @@ public class RetrievalServiceTests
         _catalogRepository.Setup(r => r.SearchCandidateExperiencesAsync(It.IsAny<AiCatalogFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync(experiences);
         _catalogRepository.Setup(r => r.SearchCandidatePackagesAsync(It.IsAny<AiCatalogFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
-        var result = await _sut.RetrieveAsync(new RetrievalQuery(_uyuni.Id, null, null, null, null, null, []), CancellationToken.None);
+        var result = await _sut.RetrieveAsync(new RetrievalQuery(_uyuni.Id, null, null, null, null, null, [], []), CancellationToken.None);
 
         Assert.Equal(8, result.Experiences.Count); // MaxCandidatesPerType configurado en el options de arriba
     }

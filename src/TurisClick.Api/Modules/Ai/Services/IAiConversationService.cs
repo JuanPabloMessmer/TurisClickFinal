@@ -14,12 +14,14 @@ public interface IAiConversationService
     /// <summary>403 si la conversación no pertenece al Tourist autenticado.</summary>
     Task<ConversationResponse> GetByIdAsync(Guid id, CancellationToken ct);
 
-    /// <summary>UC-T-13 — orquesta UC-AI-01 (extracción) y, si hay suficiente información, UC-AI-02/03/04 (retrieval + composición).</summary>
+    /// <summary>
+    /// UC-T-13 — orquesta UC-AI-01 (extracción) y, si hay suficiente información, UC-AI-02/03/04
+    /// (retrieval + composición). Si la conversación ya tiene una propuesta vigente, el mismo endpoint
+    /// resuelve UC-T-15/UC-AI-05: interpreta el ajuste y genera una versión nueva preservando lo que el
+    /// turista no pidió cambiar (docs/use-cases.md UC-T-15 usa este mismo endpoint).
+    /// </summary>
     Task<SendMessageResponse> SendMessageAsync(Guid conversationId, SendMessageRequest request, CancellationToken ct);
 
-    /// <summary>UC-T-14 — la propuesta vigente (más reciente) de la conversación.</summary>
+    /// <summary>UC-T-14 — la propuesta vigente (más reciente) de la conversación, revalidada contra el catálogo.</summary>
     Task<ItineraryResponse> GetLatestItineraryAsync(Guid conversationId, CancellationToken ct);
-
-    /// <summary>Detalle de un itinerario por id — 403 si no pertenece al Tourist autenticado.</summary>
-    Task<ItineraryResponse> GetItineraryByIdAsync(Guid itineraryId, CancellationToken ct);
 }

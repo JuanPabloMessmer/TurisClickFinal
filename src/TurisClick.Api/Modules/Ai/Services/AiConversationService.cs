@@ -28,6 +28,7 @@ public class AiConversationService(
     ICategoryRepository categoryRepository,
     IAiModelClient aiModelClient,
     IRetrievalService retrievalService,
+    IItineraryRevalidationService revalidationService,
     ICurrentUserContext currentUser,
     ILogger<AiConversationService> logger,
     TurisClickDbContext db) : IAiConversationService
@@ -150,8 +151,137 @@ public class AiConversationService(
             };
         }
 
-        return await GenerateItineraryAsync(conversation, history, userMessage, now, ct);
+        // UC-T-15/UC-AI-05: si ya hay una propuesta vigente, este mensaje puede ser un AJUSTE sobre ella
+        // y no una búsqueda nueva. Quién decide qué se conserva y qué se reemplaza es el backend
+        // (determinístico); el modelo solo clasifica la intención y señala ítems por id.
+        var currentItinerary = await itineraryRepository.GetLatestByConversationIdAsync(conversation.Id, ct);
+        var plan = currentItinerary is null
+            ? null
+            : await BuildIterationPlanAsync(conversation, currentItinerary, history, userMessage, knownCategories, categoryByName, ct);
+
+        return await GenerateItineraryAsync(conversation, history, userMessage, now, plan, ct);
     }
+
+    /// <summary>
+    /// Traduce la intención del modelo a un plan concreto: qué ítems se conservan, cuáles salen y qué
+    /// productos no deben volver a ofrecerse. Todo es determinístico salvo la clasificación de la
+    /// instrucción, y cualquier id que el modelo devuelva y no pertenezca al itinerario vigente se
+    /// descarta (misma barrera anti-hallucination que con los candidatos).
+    /// </summary>
+    private async Task<IterationPlan?> BuildIterationPlanAsync(
+        AiConversation conversation, AiItinerary current, List<ConversationTurn> history, string userMessage,
+        List<Category> knownCategories, IReadOnlyDictionary<string, Category> categoryByName, CancellationToken ct)
+    {
+        ModificationIntentResult intent;
+        try
+        {
+            intent = await aiModelClient.InterpretModificationAsync(
+                new ModificationInterpretationRequest(
+                    history, userMessage, BuildSnapshot(conversation),
+                    current.Items.Select(ToItemView).ToList(),
+                    knownCategories.Select(c => c.Name).ToList()),
+                ct);
+        }
+        catch (Exception ex) when (ex is AiModelUnavailableException or AiModelResponseException)
+        {
+            // Sin interpretación no se asume un ajuste: se trata como búsqueda nueva (comportamiento
+            // Oleada 5), que es el camino seguro — nunca se borra el itinerario por un fallo del modelo.
+            logger.LogWarning(ex, "SendMessage {ConversationId}: no se pudo interpretar el ajuste, se trata como búsqueda nueva.", conversation.Id);
+            return null;
+        }
+
+        if (intent.Action == ModificationAction.NONE)
+            return null;
+
+        // Categorías que el intérprete detectó y la extracción no llegó a fusionar.
+        foreach (var categoryName in intent.AddCategoryNames)
+        {
+            if (categoryByName.TryGetValue(categoryName, out var category) && conversation.Categories.All(c => c.Id != category.Id))
+                conversation.Categories.Add(category);
+        }
+
+        var itemsById = current.Items.ToDictionary(i => i.Id);
+        // Solo ids que realmente están en el itinerario vigente — el resto es alucinación del modelo.
+        var targeted = intent.TargetItemIds
+            .Where(itemsById.ContainsKey)
+            .Select(id => itemsById[id])
+            .ToList();
+
+        var discardedTargets = intent.TargetItemIds.Count - targeted.Count;
+        if (discardedTargets > 0)
+            logger.LogWarning("Ai modification {ConversationId}: se descartaron {Count} ids que no pertenecen al itinerario vigente.", conversation.Id, discardedTargets);
+
+        List<AiItineraryItem> removed;
+        var needsReplacement = true;
+        decimal? priceCeiling = null;
+        string? priceCeilingCurrency = null;
+
+        switch (intent.Action)
+        {
+            case ModificationAction.REMOVE:
+                removed = targeted;
+                needsReplacement = false;
+                break;
+
+            case ModificationAction.REPLACE:
+                removed = targeted;
+                break;
+
+            case ModificationAction.ADD:
+                removed = [];
+                break;
+
+            case ModificationAction.REDUCE_BUDGET:
+                // "Quiero gastar menos" sin monto: se saca el componente más caro y se exige que el
+                // reemplazo sea estrictamente más barato EN LA MISMA MONEDA (sección 10: sin FX inventado).
+                var mostExpensive = current.Items.OrderByDescending(i => i.EstimatedUnitPrice).FirstOrDefault();
+                removed = mostExpensive is null ? [] : [mostExpensive];
+                priceCeiling = mostExpensive?.EstimatedUnitPrice;
+                priceCeilingCurrency = mostExpensive?.Currency;
+                break;
+
+            case ModificationAction.PREFER_PACKAGE:
+                // El turista quiere un paquete en vez de experiencias sueltas: se rearma desde cero para
+                // que el retrieval pueda proponer un Package que cubra varios días.
+                removed = [.. current.Items];
+                break;
+
+            default:
+                return null;
+        }
+
+        var removedIds = removed.Select(r => r.Id).ToHashSet();
+        var preserved = current.Items.Where(i => !removedIds.Contains(i.Id)).ToList();
+
+        // No volver a ofrecer lo que el turista sacó, ni duplicar lo que ya está preservado.
+        var excluded = removed.Concat(preserved)
+            .Select(i => i.ExperienceId ?? i.PackageId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToHashSet();
+
+        // En PREFER_PACKAGE los productos removidos SÍ pueden volver (dentro de un paquete), así que no
+        // se excluyen: lo que cambia es la forma del itinerario, no el catálogo aceptable.
+        if (intent.Action == ModificationAction.PREFER_PACKAGE)
+            excluded.Clear();
+
+        logger.LogInformation(
+            "Ai modification {ConversationId}: acción={Action}, {Removed} ítem(s) fuera, {Preserved} preservado(s).",
+            conversation.Id, intent.Action, removed.Count, preserved.Count);
+
+        return new IterationPlan(current, intent.Action, preserved, removed, excluded, needsReplacement, priceCeiling, priceCeilingCurrency);
+    }
+
+    /// <summary>Qué conservar y qué rehacer en una iteración — lo decide el backend, no el LLM.</summary>
+    private sealed record IterationPlan(
+        AiItinerary Current,
+        ModificationAction Action,
+        IReadOnlyList<AiItineraryItem> PreservedItems,
+        IReadOnlyList<AiItineraryItem> RemovedItems,
+        IReadOnlyCollection<Guid> ExcludedProductIds,
+        bool NeedsReplacement,
+        decimal? PriceCeilingPerPerson,
+        string? PriceCeilingCurrency);
 
     public async Task<ItineraryResponse> GetLatestItineraryAsync(Guid conversationId, CancellationToken ct)
     {
@@ -162,26 +292,17 @@ public class AiConversationService(
         var itinerary = await itineraryRepository.GetLatestByConversationIdAsync(conversationId, ct)
             ?? throw new NotFoundAppException("Todavía no se generó ningún itinerario para esta conversación.");
 
-        return ToItineraryResponse(itinerary, conversation.TravelersCount ?? 1);
+        // La propuesta vigente puede tener horas o semanas: se revalida igual que al retomar (sección 9).
+        var revalidation = await revalidationService.RevalidateAsync(itinerary, ct);
+
+        return AiItineraryMapper.ToResponse(itinerary, conversation.TravelersCount ?? 1, revalidation);
     }
 
-    public async Task<ItineraryResponse> GetItineraryByIdAsync(Guid itineraryId, CancellationToken ct)
-    {
-        var itinerary = await itineraryRepository.GetByIdForReadAsync(itineraryId, ct)
-            ?? throw new NotFoundAppException("Itinerario no encontrado.");
-
-        if (itinerary.TouristId != currentUser.UserId)
-            throw new ForbiddenAppException("Este itinerario no te pertenece.");
-
-        var conversation = await conversationRepository.GetByIdForReadAsync(itinerary.AiConversationId, ct);
-
-        return ToItineraryResponse(itinerary, conversation?.TravelersCount ?? 1);
-    }
-
-    // ---- UC-AI-02/03/04: retrieval + composición + validación anti-hallucination ----
+    // ---- UC-AI-02/03/04/05: retrieval + composición + validación anti-hallucination ----
 
     private async Task<SendMessageResponse> GenerateItineraryAsync(
-        AiConversation conversation, List<ConversationTurn> history, string userMessage, DateTimeOffset now, CancellationToken ct)
+        AiConversation conversation, List<ConversationTurn> history, string userMessage, DateTimeOffset now,
+        IterationPlan? plan, CancellationToken ct)
     {
         var tripDurationDays = conversation.DurationDays
             ?? (conversation.StartDate.HasValue && conversation.EndDate.HasValue
@@ -192,6 +313,26 @@ public class AiConversationService(
         var travelers = conversation.TravelersCount ?? 1;
         var budgetPerPerson = conversation.BudgetTotal.HasValue ? conversation.BudgetTotal.Value / travelers : (decimal?)null;
 
+        var warnings = new List<string>();
+
+        // UC-AI-05 / sección 3: los ítems que se conservan NO se arrastran a ciegas — se revalidan
+        // contra Postgres igual que si fueran nuevos, y el que dejó de ser válido se cae con aviso.
+        var preserved = new List<AiItineraryItem>();
+        var needsReplacement = plan?.NeedsReplacement ?? false;
+
+        if (plan is not null && plan.PreservedItems.Count > 0)
+        {
+            var (stillValid, lostWarnings, lostAny) = await RevalidatePreservedAsync(plan, ct);
+            preserved.AddRange(stillValid);
+            warnings.AddRange(lostWarnings);
+            if (lostAny) needsReplacement = true;
+        }
+
+        // Un REMOVE puro no necesita candidatos nuevos: se persiste lo que quedó, sin volver a buscar
+        // catálogo (sección 1 — iterar no es rehacer la búsqueda desde cero).
+        if (plan is not null && !needsReplacement)
+            return await PersistIterationAsync(conversation, plan, preserved, [], warnings, userMessage, now, travelers, ct);
+
         var retrieval = await retrievalService.RetrieveAsync(
             new RetrievalQuery(
                 conversation.PreferredDestinationId,
@@ -200,15 +341,36 @@ public class AiConversationService(
                 tripDurationDays,
                 budgetPerPerson,
                 conversation.BudgetCurrency,
-                conversation.Categories.Select(c => c.Id).ToList()),
+                conversation.Categories.Select(c => c.Id).ToList(),
+                plan?.ExcludedProductIds ?? []),
             ct);
 
+        // "Quiero gastar menos": solo sirven candidatos estrictamente más baratos en LA MISMA moneda —
+        // comparar contra otra moneda exigiría una conversión que no hacemos (sección 10).
+        if (plan is { PriceCeilingPerPerson: { } ceiling, PriceCeilingCurrency: { } ceilingCurrency })
+        {
+            retrieval = new RetrievalResult(
+                [.. retrieval.Experiences.Where(e => IsCheaperInSameCurrency(e.Price, e.Currency, ceiling, ceilingCurrency))],
+                [.. retrieval.Packages.Where(p => IsCheaperInSameCurrency(p.Price, p.Currency, ceiling, ceilingCurrency))]);
+
+            if (retrieval.Experiences.Count == 0 && retrieval.Packages.Count == 0)
+                warnings.Add($"No encontré alternativas más baratas que {ceilingCurrency} {ceiling:0.##} en la misma moneda.");
+        }
+
         logger.LogInformation(
-            "Ai retrieval {ConversationId}: {ExperienceCount} experiencias, {PackageCount} paquetes candidatos.",
-            conversation.Id, retrieval.Experiences.Count, retrieval.Packages.Count);
+            "Ai retrieval {ConversationId}: {ExperienceCount} experiencias, {PackageCount} paquetes candidatos (iteración={IsIteration}).",
+            conversation.Id, retrieval.Experiences.Count, retrieval.Packages.Count, plan is not null);
 
         if (retrieval.Experiences.Count == 0 && retrieval.Packages.Count == 0)
         {
+            // Si estábamos iterando y todavía quedan ítems válidos, la propuesta no se pierde por no
+            // haber encontrado reemplazo: se persiste lo que sobrevivió.
+            if (plan is not null && preserved.Count > 0)
+            {
+                warnings.Add("No encontré alternativas nuevas, así que mantuve el resto de tu itinerario.");
+                return await PersistIterationAsync(conversation, plan, preserved, [], warnings, userMessage, now, travelers, ct);
+            }
+
             const string noMatchesReply = "No encontré experiencias ni paquetes publicados que coincidan con lo que buscás todavía. ¿Querés ajustar el destino, las fechas o el presupuesto?";
             AddMessage(conversation.Id, MessageSender.AI, noMatchesReply, now);
             await db.SaveChangesAsync(ct);
@@ -218,7 +380,9 @@ public class AiConversationService(
                 AssistantMessage = noMatchesReply,
                 ParsedPreferences = ToPreferencesResponse(conversation),
                 ClarificationNeeded = false,
-                Warnings = ["No hay candidatos publicados disponibles para estos criterios."]
+                // Los avisos acumulados (ej. un ítem preservado que se cayó) NO se pisan: son justamente
+                // lo que explica por qué el itinerario quedó como quedó.
+                Warnings = [.. warnings, "No hay candidatos publicados disponibles para estos criterios."]
             };
         }
 
@@ -226,7 +390,11 @@ public class AiConversationService(
         try
         {
             composition = await aiModelClient.ComposeItineraryAsync(
-                new ItineraryCompositionRequest(BuildSnapshot(conversation), tripDurationDays, retrieval.Experiences, retrieval.Packages), ct);
+                new ItineraryCompositionRequest(
+                    BuildSnapshot(conversation), tripDurationDays, retrieval.Experiences, retrieval.Packages,
+                    preserved.Select(ToPreservedItem).ToList(),
+                    plan is null ? null : userMessage),
+                ct);
         }
         catch (Exception ex) when (ex is AiModelUnavailableException or AiModelResponseException)
         {
@@ -234,10 +402,36 @@ public class AiConversationService(
             return await FailGracefullyAsync(conversation, now, ct);
         }
 
-        var (validItems, warnings) = ValidateComposedItems(composition.Items, retrieval);
+        var (validItems, compositionWarnings) = ValidateComposedItems(composition.Items, retrieval);
+        warnings.AddRange(compositionWarnings);
+
+        // El modelo no puede meter mano en los días que el turista NO pidió tocar: si propone algo para
+        // un día ocupado por un ítem preservado, se descarta. La excepción es ADD, donde sumar algo a un
+        // día que ya tiene actividades es justamente lo que se pidió.
+        if (plan is not null && plan.Action != ModificationAction.ADD && preserved.Count > 0)
+        {
+            var preservedDays = preserved.Select(p => p.DayNumber).ToHashSet();
+            var intruders = validItems.Where(i => preservedDays.Contains(i.DayNumber)).ToList();
+            if (intruders.Count > 0)
+            {
+                logger.LogWarning(
+                    "Ai composition {ConversationId}: se descartaron {Count} ítem(s) que el modelo propuso para días preservados.",
+                    conversation.Id, intruders.Count);
+                validItems = [.. validItems.Except(intruders)];
+            }
+        }
+
         logger.LogInformation(
             "Ai composition {ConversationId}: {Selected} ítems elegidos por el modelo, {Valid} válidos tras la revalidación.",
             conversation.Id, composition.Items.Count, validItems.Count);
+
+        // En una iteración, lo preservado ya es una propuesta válida por sí solo: que el modelo no
+        // encuentre reemplazo no puede borrar el itinerario del turista.
+        if (validItems.Count == 0 && plan is not null && preserved.Count > 0)
+        {
+            warnings.Add("No encontré un reemplazo válido, así que mantuve el resto de tu itinerario tal como estaba.");
+            return await PersistIterationAsync(conversation, plan, preserved, [], warnings, userMessage, now, travelers, ct);
+        }
 
         if (validItems.Count == 0)
         {
@@ -254,29 +448,79 @@ public class AiConversationService(
             };
         }
 
+        var explanation = string.IsNullOrWhiteSpace(composition.AssistantExplanation)
+            ? "Armé una propuesta de itinerario con productos reales disponibles."
+            : composition.AssistantExplanation;
+
+        return await PersistProposalAsync(
+            conversation, plan, preserved, validItems, warnings,
+            string.IsNullOrWhiteSpace(composition.Title) ? null : composition.Title,
+            explanation, now, travelers, ct);
+    }
+
+    /// <summary>
+    /// Persiste una iteración sin ítems nuevos (REMOVE puro, o no hubo reemplazo válido): se conserva lo
+    /// que quedaba y se sube la versión, para que el historial refleje el ajuste igual.
+    /// </summary>
+    private Task<SendMessageResponse> PersistIterationAsync(
+        AiConversation conversation, IterationPlan plan, List<AiItineraryItem> preserved, List<AiItineraryItem> newItems,
+        List<string> warnings, string userMessage, DateTimeOffset now, int travelers, CancellationToken ct)
+    {
+        var explanation = plan.Action == ModificationAction.REMOVE
+            ? "Listo, saqué eso del itinerario y dejé el resto como estaba."
+            : "Actualicé tu itinerario con el ajuste que pediste.";
+
+        return PersistProposalAsync(conversation, plan, preserved, newItems, warnings, plan.Current.Title, explanation, now, travelers, ct);
+    }
+
+    /// <summary>
+    /// Persiste la propuesta como una fila NUEVA de AiItinerary. En una iteración la versión se
+    /// incrementa (domain-model.md: "Version se incrementa en cada ajuste (UC-AI-05)") y la propuesta
+    /// anterior se conserva intacta — así queda la trazabilidad de cómo evolucionó la conversación sin
+    /// necesidad de tablas de versionado extra.
+    /// </summary>
+    private async Task<SendMessageResponse> PersistProposalAsync(
+        AiConversation conversation, IterationPlan? plan, List<AiItineraryItem> preserved, List<AiItineraryItem> newItems,
+        List<string> warnings, string? title, string explanation, DateTimeOffset now, int travelers, CancellationToken ct)
+    {
         var itinerary = new AiItinerary
         {
             Id = Guid.NewGuid(),
             AiConversationId = conversation.Id,
             TouristId = conversation.TouristId,
-            Title = string.IsNullOrWhiteSpace(composition.Title) ? null : composition.Title,
+            Title = title,
             Status = AiItineraryStatus.DRAFT,
-            Version = 1,
+            Version = plan is null ? 1 : plan.Current.Version + 1,
             CreatedAt = now,
             UpdatedAt = now
         };
 
-        foreach (var item in validItems)
+        // Preservados primero: mantienen su día original, y los nuevos se acomodan detrás dentro del día.
+        var sortOrderByDay = new Dictionary<int, int>();
+        foreach (var item in preserved.Concat(newItems).OrderBy(i => i.DayNumber))
+        {
+            item.SortOrder = sortOrderByDay.GetValueOrDefault(item.DayNumber);
+            sortOrderByDay[item.DayNumber] = item.SortOrder + 1;
             itinerary.Items.Add(item);
+        }
+
+        if (itinerary.Items.Count == 0)
+        {
+            const string emptyReply = "Con ese ajuste no queda ningún componente en el itinerario. ¿Querés que busque otras opciones?";
+            AddMessage(conversation.Id, MessageSender.AI, emptyReply, now);
+            await db.SaveChangesAsync(ct);
+
+            return new SendMessageResponse
+            {
+                AssistantMessage = emptyReply,
+                ParsedPreferences = ToPreferencesResponse(conversation),
+                ClarificationNeeded = false,
+                Warnings = warnings
+            };
+        }
 
         await itineraryRepository.AddAsync(itinerary, ct);
-
-        var explanation = string.IsNullOrWhiteSpace(composition.AssistantExplanation)
-            ? "Armé una propuesta de itinerario con productos reales disponibles."
-            : composition.AssistantExplanation;
-
         AddMessage(conversation.Id, MessageSender.AI, explanation, now);
-
         await db.SaveChangesAsync(ct);
 
         var persisted = await itineraryRepository.GetByIdForReadAsync(itinerary.Id, ct)
@@ -287,10 +531,81 @@ public class AiConversationService(
             AssistantMessage = explanation,
             ParsedPreferences = ToPreferencesResponse(conversation),
             ClarificationNeeded = false,
-            Itinerary = ToItineraryResponse(persisted, travelers),
+            // Recién persistido y validado en este mismo request: no hace falta revalidar de nuevo.
+            Itinerary = AiItineraryMapper.ToResponse(persisted, travelers, ItineraryRevalidationResult.Empty),
             Warnings = warnings
         };
     }
+
+    /// <summary>
+    /// Sección 3 — los ítems preservados se revalidan contra Postgres antes de reinsertarlos, pero
+    /// preservar significa preservar: se reinsertan con SU snapshot original (precio y moneda del
+    /// momento en que se propusieron), no con el precio de hoy. Un cambio de precio se informa como
+    /// warning y queda visible de forma permanente al leer el itinerario (el DTO expone snapshot y
+    /// precio vigente lado a lado); reescribir el snapshot lo haría desaparecer para siempre.
+    /// Solo se reemplaza lo que dejó de ser válido: eso sí se cae, con aviso.
+    /// </summary>
+    private async Task<(List<AiItineraryItem> Items, List<string> Warnings, bool LostAny)> RevalidatePreservedAsync(
+        IterationPlan plan, CancellationToken ct)
+    {
+        var snapshot = new AiItinerary { Id = plan.Current.Id, Items = [.. plan.PreservedItems] };
+        var revalidation = await revalidationService.RevalidateAsync(snapshot, ct);
+
+        var kept = new List<AiItineraryItem>();
+        var warnings = new List<string>();
+        var lostAny = false;
+
+        foreach (var item in plan.PreservedItems)
+        {
+            if (!revalidation.ByItemId.TryGetValue(item.Id, out var live) || !live.IsValid)
+            {
+                lostAny = true;
+                warnings.AddRange(live?.Warnings ?? ["Un componente que ibas a conservar ya no está disponible."]);
+                warnings.Add("Lo saqué del itinerario porque ya no se puede reservar.");
+                continue;
+            }
+
+            if (live.PriceChanged(item.EstimatedUnitPrice, item.Currency))
+                warnings.AddRange(live.Warnings);
+
+            kept.Add(new AiItineraryItem
+            {
+                Id = Guid.NewGuid(),
+                DayNumber = item.DayNumber,
+                SortOrder = item.SortOrder,
+                ProductType = item.ProductType,
+                ExperienceId = item.ExperienceId,
+                PackageId = item.PackageId,
+                ExperienceAvailabilityId = item.ExperienceAvailabilityId,
+                PackageAvailabilityId = item.PackageAvailabilityId,
+                // Snapshot ORIGINAL: este ítem no se volvió a proponer, se conservó tal cual. El precio
+                // vigente no se persiste acá — viaja por DTO (CurrentPrice) cada vez que se lee.
+                EstimatedUnitPrice = item.EstimatedUnitPrice,
+                Currency = item.Currency
+            });
+        }
+
+        return (kept, warnings, lostAny);
+    }
+
+    private static bool IsCheaperInSameCurrency(decimal price, string currency, decimal ceiling, string ceilingCurrency) =>
+        string.Equals(currency, ceilingCurrency, StringComparison.OrdinalIgnoreCase) && price < ceiling;
+
+    private static PreservedItem ToPreservedItem(AiItineraryItem item) => new(
+        item.DayNumber,
+        item.ProductType.ToString(),
+        item.ExperienceId ?? item.PackageId ?? Guid.Empty,
+        item.Experience?.Title ?? item.Package?.Title ?? "Componente");
+
+    private static CurrentItineraryItemView ToItemView(AiItineraryItem item) => new(
+        item.Id,
+        item.DayNumber,
+        item.ProductType.ToString(),
+        item.Experience?.Title ?? item.Package?.Title ?? "Componente",
+        item.Experience?.Categories.Select(c => c.Name).ToList() ?? item.Package?.Categories.Select(c => c.Name).ToList() ?? [],
+        item.EstimatedUnitPrice,
+        item.Currency,
+        item.ExperienceAvailability?.Date ?? item.PackageAvailability?.DepartureDate);
 
     /// <summary>
     /// UC-11 (sección de la sesión) — anti-hallucination: cada ítem que devolvió el modelo se valida
@@ -495,35 +810,4 @@ public class AiConversationService(
         Categories = conversation.Categories.Select(c => new CategoryResponse { Id = c.Id, Name = c.Name, Description = c.Description }).ToList()
     };
 
-    private static ItineraryResponse ToItineraryResponse(AiItinerary itinerary, int travelers) => new()
-    {
-        Id = itinerary.Id,
-        AiConversationId = itinerary.AiConversationId,
-        Title = itinerary.Title,
-        Status = itinerary.Status.ToString(),
-        Version = itinerary.Version,
-        Items = itinerary.Items
-            .OrderBy(i => i.DayNumber).ThenBy(i => i.SortOrder)
-            .Select(i => new ItineraryItemResponse
-            {
-                Id = i.Id,
-                DayNumber = i.DayNumber,
-                SortOrder = i.SortOrder,
-                ProductType = i.ProductType.ToString(),
-                ExperienceId = i.ExperienceId,
-                ExperienceTitle = i.Experience?.Title,
-                PackageId = i.PackageId,
-                PackageTitle = i.Package?.Title,
-                Date = i.ExperienceAvailability?.Date ?? i.PackageAvailability?.DepartureDate,
-                EstimatedUnitPrice = i.EstimatedUnitPrice,
-                Currency = i.Currency,
-                Travelers = travelers,
-                Subtotal = i.EstimatedUnitPrice * travelers
-            }).ToList(),
-        Totals = [.. itinerary.Items
-            .GroupBy(i => i.Currency)
-            .Select(g => new ItineraryTotalResponse { Currency = g.Key, Amount = g.Sum(i => i.EstimatedUnitPrice * travelers) })],
-        CreatedAt = itinerary.CreatedAt,
-        UpdatedAt = itinerary.UpdatedAt
-    };
 }

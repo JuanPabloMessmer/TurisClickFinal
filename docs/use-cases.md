@@ -279,6 +279,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Actor principal:** TOURIST
 - **Objetivo:** Revisar el itinerario propuesto por la IA (día a día, componentes, precio estimado).
 - **Flujo principal:** 1. Sistema devuelve el `AiItinerary` vigente de la conversación, con sus `AiItineraryItem` (cada uno referenciando una `Experience` o un `Package` real).
+- **Implementación (Oleada 6):** la respuesta se revalida contra el catálogo vigente antes de devolverse. El snapshot persistido (`EstimatedUnitPrice`/`Currency`) **nunca se reescribe**; el estado actual viaja al lado por DTO (`currentPrice`, `currentCurrency`, `currentAvailableSlots`, `priceChanged`, `availabilityState`, `warnings`).
 - **Entidades involucradas:** `AiItinerary`, `AiItineraryItem`, `Experience`, `Package`
 - **Endpoints probables:** `GET /api/ai/conversations/{id}/itinerary`
 
@@ -289,6 +290,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Objetivo:** Pedir ajustes sobre la propuesta ("quitá el trekking", "máximo $500") manteniendo contexto.
 - **Precondiciones:** Existe un `AiItinerary` vigente en la conversación.
 - **Flujo principal:** 1. Usuario envía instrucción (UC-T-13 reutilizado). 2. Sistema invoca UC-AI-05. 3. Sistema actualiza el `AiItinerary` (nueva versión) y lo devuelve.
+- **Implementación (Oleada 6):** "nueva versión" es una **fila nueva** de `ai_itineraries` con `Version = anterior + 1`; la propuesta anterior queda intacta y sigue siendo recuperable por id (trazabilidad de la iteración). El ajuste es **parcial**: el backend decide de forma determinística qué ítems se preservan y cuáles se reemplazan, los preservados se reinsertan con su producto/día/slot/snapshot idénticos, y se descarta cualquier componente que el modelo proponga para un día preservado (salvo cuando la instrucción es "agregar").
 - **Postcondiciones:** `AiItinerary` actualizado.
 - **Entidades involucradas:** `AiConversation`, `AiMessage`, `AiItinerary`, `AiItineraryItem`
 - **Endpoints probables:** `POST /api/ai/conversations/{id}/messages` (mismo endpoint que UC-T-13)
@@ -307,6 +309,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Actor principal:** TOURIST
 - **Objetivo:** Continuar planificando o revisar un itinerario guardado previamente.
 - **Flujo principal:** 1. Usuario lista sus itinerarios guardados. 2. Usuario abre uno. 3. Sistema recupera el itinerario y su conversación asociada para permitir seguir iterando (UC-T-15) o reservar (UC-T-18).
+- **Implementación (Oleada 6):** al abrirlo se revalida contra el catálogo (guardar no retiene cupos ni congela precio) y se informan los cambios: precio distinto, producto despublicado, slot cerrado o sin cupos. La respuesta trae `aiConversationId` para retomar la conversación por el endpoint de mensajes.
 - **Entidades involucradas:** `AiItinerary`, `AiConversation`
 - **Endpoints probables:** `GET /api/ai/itineraries/me`, `GET /api/ai/itineraries/{id}`
 
@@ -569,7 +572,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 
 ## AI AGENT
 
-> Estos casos de uso no exponen endpoints propios de negocio: se orquestan desde UC-T-13/UC-T-15 y consumen los casos de uso internos del sistema (UC-SYS) para garantizar que nunca se inventa información.
+> Estos casos de uso se orquestan desde UC-T-13/UC-T-15 y consumen los casos de uso internos del sistema (UC-SYS) para garantizar que nunca se inventa información. Ninguno expone un endpoint propio, **con una excepción implementada en Oleada 6**: UC-AI-06 sí tiene un endpoint de consulta para pedir la justificación de un componente concreto del itinerario (ver su ficha).
 
 ### UC-AI-01 — Interpretar preferencias de viaje
 
@@ -622,7 +625,9 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Actor principal:** AI AGENT
 - **Objetivo:** Generar el texto explicativo que acompaña al itinerario (por qué se eligió cada componente), basado únicamente en datos reales recuperados.
 - **Flujo principal:** 1. El agente redacta la explicación usando los datos de `AiItinerary`/`AiItineraryItem` ya calculados, sin agregar precios o datos no presentes en ellos.
+- **Implementación (Oleada 6):** el backend calcula primero una lista de *hechos* desde Postgres (destino, categorías compartidas con las preferencias, fecha del slot dentro del rango del viaje, cupos disponibles, precio del snapshot, encaje con el presupuesto solo si la moneda coincide) y el modelo **únicamente los redacta**. Los hechos se devuelven junto al texto para que la explicación sea auditable: nada que no esté en esa lista puede aparecer en la respuesta.
 - **Entidades involucradas:** `AiItinerary`, `AiItineraryItem`
+- **Endpoint:** `GET /api/ai/itineraries/{id}/items/{itemId}/explanation` — solo lectura, no altera precio, disponibilidad ni estado del itinerario.
 
 ---
 

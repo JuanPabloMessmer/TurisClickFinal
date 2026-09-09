@@ -17,6 +17,11 @@ public record RetrievalQuery(
     int? DurationDays,
     decimal? BudgetPerPerson,
     string? BudgetCurrency,
-    IReadOnlyCollection<Guid> InterestCategoryIds);
+    IReadOnlyCollection<Guid> InterestCategoryIds,
+    /// <summary>
+    /// UC-AI-05 — productos que NO deben volver a ofrecerse al iterar: los que el turista acaba de pedir
+    /// sacar ("no quiero rafting") y los que ya quedaron preservados en el itinerario (para no duplicarlos).
+    /// </summary>
+    IReadOnlyCollection<Guid> ExcludedProductIds);
 
 public record RetrievalResult(IReadOnlyList<CandidateExperience> Experiences, IReadOnlyList<CandidatePackage> Packages);

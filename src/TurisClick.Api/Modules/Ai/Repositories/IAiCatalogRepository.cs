@@ -16,4 +16,13 @@ public interface IAiCatalogRepository
     Task<List<Experience>> SearchCandidateExperiencesAsync(AiCatalogFilter filter, CancellationToken ct);
 
     Task<List<Package>> SearchCandidatePackagesAsync(AiCatalogFilter filter, CancellationToken ct);
+
+    /// <summary>
+    /// Estado ACTUAL (no el snapshot) de los productos ya referenciados por un itinerario — sin filtrar
+    /// por PUBLISHED ni por disponibilidad, justamente porque la revalidación (UC-T-17, sección 9 de la
+    /// sesión) necesita poder detectar que un producto se despublicó o se quedó sin cupos.
+    /// </summary>
+    Task<List<Experience>> GetExperiencesByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct);
+
+    Task<List<Package>> GetPackagesByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct);
 }

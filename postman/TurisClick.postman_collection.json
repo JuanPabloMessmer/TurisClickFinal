@@ -10367,6 +10367,862 @@
                   "  pm.expect(currencies).to.include(\"EUR\");",
                   "  const totalCurrencies = body.itinerary.totals.map(t => t.currency);",
                   "  pm.expect(totalCurrencies).to.include.members([\"USD\", \"EUR\"]);",
+                  "});",
+                  "// Punto de partida de la iteración (UC-T-15): se guardan ids/títulos REALES de esta propuesta.",
+                  "pm.collectionVariables.set(\"ai_multi_itinerary_id\", body.itinerary.id);",
+                  "const day1 = body.itinerary.items.find(i => i.dayNumber === 1);",
+                  "const day2 = body.itinerary.items.find(i => i.dayNumber === 2);",
+                  "pm.collectionVariables.set(\"ai_iter_day1_experience_id\", day1.experienceId);",
+                  "pm.collectionVariables.set(\"ai_iter_day2_experience_id\", day2.experienceId);",
+                  "pm.collectionVariables.set(\"ai_iter_day2_title\", day2.experienceTitle);",
+                  "// Snapshot COMPLETO del ítem del día 1: tiene que viajar idéntico a la versión siguiente.",
+                  "pm.collectionVariables.set(\"ai_iter_day1_price\", String(day1.estimatedUnitPrice));",
+                  "pm.collectionVariables.set(\"ai_iter_day1_currency\", day1.currency);",
+                  "pm.collectionVariables.set(\"ai_iter_day1_availability_state\", day1.availabilityState);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-15 - Iterate: Remove A Component (New Version Keeps The Rest)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/conversations/{{ai_conversation_multi_id}}/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "conversations",
+                "{{ai_conversation_multi_id}}",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Quitá {{ai_iter_day2_title}}.\"\n}"
+            },
+            "description": "Mismo endpoint que UC-T-13 (docs/use-cases.md UC-T-15). El ítem del día 1 no se toca: iterar no es volver a buscar desde cero."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Nueva versión, con lo no afectado intacto\", function () {",
+                  "  pm.expect(body.itinerary, \"itinerary no debería ser null\").to.not.be.null;",
+                  "  pm.expect(body.itinerary.version).to.eql(2);",
+                  "  pm.expect(body.itinerary.id).to.not.eql(pm.collectionVariables.get(\"ai_multi_itinerary_id\"));",
+                  "  pm.expect(body.itinerary.items.length).to.eql(1);",
+                  "  const remaining = body.itinerary.items[0].experienceId;",
+                  "  pm.expect(remaining).to.eql(pm.collectionVariables.get(\"ai_iter_day1_experience_id\"));",
+                  "  pm.expect(remaining).to.not.eql(pm.collectionVariables.get(\"ai_iter_day2_experience_id\"));",
+                  "});",
+                  "pm.test(\"El ítem preservado viaja idéntico (día, precio y moneda): no se recompone nada\", function () {",
+                  "  const kept = pm.response.json().itinerary.items[0];",
+                  "  pm.expect(kept.dayNumber).to.eql(1);",
+                  "  pm.expect(String(kept.estimatedUnitPrice)).to.eql(pm.collectionVariables.get(\"ai_iter_day1_price\"));",
+                  "  pm.expect(kept.currency).to.eql(pm.collectionVariables.get(\"ai_iter_day1_currency\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-15 - Previous Version Is Still Retrievable (Trazabilidad)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/{{ai_multi_itinerary_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "{{ai_multi_itinerary_id}}"
+              ]
+            },
+            "description": "La propuesta anterior no se pisa: cada ajuste crea una versión nueva y la vieja queda para auditar la iteración."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"La versión 1 sigue teniendo sus 2 componentes\", function () {",
+                  "  pm.expect(body.version).to.eql(1);",
+                  "  pm.expect(body.items.length).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-15 - Iterate: Replace A Day (Uses A Real Different Candidate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/conversations/{{ai_conversation_multi_id}}/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "conversations",
+                "{{ai_conversation_multi_id}}",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Cambiá el día 1.\"\n}"
+            },
+            "description": "El reemplazo sale del catálogo real recuperado por el backend; el producto que se acaba de sacar no vuelve a ofrecerse."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Versión 3 con un candidato real distinto al anterior\", function () {",
+                  "  pm.expect(body.itinerary, \"itinerary no debería ser null\").to.not.be.null;",
+                  "  pm.expect(body.itinerary.version).to.eql(3);",
+                  "  pm.expect(body.itinerary.items.length).to.eql(1);",
+                  "  const chosen = body.itinerary.items[0].experienceId;",
+                  "  pm.expect(chosen).to.not.eql(pm.collectionVariables.get(\"ai_iter_day1_experience_id\"));",
+                  "  pm.expect(chosen).to.eql(pm.collectionVariables.get(\"ai_iter_day2_experience_id\"));",
+                  "});",
+                  "pm.collectionVariables.set(\"ai_iterated_itinerary_id\", body.itinerary.id);",
+                  "pm.collectionVariables.set(\"ai_iterated_item_id\", body.itinerary.items[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-AI-06 - Explain One Component (Facts Come From The Database)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/{{ai_iterated_itinerary_id}}/items/{{ai_iterated_item_id}}/explanation",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "{{ai_iterated_itinerary_id}}",
+                "items",
+                "{{ai_iterated_item_id}}",
+                "explanation"
+              ]
+            },
+            "description": "El modelo solo redacta los hechos que el backend calculó desde Postgres — se devuelven junto al texto para que la explicación sea auditable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"La explicación se apoya en hechos reales del catálogo\", function () {",
+                  "  pm.expect(body.facts).to.be.an(\"array\").that.is.not.empty;",
+                  "  pm.expect(body.explanation).to.be.a(\"string\").that.is.not.empty;",
+                  "  const facts = body.facts.join(\" \");",
+                  "  pm.expect(facts).to.include(pm.collectionVariables.get(\"ai_city_name\")); // destino real",
+                  "  pm.expect(facts).to.include(\"cupo\");                                     // disponibilidad real",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-16 - Save Itinerary (Success)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/{{ai_iterated_itinerary_id}}/save",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "{{ai_iterated_itinerary_id}}",
+                "save"
+              ]
+            },
+            "description": "Guardar NO reserva: no retiene cupos, no congela precio y no crea Reservation (eso es UC-T-18, Oleada 7)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Queda en SAVED sin reservar nada\", function () {",
+                  "  pm.expect(body.status).to.eql(\"SAVED\");",
+                  "  pm.expect(body.isStillBookable).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-16 - Save Itinerary Again Is Idempotent",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/{{ai_iterated_itinerary_id}}/save",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "{{ai_iterated_itinerary_id}}",
+                "save"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Sigue SAVED, sin duplicar ni fallar\", function () { pm.expect(pm.response.json().status).to.eql(\"SAVED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-17 - List My Saved Itineraries (Success)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Incluye el itinerario guardado y su conversación para poder retomarlo\", function () {",
+                  "  const saved = body.items.find(i => i.id === pm.collectionVariables.get(\"ai_iterated_itinerary_id\"));",
+                  "  pm.expect(saved, \"el itinerario guardado debería estar en la lista\").to.not.be.undefined;",
+                  "  pm.expect(saved.status).to.eql(\"SAVED\");",
+                  "  pm.expect(saved.aiConversationId).to.eql(pm.collectionVariables.get(\"ai_conversation_multi_id\"));",
+                  "  pm.expect(saved.totals).to.be.an(\"array\").that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-17 - Resume Saved Itinerary (Revalidated, Still Bookable)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/{{ai_iterated_itinerary_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "{{ai_iterated_itinerary_id}}"
+              ]
+            },
+            "description": "Al retomar NO se asume que sigue vigente: se revalida contra el catálogo antes de devolverlo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Nada cambió todavía: sin warnings y reservable\", function () {",
+                  "  pm.expect(body.status).to.eql(\"SAVED\");",
+                  "  pm.expect(body.warnings).to.be.an(\"array\").that.is.empty;",
+                  "  pm.expect(body.isStillBookable).to.be.true;",
+                  "  pm.expect(body.items[0].currentPrice).to.eql(body.items[0].estimatedUnitPrice);",
+                  "});",
+                  "pm.test(\"Snapshot y estado vigente conviven en la misma respuesta\", function () {",
+                  "  const it = pm.response.json().items[0];",
+                  "  pm.expect(it.currentCurrency).to.eql(it.currency);",
+                  "  pm.expect(it.priceChanged).to.be.false;",
+                  "  pm.expect(it.availabilityState).to.eql(\"AVAILABLE\");",
+                  "  pm.expect(it.currentAvailableSlots).to.be.a(\"number\");",
+                  "});",
+                  "// Snapshot original, para comprobar más abajo que ningún GET lo reescribe.",
+                  "pm.collectionVariables.set(\"ai_saved_snapshot_price\", String(pm.response.json().items[0].estimatedUnitPrice));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-15 - Continue Iterating A Resumed Itinerary",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/conversations/{{ai_conversation_multi_id}}/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "conversations",
+                "{{ai_conversation_multi_id}}",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Gracias, así está bien.\"\n}"
+            },
+            "description": "Un mensaje que no es un ajuste no puede romper ni borrar la propuesta vigente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"No pide clarificación (la conversación conserva el contexto)\", function () {",
+                  "  pm.expect(pm.response.json().clarificationNeeded).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Security - Save Another Tourist's Itinerary (403)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_b_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/{{ai_iterated_itinerary_id}}/save",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "{{ai_iterated_itinerary_id}}",
+                "save"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403 (no es dueño)\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Security - Explain Another Tourist's Itinerary Item (403)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_b_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/{{ai_iterated_itinerary_id}}/items/{{ai_iterated_item_id}}/explanation",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "{{ai_iterated_itinerary_id}}",
+                "items",
+                "{{ai_iterated_item_id}}",
+                "explanation"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403 (no es dueño)\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Security - Another Tourist's Saved List Does Not Leak It",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_b_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"No aparece el itinerario ajeno\", function () {",
+                  "  const ids = pm.response.json().items.map(i => i.id);",
+                  "  pm.expect(ids).to.not.include(pm.collectionVariables.get(\"ai_iterated_itinerary_id\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Provider Raises The Price After The Tourist Saved",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experiences/{{ai_experience_a_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experiences",
+                "{{ai_experience_a_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Tour Salar Ai {{ai_suffix}} (actualizado)\",\n  \"description\": \"Descripción suficientemente larga para pasar la validación.\",\n  \"destinationId\": \"{{ai_city_id}}\",\n  \"categoryIds\": [\n    \"{{ai_category_id}}\"\n  ],\n  \"price\": 55,\n  \"currency\": \"USD\"\n}"
+            },
+            "description": "El precio del catálogo cambia DESPUÉS de guardar: guardar nunca congeló nada."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-17 - Resume Shows Price Change Without Touching The Snapshot",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/{{ai_iterated_itinerary_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "{{ai_iterated_itinerary_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Avisa del cambio de precio y muestra ambos valores\", function () {",
+                  "  const item = body.items[0];",
+                  "  pm.expect(item.estimatedUnitPrice).to.eql(40);  // snapshot original, intacto",
+                  "  pm.expect(item.currentPrice).to.eql(55);        // precio vigente, al lado",
+                  "  pm.expect(body.warnings.join(\" \")).to.include(\"precio\");",
+                  "  pm.expect(body.isStillBookable).to.be.true;     // cambió de precio, pero sigue reservable",
+                  "});",
+                  "pm.test(\"El snapshot histórico no se reescribió\", function () {",
+                  "  const it = pm.response.json().items[0];",
+                  "  pm.expect(String(it.estimatedUnitPrice)).to.eql(pm.collectionVariables.get(\"ai_saved_snapshot_price\"));",
+                  "  pm.expect(it.priceChanged).to.be.true;",
+                  "  pm.expect(it.availabilityState).to.eql(\"AVAILABLE\"); // cambió de precio, pero sigue disponible",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-17 - Resume Again Is Read-Only (Snapshot Still Intact)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/{{ai_iterated_itinerary_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "{{ai_iterated_itinerary_id}}"
+              ]
+            },
+            "description": "Revalidar es solo lectura: por muchas veces que se abra, el snapshot histórico no se mueve."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"El snapshot sigue siendo el original tras releer\", function () {",
+                  "  const it = pm.response.json().items[0];",
+                  "  pm.expect(String(it.estimatedUnitPrice)).to.eql(pm.collectionVariables.get(\"ai_saved_snapshot_price\"));",
+                  "  pm.expect(it.currentPrice).to.eql(55);",
+                  "  pm.expect(it.priceChanged).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Provider Unpublishes The Experience",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_owner_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experiences/{{ai_experience_a_id}}/unpublish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experiences",
+                "{{ai_experience_a_id}}",
+                "unpublish"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UC-T-17 - Resume Warns That A Component Is No Longer Available",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ai_tourist_a_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/itineraries/{{ai_iterated_itinerary_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "itineraries",
+                "{{ai_iterated_itinerary_id}}"
+              ]
+            },
+            "description": "Nunca se devuelve un itinerario guardado como si siguiera reservable cuando dejó de estarlo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"El componente despublicado se marca como no disponible\", function () {",
+                  "  pm.expect(body.isStillBookable).to.be.false;",
+                  "  pm.expect(body.items[0].isStillAvailable).to.be.false;",
+                  "  pm.expect(body.warnings.join(\" \")).to.include(\"publicada\");",
+                  "});",
+                  "pm.test(\"La causa llega estructurada y el snapshot sigue intacto\", function () {",
+                  "  const it = pm.response.json().items[0];",
+                  "  pm.expect(it.availabilityState).to.eql(\"UNPUBLISHED\");",
+                  "  pm.expect(String(it.estimatedUnitPrice)).to.eql(pm.collectionVariables.get(\"ai_saved_snapshot_price\"));",
                   "});"
                 ]
               }

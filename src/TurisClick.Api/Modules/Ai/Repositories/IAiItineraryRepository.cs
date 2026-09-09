@@ -10,5 +10,11 @@ public interface IAiItineraryRepository
     /// <summary>El itinerario más reciente de una conversación (UC-T-14: "la propuesta vigente").</summary>
     Task<AiItinerary?> GetLatestByConversationIdAsync(Guid conversationId, CancellationToken ct);
 
+    /// <summary>Trackeado (sin AsNoTracking) — para cambiar Status en UC-T-16.</summary>
+    Task<AiItinerary?> GetByIdForUpdateAsync(Guid id, CancellationToken ct);
+
+    /// <summary>UC-T-17 — "Mis itinerarios guardados": solo los SAVED del turista dueño, más recientes primero.</summary>
+    Task<(List<AiItinerary> Items, int TotalCount)> ListSavedByTouristAsync(Guid touristId, int page, int pageSize, CancellationToken ct);
+
     Task AddAsync(AiItinerary itinerary, CancellationToken ct);
 }

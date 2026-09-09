@@ -21,6 +21,14 @@ public class RetrievalService(IAiCatalogRepository catalogRepository, IOptions<A
         var experiences = await catalogRepository.SearchCandidateExperiencesAsync(filter, ct);
         var packages = await catalogRepository.SearchCandidatePackagesAsync(filter, ct);
 
+        // UC-AI-05: lo que el turista pidió sacar (o ya tiene preservado) no se vuelve a ofrecer.
+        if (query.ExcludedProductIds.Count > 0)
+        {
+            var excluded = query.ExcludedProductIds.ToHashSet();
+            experiences = experiences.Where(e => !excluded.Contains(e.Id)).ToList();
+            packages = packages.Where(p => !excluded.Contains(p.Id)).ToList();
+        }
+
         var maxPerType = options.Value.MaxCandidatesPerType;
 
         var rankedExperiences = experiences
