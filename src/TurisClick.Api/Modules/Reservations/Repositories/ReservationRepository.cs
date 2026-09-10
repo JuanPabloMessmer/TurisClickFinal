@@ -6,6 +6,11 @@ namespace TurisClick.Api.Modules.Reservations.Repositories;
 
 public class ReservationRepository(TurisClickDbContext db) : IReservationRepository
 {
+    public Task<Reservation?> GetByAiItineraryIdAsync(Guid aiItineraryId, CancellationToken ct) =>
+        db.Reservations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.AiItineraryId == aiItineraryId, ct);
+
     public async Task AddAsync(Reservation reservation, CancellationToken ct) =>
         await db.Reservations.AddAsync(reservation, ct);
 

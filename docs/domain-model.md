@@ -253,7 +253,7 @@ Soporta UC-T-08/09/10/18/19, UC-SYS-04/05/07/08. Es el mismo tipo de entidad tan
 |---|---|
 | Id | — |
 | TouristId | FK a `User` |
-| AiItineraryId | FK opcional a `AiItinerary` — presente únicamente si esta reserva se originó en un itinerario IA (UC-T-18) |
+| AiItineraryId | FK opcional a `AiItinerary` — presente únicamente si esta reserva se originó en un itinerario IA (UC-T-18). **Único** (índice único parcial, migración 0007): un itinerario produce como máximo una reserva, y es esa unicidad la que hace idempotente al booking ante dos requests concurrentes |
 | Status | `ReservationStatus`: `PENDING_PAYMENT`, `CONFIRMED`, `PAYMENT_FAILED`, `CANCELLED`, `EXPIRED` — representa el ciclo de vida de la reserva **como un todo** (pago, cancelación explícita del turista, expiración); no cambia automáticamente por una cancelación parcial a nivel de ítem (ver nota más abajo) |
 | ExpiresAt | Límite del hold de cupo mientras está `PENDING_PAYMENT` (UC-SYS-08) |
 | CreatedAt, ConfirmedAt, CancelledAt | Nulos según corresponda |

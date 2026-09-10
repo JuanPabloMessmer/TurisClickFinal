@@ -88,7 +88,9 @@ public class ReservationService(
         var tx = await db.Database.BeginTransactionAsync(ct);
 
         var affectedRows = await db.ExperienceAvailabilities
-            .Where(a => a.Id == availability.Id && a.ReservedSlots + travelers <= a.TotalSlots)
+            .Where(a => a.Id == availability.Id
+                && a.Status == AvailabilitySlotStatus.OPEN
+                && a.ReservedSlots + travelers <= a.TotalSlots)
             .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots + travelers), ct);
 
         if (affectedRows == 0)
@@ -140,7 +142,9 @@ public class ReservationService(
         var tx = await db.Database.BeginTransactionAsync(ct);
 
         var affectedRows = await db.PackageAvailabilities
-            .Where(a => a.Id == availability.Id && a.ReservedSlots + travelers <= a.TotalSlots)
+            .Where(a => a.Id == availability.Id
+                && a.Status == AvailabilitySlotStatus.OPEN
+                && a.ReservedSlots + travelers <= a.TotalSlots)
             .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots + travelers), ct);
 
         if (affectedRows == 0)
@@ -270,14 +274,34 @@ public class ReservationService(
             }
         }
 
-        // Una reserva directa siempre tiene un único Item/moneda; agregación multi-moneda queda para
-        // cuando exista una reserva de itinerario IA con varios proveedores.
-        var amount = reservation.Items.Sum(i => i.Subtotal);
-        var currency = reservation.Items.First().Currency;
+        // Una reserva de itinerario IA (UC-T-18) puede combinar productos de varias empresas en
+        // MONEDAS distintas. Sumar los subtotales en un único importe implicaría una conversión que
+        // TurisClick no hace, así que se cobra un cargo por moneda. Una reserva directa tiene una sola
+        // moneda y sigue produciendo exactamente un cargo, igual que antes.
+        var chargesByCurrency = reservation.Items
+            .GroupBy(i => i.Currency)
+            .Select(g => new { Currency = g.Key, Amount = g.Sum(i => i.Subtotal) })
+            .OrderBy(c => c.Currency)
+            .ToList();
 
         // El gateway se llama ANTES de abrir la transacción de DB: nunca sostener locks durante I/O externo.
-        var chargeResult = await paymentGateway.ChargeAsync(
-            new PaymentChargeRequest(reservation.Id, amount, currency, request.Success), ct);
+        PaymentChargeResult chargeResult = new(Approved: true, FailureReason: null);
+        foreach (var charge in chargesByCurrency)
+        {
+            chargeResult = await paymentGateway.ChargeAsync(
+                new PaymentChargeRequest(reservation.Id, charge.Amount, charge.Currency, request.Success), ct);
+
+            // Un rechazo en cualquier moneda deja la reserva entera PENDING_PAYMENT y reintentable: no
+            // se confirma una parte del viaje. (Con una pasarela real habría que compensar los cargos
+            // ya aprobados; con la simulada todos los grupos responden igual — ver limitaciones.)
+            if (!chargeResult.Approved)
+            {
+                logger.LogWarning(
+                    "Pago rechazado para la reserva {ReservationId} en {Currency}: {Reason}",
+                    reservation.Id, charge.Currency, chargeResult.FailureReason);
+                break;
+            }
+        }
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
@@ -289,16 +313,11 @@ public class ReservationService(
             foreach (var item in reservation.Items)
                 item.Status = ReservationItemStatus.CONFIRMED;
         }
-        else
-        {
-            // El rechazo NO cambia Reservation.Status ni ReservationItem.Status: la reserva sigue
-            // PENDING_PAYMENT y admite reintentar el pago mientras no venza ExpiresAt (decisión del
-            // usuario: no liberar el cupo de inmediato). El fallo solo queda registrado acá (respuesta)
-            // y en el log — cuando exista una entidad Payment, los intentos fallidos se registrarán ahí
-            // sin volver a tocar el estado principal de la reserva.
-            logger.LogWarning(
-                "Pago rechazado para la reserva {ReservationId}: {Reason}", reservation.Id, chargeResult.FailureReason);
-        }
+        // Si el cobro fue rechazado no se cambia Reservation.Status ni ReservationItem.Status: la
+        // reserva sigue PENDING_PAYMENT y admite reintentar el pago mientras no venza ExpiresAt
+        // (decisión del usuario: no liberar el cupo de inmediato). El fallo queda registrado en la
+        // respuesta y en el log — cuando exista una entidad Payment, los intentos fallidos se
+        // registrarán ahí sin volver a tocar el estado principal de la reserva.
 
         // Si se aceptó un precio nuevo, ese recongelamiento se persiste aunque el cobro haya sido rechazado.
         await db.SaveChangesAsync(ct);

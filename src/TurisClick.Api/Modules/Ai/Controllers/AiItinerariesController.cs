@@ -14,7 +14,9 @@ namespace TurisClick.Api.Modules.Ai.Controllers;
 [ApiController]
 [Route("api/ai/itineraries")]
 [Authorize(Policy = "RequireTourist")]
-public class AiItinerariesController(IAiItineraryService itineraryService) : ControllerBase
+public class AiItinerariesController(
+    IAiItineraryService itineraryService,
+    IAiItineraryBookingService bookingService) : ControllerBase
 {
     /// <summary>UC-T-17 — "Mis itinerarios guardados".</summary>
     [HttpGet("me")]
@@ -38,6 +40,17 @@ public class AiItinerariesController(IAiItineraryService itineraryService) : Con
     public async Task<ActionResult<ItineraryResponse>> Save(Guid id, CancellationToken ct)
     {
         var result = await itineraryService.SaveAsync(id, ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// UC-T-18 — acepta la propuesta y la convierte en una reserva real en PENDING_PAYMENT. No cobra:
+    /// el pago sigue siendo POST /api/reservations/{id}/pay (UC-T-19), el mismo de una reserva directa.
+    /// </summary>
+    [HttpPost("{id:guid}/book")]
+    public async Task<ActionResult<BookItineraryResponse>> Book(Guid id, [FromBody] BookItineraryRequest? request, CancellationToken ct)
+    {
+        var result = await bookingService.BookAsync(id, request ?? new BookItineraryRequest(), ct);
         return Ok(result);
     }
 

@@ -4,6 +4,9 @@ namespace TurisClick.Api.Modules.Reservations.Repositories;
 
 public interface IReservationRepository
 {
+    /// <summary>UC-T-18 — la reserva ya creada desde un itinerario IA (relación 1-1, ver domain-model.md). Sirve para responder "ya estaba reservado, es esta".</summary>
+    Task<Reservation?> GetByAiItineraryIdAsync(Guid aiItineraryId, CancellationToken ct);
+
     Task AddAsync(Reservation reservation, CancellationToken ct);
 
     /// <summary>AsNoTracking, con Items + Experience + Company + ExperienceAvailability cargados — detalle completo para el TOURIST dueño.</summary>

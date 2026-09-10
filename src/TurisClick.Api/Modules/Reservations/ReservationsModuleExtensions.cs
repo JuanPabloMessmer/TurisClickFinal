@@ -11,6 +11,7 @@ public static class ReservationsModuleExtensions
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IReservationItemRepository, ReservationItemRepository>();
         services.AddScoped<IReservationService, ReservationService>();
+        services.AddScoped<IReservationBookingService, ReservationBookingService>();
 
         // Placeholder hasta integrar una pasarela real — ver IPaymentGateway.
         services.AddScoped<IPaymentGateway, SimulatedPaymentGateway>();

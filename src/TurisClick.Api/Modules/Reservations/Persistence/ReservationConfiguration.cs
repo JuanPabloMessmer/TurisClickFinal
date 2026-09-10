@@ -33,7 +33,15 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
 
         builder.HasIndex(r => r.TouristId).HasDatabaseName("ix_reservations_tourist_id");
         builder.HasIndex(r => r.Status).HasDatabaseName("ix_reservations_status");
-        builder.HasIndex(r => r.AiItineraryId).HasDatabaseName("ix_reservations_ai_itinerary_id");
+        // ÚNICO y parcial: domain-model.md documenta AiItinerary 1—1 opcional Reservation, pero hasta
+        // Oleada 6 el schema solo tenía un índice común y permitía N. La unicidad es lo que hace
+        // realmente idempotente al booking (UC-T-18): dos requests concurrentes pueden leer el
+        // itinerario como reservable al mismo tiempo, y un chequeo en C# no alcanza — acá pierde uno.
+        // El filtro deja fuera las reservas directas (ai_itinerary_id NULL), que no se ven afectadas.
+        builder.HasIndex(r => r.AiItineraryId)
+            .HasDatabaseName("ix_reservations_ai_itinerary_id")
+            .IsUnique()
+            .HasFilter("ai_itinerary_id IS NOT NULL");
 
         builder.HasOne(r => r.Tourist)
             .WithMany()

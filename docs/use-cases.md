@@ -328,6 +328,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Excepciones:** Algún componente ya no tiene cupo y el usuario no ajusta → no se crea la reserva, se informa qué falló.
 - **Postcondiciones:** Reserva padre + reservas hijas creadas en `PENDING_PAYMENT`.
 - **Reglas de negocio relacionadas:** Decisión 2 y 4.
+- **Implementación (Oleada 7):** se aceptan itinerarios en `DRAFT` **y** en `SAVED` (guardar no es requisito previo: la precondición documentada es solo tener componentes). El request lleva únicamente el id del itinerario y `acceptPriceChanges` — producto, availability, empresa, precio y moneda los deriva el backend desde Postgres, nunca del cliente. Todo ocurre en **una sola transacción**: holds condicionales de cupo (agrupados por availability y en orden determinístico), creación de `Reservation` + `ReservationItem`s, vínculo con el itinerario y transición a `BOOKED`; cualquier fallo revierte absolutamente todo. Si el precio o la moneda cambiaron y no se aceptaron, se devuelve 200 con `requiresPriceAcceptance` y **no se toma ningún cupo** (misma política que UC-T-19). Un segundo booking del mismo itinerario devuelve 409 `ITINERARY_ALREADY_BOOKED` con el id de la reserva existente.
 - **Entidades involucradas:** `AiItinerary`, `Reservation` (padre), `ReservationItem` (hijas), `Experience`, `Package`
 - **Endpoints probables:** `POST /api/ai/itineraries/{id}/book`
 
@@ -690,6 +691,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Invocado por:** UC-P-06, UC-P-09, UC-P-05, UC-P-08 (como efecto secundario).
 - **Entidades involucradas:** `Experience`, `Package`
 - **Prioridad:** Oleada 7 (se implementa junto con la base de IA, no antes).
+- **Implementación (Oleada 7): no requiere código.** El "mecanismo de recuperación" que usa UC-AI-02 es una consulta SQL directa sobre `experiences`/`packages` y sus disponibilidades (retrieval estructurado, ver `backend-architecture.md`): **no existe un índice secundario que pueda quedar desincronizado**, así que el objetivo del UC se cumple por construcción — apenas la transacción del proveedor commitea, la siguiente consulta de la IA ya ve el estado nuevo. Se decidió deliberadamente **no** introducir embeddings, `pgvector` ni una base vectorial solo para tener algo que "reindexar": sería infraestructura sin problema que resolver. La propiedad está cubierta por tests de integración (publicar/despublicar/cambiar precio/cerrar disponibilidad → efecto inmediato en la propuesta siguiente). Si en el futuro se agrega retrieval semántico con un índice propio, **ahí** este UC pasa a requerir sincronización real.
 
 ---
 

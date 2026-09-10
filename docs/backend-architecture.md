@@ -312,6 +312,27 @@ await tx.CommitAsync();
 - Interfaces del módulo: `IAiModelClient` (con dos implementaciones seleccionadas por `Ai:Provider` — `DeterministicAiModelClient`, sin dependencias externas y usado por tests/Newman, y `OllamaAiModelClient`, HTTP contra un Ollama local), `IRetrievalService`, `IItineraryRevalidationService` (Oleada 6, contrasta el snapshot persistido contra el catálogo vigente sin escribir), `IAiConversationService` y `IAiItineraryService`.
 - **No se agregó base de datos vectorial ni `pgvector`**: el retrieval es estructurado en Postgres (destino, fechas, capacidad, categorías, precio) y hasta ahora cubre los casos de uso sin necesidad de embeddings. La opción sigue abierta si aparece una necesidad real de match semántico.
 - Sí se agregaron paquetes de IA: ninguno. `OllamaAiModelClient` habla HTTP/JSON con `HttpClient` y `System.Text.Json`, sin SDK propietario.
+- **UC-SYS-09 (reindexado) no requiere implementación** con este diseño: el retrieval consulta Postgres directamente, así que no hay índice secundario que sincronizar y cualquier cambio del proveedor es visible en la consulta siguiente apenas commitea. Ver la ficha del UC en `use-cases.md` para el detalle y los tests que lo demuestran.
+
+---
+
+## 15. Booking desde un itinerario IA (Oleada 7)
+
+Convertir una propuesta de IA en una reserva real (UC-T-18) cruza dos módulos, y la regla es que **la IA orquesta pero no reserva**:
+
+- `AiItineraryBookingService` (módulo Ai) valida pertenencia y estado, revalida cada componente contra Postgres (UC-SYS-01/02) y arma las líneas con datos **derivados en el servidor** — producto, availability, `CompanyId`, precio y moneda salen de la base, nunca del request, que solo lleva el id del itinerario y `acceptPriceChanges`.
+- `ReservationBookingService` (módulo Reservations) es el **único** lugar que toca cupos: toma los holds con el mismo `UPDATE` condicional de UC-SYS-06 y arma `Reservation` + `ReservationItem`s. No abre ni commitea la transacción.
+- **Frontera transaccional:** la abre el servicio de IA porque la unidad atómica incluye también la transición `AiItinerary → BOOKED`. Dentro entran los holds, la reserva, sus ítems, el vínculo y el cambio de estado; cualquier fallo revierte todo y no queda ni un hold huérfano.
+
+Tres detalles de concurrencia que conviene no perder de vista:
+
+1. **Los holds se agrupan por availability antes de ejecutarse.** Dos ítems del itinerario pueden apuntar al mismo slot; con un `UPDATE` por ítem cada uno evaluaría la capacidad por separado y la suma podría pasarse.
+2. **Se adquieren en orden determinístico** (`ProductType`, luego `AvailabilityId`) para que dos bookings concurrentes que compiten por las mismas filas las tomen siempre en el mismo orden y no se traben entre sí. No hacen falta locks distribuidos.
+3. **La revalidación previa es UX, no control de concurrencia.** Entre revalidar y tomar el cupo otro request puede consumirlo; la autoridad final es siempre el `UPDATE` condicional y su `affectedRows`.
+
+**Snapshots: dos mundos separados.** `AiItineraryItem.EstimatedUnitPrice` es el histórico de lo que el turista vio y no se reescribe nunca. `ReservationItem.UnitPrice` es el snapshot comercial, congelado con el precio vigente al reservar. Si difieren, el booking se detiene y pide aceptación explícita (misma política que UC-T-19); aceptar cambia el snapshot de la reserva, jamás el de la IA.
+
+**Idempotencia.** `reservations.ai_itinerary_id` tiene un índice único parcial (migración 0007) que materializa el 1—1 que ya documentaba el modelo de dominio. Es lo que hace segura la doble solicitud concurrente: un `if (status != BOOKED)` en C# no alcanza, porque dos requests pueden leer el estado viejo antes de que ninguno escriba.
 
 ---
 

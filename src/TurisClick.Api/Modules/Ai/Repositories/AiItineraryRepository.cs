@@ -32,6 +32,11 @@ public class AiItineraryRepository(TurisClickDbContext db) : IAiItineraryReposit
     public Task<AiItinerary?> GetByIdForUpdateAsync(Guid id, CancellationToken ct) =>
         db.AiItineraries.FirstOrDefaultAsync(i => i.Id == id, ct);
 
+    public Task<AiItinerary?> GetByIdForBookingAsync(Guid id, CancellationToken ct) =>
+        db.AiItineraries
+            .Include(i => i.Items)
+            .FirstOrDefaultAsync(i => i.Id == id, ct);
+
     public async Task<(List<AiItinerary> Items, int TotalCount)> ListSavedByTouristAsync(
         Guid touristId, int page, int pageSize, CancellationToken ct)
     {

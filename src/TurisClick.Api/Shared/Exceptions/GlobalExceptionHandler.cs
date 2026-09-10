@@ -43,13 +43,23 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
 
         httpContext.Response.StatusCode = status;
 
-        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        var problem = new ProblemDetails
         {
             Status = status,
             Title = title,
             Detail = detail,
             Instance = httpContext.Request.Path
-        }, cancellationToken);
+        };
+
+        // Código legible por máquina cuando la excepción lo declara (ej. INSUFFICIENT_CAPACITY): permite
+        // que el cliente decida qué ofrecer sin parsear el mensaje. Nunca se expone en un 500.
+        if (status != StatusCodes.Status500InternalServerError
+            && exception is IHasErrorCode { ErrorCode: { } errorCode })
+        {
+            problem.Extensions["errorCode"] = errorCode;
+        }
+
+        await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
 
         return true;
     }
