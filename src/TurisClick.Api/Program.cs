@@ -7,6 +7,7 @@ using Serilog;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Database.Seed;
 using TurisClick.Api.Infrastructure.Security;
+using TurisClick.Api.Modules.Admin;
 using TurisClick.Api.Modules.Ai;
 using TurisClick.Api.Modules.Auth;
 using TurisClick.Api.Modules.Categories;
@@ -108,7 +109,8 @@ try
     builder.Services.AddCompaniesModule();
     builder.Services.AddExperiencesModule();
     builder.Services.AddPackagesModule();
-    builder.Services.AddReservationsModule();
+    builder.Services.AddReservationsModule(builder.Configuration);
+builder.Services.AddAdminModule();
     builder.Services.AddAiModule(builder.Configuration);
 
     // ---- Manejo global de errores ----

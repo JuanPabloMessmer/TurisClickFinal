@@ -13,7 +13,7 @@ public class PackageAvailabilityRepository(TurisClickDbContext db) : IPackageAva
     public Task<PackageAvailability?> GetByIdWithPackageAsync(Guid id, CancellationToken ct) =>
         db.PackageAvailabilities
             .AsNoTracking()
-            .Include(a => a.Package)
+            .Include(a => a.Package).ThenInclude(p => p!.Company)
             .FirstOrDefaultAsync(a => a.Id == id, ct);
 
     public Task<bool> ExistsAsync(Guid packageId, DateOnly departureDate, CancellationToken ct) =>

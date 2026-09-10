@@ -26,4 +26,10 @@ public interface ICompanyService
 
     /// <summary>UC-P-02 (edición) — requiere Status = APPROVED.</summary>
     Task<CompanyResponse> UpdateMyCompanyAsync(Guid companyId, UpdateCompanyRequest request, CancellationToken ct);
+
+    /// <summary>UC-A-08 — suspende la empresa: su catálogo deja de ser visible y no puede operar comercialmente.</summary>
+    Task<CompanyResponse> SuspendAsync(Guid companyId, CancellationToken ct);
+
+    /// <summary>UC-A-08 — levanta la suspensión sin restaurar estados de productos (nunca se modificaron).</summary>
+    Task<CompanyResponse> ReactivateAsync(Guid companyId, CancellationToken ct);
 }

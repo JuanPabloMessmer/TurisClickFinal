@@ -39,4 +39,7 @@ public class ReservationItemRepository(TurisClickDbContext db) : IReservationIte
             .Include(i => i.Company)
             .AsSplitQuery()
             .FirstOrDefaultAsync(i => i.Id == id, ct);
+
+    public Task<ReservationItem?> GetByIdForUpdateAsync(Guid id, CancellationToken ct) =>
+        db.ReservationItems.FirstOrDefaultAsync(i => i.Id == id, ct);
 }

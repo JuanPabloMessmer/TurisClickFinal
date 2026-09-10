@@ -64,6 +64,7 @@ public class ReservationServiceTests
             _availabilityRepository.Object,
             _packageAvailabilityRepository.Object,
             _paymentGateway.Object,
+            Mock.Of<IReservationBookingService>(),
             _currentUser.Object,
             ownershipGuard.Object,
             Mock.Of<ILogger<ReservationService>>(),
@@ -358,7 +359,6 @@ public class ReservationServiceTests
     [InlineData(ReservationStatus.CONFIRMED)]
     [InlineData(ReservationStatus.CANCELLED)]
     [InlineData(ReservationStatus.PAYMENT_FAILED)]
-    [InlineData(ReservationStatus.EXPIRED)]
     public async Task PayAsync_IncompatibleStatus_ThrowsConflict(ReservationStatus status)
     {
         var reservation = PayableReservation(status);
@@ -368,6 +368,22 @@ public class ReservationServiceTests
         await Assert.ThrowsAsync<ConflictAppException>(() =>
             _sut.PayAsync(reservation.Id, new PayReservationRequest { Success = true }, CancellationToken.None));
 
+        _paymentGateway.Verify(g => g.ChargeAsync(It.IsAny<PaymentChargeRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task PayAsync_ExpiredReservation_ThrowsGoneNotConflict()
+    {
+        // Oleada 8: una reserva expirada ya liberó su cupo (UC-SYS-08), así que el recurso quedó
+        // obsoleto y no simplemente "en conflicto" — mismo criterio que el chequeo de ExpiresAt.
+        var reservation = PayableReservation(ReservationStatus.EXPIRED);
+        _reservationRepository.Setup(r => r.GetByIdForPaymentAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        var ex = await Assert.ThrowsAsync<GoneAppException>(() =>
+            _sut.PayAsync(reservation.Id, new PayReservationRequest { Success = true }, CancellationToken.None));
+
+        Assert.Equal(ErrorCodes.ReservationNoLongerPayable, ex.ErrorCode);
         _paymentGateway.Verify(g => g.ChargeAsync(It.IsAny<PaymentChargeRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

@@ -28,4 +28,16 @@ public class CompanyReservationsController(IReservationService reservationServic
         var result = await reservationService.GetReceivedItemByIdAsync(id, ct);
         return Ok(result);
     }
+
+    /// <summary>
+    /// UC-P-14 — cancelación excepcional de la propia línea, con motivo obligatorio. No toca las líneas
+    /// de otros proveedores ni el estado de la Reservation padre.
+    /// </summary>
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<ActionResult<ReservationItemResponse>> Cancel(
+        Guid id, [FromBody] CancelReservationItemRequest request, CancellationToken ct)
+    {
+        var result = await reservationService.CancelItemAsync(id, request, ct);
+        return Ok(result);
+    }
 }

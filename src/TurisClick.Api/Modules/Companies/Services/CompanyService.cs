@@ -114,6 +114,43 @@ public class CompanyService(
         return ToResponse(company);
     }
 
+    /// <summary>
+    /// UC-A-08 — suspender una empresa incumplidora. No hay cascada sobre sus productos: la suspensión
+    /// actúa como filtro de visibilidad y de operación (catálogo público, retrieval de la IA, reservas y
+    /// publicación), así que al reactivarla cada Experience/Package vuelve con el estado que ya tenía.
+    /// </summary>
+    public async Task<CompanyResponse> SuspendAsync(Guid companyId, CancellationToken ct)
+    {
+        var company = await companyRepository.GetByIdAsync(companyId, ct)
+            ?? throw new NotFoundAppException("Empresa no encontrada.");
+
+        if (company.Status == CompanyStatus.SUSPENDED)
+            return ToResponse(company);
+
+        if (company.Status != CompanyStatus.APPROVED)
+            throw new ConflictAppException($"Solo se puede suspender una empresa aprobada (estado actual: {company.Status}).");
+
+        company.Status = CompanyStatus.SUSPENDED;
+        await db.SaveChangesAsync(ct);
+
+        return ToResponse(company);
+    }
+
+    /// <summary>UC-A-08 — levantar la suspensión. Devuelve la empresa a APPROVED sin tocar el estado de sus productos.</summary>
+    public async Task<CompanyResponse> ReactivateAsync(Guid companyId, CancellationToken ct)
+    {
+        var company = await companyRepository.GetByIdAsync(companyId, ct)
+            ?? throw new NotFoundAppException("Empresa no encontrada.");
+
+        if (company.Status != CompanyStatus.SUSPENDED)
+            throw new ConflictAppException($"Solo se puede reactivar una empresa suspendida (estado actual: {company.Status}).");
+
+        company.Status = CompanyStatus.APPROVED;
+        await db.SaveChangesAsync(ct);
+
+        return ToResponse(company);
+    }
+
     public async Task<CompanyResponse> RejectAsync(Guid companyId, Guid adminUserId, RejectCompanyRequest request, CancellationToken ct)
     {
         var company = await companyRepository.GetByIdAsync(companyId, ct)

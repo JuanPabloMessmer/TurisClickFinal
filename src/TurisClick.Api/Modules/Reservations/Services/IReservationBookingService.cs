@@ -20,6 +20,16 @@ public interface IReservationBookingService
     /// </summary>
     Task<Reservation> HoldAndBuildAsync(
         Guid touristId, Guid? aiItineraryId, IReadOnlyList<BookingLine> lines, CancellationToken ct);
+
+    /// <summary>
+    /// UC-SYS-08 — operación inversa del hold: devuelve al catálogo el cupo que retenían estas líneas.
+    /// Igual que el hold, agrupa por availability y usa un UPDATE condicional, así que nunca puede
+    /// dejar `reserved_slots` por debajo de cero. Tampoco abre ni commitea la transacción.
+    ///
+    /// NO decide si corresponde liberar: eso lo resuelve el caller ganando la transición de estado de
+    /// la reserva/línea. Llamar a este método sin haber ganado esa transición liberaría cupo de más.
+    /// </summary>
+    Task ReleaseHoldsAsync(IReadOnlyList<ReservationItem> items, CancellationToken ct);
 }
 
 /// <summary>

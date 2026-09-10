@@ -52,6 +52,11 @@ public class ReservationItemResponse
     public string Currency { get; set; } = string.Empty;
     public decimal Subtotal { get; set; }
     public string Status { get; set; } = string.Empty;
+
+    /// <summary>UC-P-14 — presentes solo si la línea fue cancelada o expiró.</summary>
+    public DateTimeOffset? CancelledAt { get; set; }
+    public string? CancellationReason { get; set; }
+
     public DateOnly? Date { get; set; }
     public TimeOnly? StartTime { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

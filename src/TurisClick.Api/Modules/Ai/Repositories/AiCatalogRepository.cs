@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
+using TurisClick.Api.Modules.Companies.Entities;
 
 namespace TurisClick.Api.Modules.Ai.Repositories;
 
@@ -9,7 +10,12 @@ public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
 {
     public async Task<List<Experience>> SearchCandidateExperiencesAsync(AiCatalogFilter filter, CancellationToken ct)
     {
-        var query = db.Experiences.AsNoTracking().Where(e => e.Status == PublicationStatus.PUBLISHED);
+        // UC-A-08: suspender una empresa oculta su catálogo también para la IA — sin esto el retrieval
+        // seguiría proponiendo productos de una empresa sancionada (UC-SYS-09 no necesita reindexar
+        // nada porque la consulta ES el índice).
+        var query = db.Experiences.AsNoTracking()
+            .Where(e => e.Status == PublicationStatus.PUBLISHED
+                && e.Company!.Status != CompanyStatus.SUSPENDED);
 
         if (filter.DestinationId.HasValue)
             query = query.Where(e => e.DestinationId == filter.DestinationId);
@@ -39,7 +45,9 @@ public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
 
     public async Task<List<Package>> SearchCandidatePackagesAsync(AiCatalogFilter filter, CancellationToken ct)
     {
-        var query = db.Packages.AsNoTracking().Where(p => p.Status == PublicationStatus.PUBLISHED);
+        var query = db.Packages.AsNoTracking()
+            .Where(p => p.Status == PublicationStatus.PUBLISHED
+                && p.Company!.Status != CompanyStatus.SUSPENDED);
 
         if (filter.DestinationId.HasValue)
             query = query.Where(p => p.DestinationId == filter.DestinationId);

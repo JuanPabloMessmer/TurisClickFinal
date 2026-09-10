@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
+using TurisClick.Api.Modules.Companies.Entities;
 
 namespace TurisClick.Api.Modules.Packages.Repositories;
 
@@ -34,7 +35,9 @@ public class PackageRepository(TurisClickDbContext db) : IPackageRepository
     {
         var query = db.Packages
             .AsNoTracking()
-            .Where(p => p.Status == PublicationStatus.PUBLISHED);
+            // UC-A-08: ídem Experiences — filtro de visibilidad, no cascada de estados.
+            .Where(p => p.Status == PublicationStatus.PUBLISHED
+                && p.Company!.Status != CompanyStatus.SUSPENDED);
 
         if (filter.DestinationId.HasValue)
             query = query.Where(p => p.DestinationId == filter.DestinationId);

@@ -22,6 +22,23 @@ public static class ErrorCodes
     public const string InvalidItineraryStatus = "INVALID_ITINERARY_STATUS";
     public const string ItineraryEmpty = "ITINERARY_EMPTY";
     public const string AvailabilityNotResolved = "AVAILABILITY_NOT_RESOLVED";
+
+    // ---- Oleada 8: expiración, cancelación y sanciones administrativas ----
+
+    /// <summary>El pago llegó cuando la reserva ya no admitía pago (expiró o se canceló mientras se cobraba).</summary>
+    public const string ReservationNoLongerPayable = "RESERVATION_NO_LONGER_PAYABLE";
+
+    /// <summary>La reserva está en un estado que no admite cancelación (ej. ya expirada, ya cancelada).</summary>
+    public const string ReservationNotCancellable = "RESERVATION_NOT_CANCELLABLE";
+
+    /// <summary>Cancelar una reserva ya CONFIRMED requiere una política de reembolso que todavía no existe (Oleada 8: fuera de alcance).</summary>
+    public const string RefundPolicyRequired = "REFUND_POLICY_REQUIRED";
+
+    /// <summary>El contenido fue suspendido por un administrador; solo un ADMIN puede levantar la sanción.</summary>
+    public const string ContentSuspended = "CONTENT_SUSPENDED";
+
+    /// <summary>La empresa está suspendida: no puede operar comercialmente ni aparecer en el catálogo.</summary>
+    public const string CompanySuspended = "COMPANY_SUSPENDED";
 }
 
 /// <summary>Recurso solicitado no existe. El GlobalExceptionHandler la mapea a 404.</summary>

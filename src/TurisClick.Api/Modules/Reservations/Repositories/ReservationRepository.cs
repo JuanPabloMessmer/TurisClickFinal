@@ -11,6 +11,20 @@ public class ReservationRepository(TurisClickDbContext db) : IReservationReposit
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.AiItineraryId == aiItineraryId, ct);
 
+    public Task<List<Guid>> ListExpiredCandidateIdsAsync(DateTimeOffset now, int batchSize, CancellationToken ct) =>
+        db.Reservations
+            .AsNoTracking()
+            .Where(r => r.Status == ReservationStatus.PENDING_PAYMENT && r.ExpiresAt != null && r.ExpiresAt < now)
+            .OrderBy(r => r.ExpiresAt)
+            .Take(batchSize)
+            .Select(r => r.Id)
+            .ToListAsync(ct);
+
+    public Task<Reservation?> GetByIdForCancellationAsync(Guid id, CancellationToken ct) =>
+        db.Reservations
+            .Include(r => r.Items)
+            .FirstOrDefaultAsync(r => r.Id == id, ct);
+
     public async Task AddAsync(Reservation reservation, CancellationToken ct) =>
         await db.Reservations.AddAsync(reservation, ct);
 

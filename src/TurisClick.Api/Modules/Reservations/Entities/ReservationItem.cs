@@ -39,6 +39,17 @@ public class ReservationItem
 
     public ReservationItemStatus Status { get; set; } = ReservationItemStatus.PENDING_PAYMENT;
 
+    /// <summary>Cuándo dejó de estar activa esta línea (cancelación o expiración). Nulo mientras siga vigente.</summary>
+    public DateTimeOffset? CancelledAt { get; set; }
+
+    /// <summary>
+    /// Motivo que dejó el proveedor al cancelar su línea (UC-P-14, cancelación excepcional por fuerza
+    /// mayor). Nulo en el resto de los casos — quién canceló es derivable: si la Reservation padre
+    /// también tiene CancelledAt fue el turista sobre todo el viaje; si solo lo tiene la línea, fue el
+    /// proveedor sobre su parte.
+    /// </summary>
+    public string? CancellationReason { get; set; }
+
     /// <summary>Solo tiene sentido si Reservation.AiItineraryId no es nulo (orden del viaje) — todavía nulo hasta Oleada 5+.</summary>
     public int? DayNumber { get; set; }
 

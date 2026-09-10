@@ -38,10 +38,17 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
         // realmente idempotente al booking (UC-T-18): dos requests concurrentes pueden leer el
         // itinerario como reservable al mismo tiempo, y un chequeo en C# no alcanza — acá pierde uno.
         // El filtro deja fuera las reservas directas (ai_itinerary_id NULL), que no se ven afectadas.
+        //
+        // Oleada 8: el invariante pasa de "una reserva histórica" a "una reserva ACTIVA" por itinerario,
+        // para que un itinerario cuya reserva expiró se pueda volver a reservar conservando la reserva
+        // vieja como auditoría. Se excluyen los estados TERMINALES (los que ya liberaron el cupo) en vez
+        // de listar los activos: así cualquier estado que se agregue en el futuro bloquea por defecto,
+        // que es el lado seguro del error. PAYMENT_FAILED queda dentro de "activo" a propósito — hoy
+        // ningún código lo escribe, pero según UC-T-19 ahí el cupo sigue retenido hasta expirar.
         builder.HasIndex(r => r.AiItineraryId)
             .HasDatabaseName("ix_reservations_ai_itinerary_id")
             .IsUnique()
-            .HasFilter("ai_itinerary_id IS NOT NULL");
+            .HasFilter("ai_itinerary_id IS NOT NULL AND status NOT IN ('EXPIRED', 'CANCELLED')");
 
         builder.HasOne(r => r.Tourist)
             .WithMany()

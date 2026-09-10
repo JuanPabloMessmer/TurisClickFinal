@@ -116,6 +116,18 @@ public class ExperienceService(
 
         ownershipGuard.EnsureOwns(experience.CompanyId);
 
+        // UC-A-07 (Oleada 8): SUSPENDED es una sanción administrativa, no un estado de publicación más.
+        // Sin este chequeo el proveedor podría deshacerla llamando a publish, que es exactamente lo que
+        // la sanción tiene que impedir. Solo un ADMIN puede levantarla.
+        // UC-A-08: una empresa suspendida no puede realizar operaciones comerciales nuevas. No se
+        // cambia el estado de sus productos (nunca hubo cascada): simplemente no puede publicar.
+        await EnsureCompanyNotSuspendedAsync(experience.CompanyId, ct);
+
+        if (experience.Status == PublicationStatus.SUSPENDED)
+            throw new ConflictAppException(
+                "Esta experiencia fue suspendida por un administrador; solo un administrador puede restablecerla.",
+                ErrorCodes.ContentSuspended);
+
         if (experience.Status != PublicationStatus.PUBLISHED)
         {
             // Regla explícita (no basta con cambiar el estado): ver docs/use-cases.md UC-P-06.
@@ -179,7 +191,11 @@ public class ExperienceService(
     {
         var experience = await experienceRepository.GetByIdForReadAsync(id, ct);
 
-        if (experience is null || experience.Status != PublicationStatus.PUBLISHED)
+        // UC-A-08: mismo criterio de visibilidad que la búsqueda — para el turista, el producto de
+        // una empresa suspendida simplemente no existe.
+        if (experience is null
+            || experience.Status != PublicationStatus.PUBLISHED
+            || experience.Company?.Status == CompanyStatus.SUSPENDED)
             throw new NotFoundAppException("Experiencia no encontrada.");
 
         return ToResponse(experience);
@@ -294,4 +310,13 @@ public class ExperienceService(
         CompanyName = experience.Company!.Name,
         Status = experience.Status.ToString()
     };
+
+    /// <summary>UC-A-08 — la suspensión de la empresa bloquea sus operaciones comerciales sin tocar el estado de cada producto.</summary>
+    private async Task EnsureCompanyNotSuspendedAsync(Guid companyId, CancellationToken ct)
+    {
+        var company = await companyRepository.GetByIdAsync(companyId, ct);
+        if (company?.Status == CompanyStatus.SUSPENDED)
+            throw new ForbiddenAppException(
+                "Tu empresa está suspendida; no podés realizar esta operación.", ErrorCodes.CompanySuspended);
+    }
 }

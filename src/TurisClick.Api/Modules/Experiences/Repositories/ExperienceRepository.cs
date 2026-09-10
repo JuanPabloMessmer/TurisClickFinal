@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Experiences.Entities;
+using TurisClick.Api.Modules.Companies.Entities;
 
 namespace TurisClick.Api.Modules.Experiences.Repositories;
 
@@ -35,7 +36,10 @@ public class ExperienceRepository(TurisClickDbContext db) : IExperienceRepositor
     {
         var query = db.Experiences
             .AsNoTracking()
-            .Where(e => e.Status == PublicationStatus.PUBLISHED);
+            // UC-A-08: el catálogo público oculta lo de empresas suspendidas sin tocar el estado de cada
+            // producto — al reactivar la empresa, cada uno vuelve con el estado que ya tenía.
+            .Where(e => e.Status == PublicationStatus.PUBLISHED
+                && e.Company!.Status != CompanyStatus.SUSPENDED);
 
         if (filter.DestinationId.HasValue)
             query = query.Where(e => e.DestinationId == filter.DestinationId);

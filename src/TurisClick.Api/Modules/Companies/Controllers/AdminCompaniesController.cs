@@ -52,4 +52,14 @@ public class AdminCompaniesController(ICompanyService companyService, ICurrentUs
         var result = await companyService.RejectAsync(id, currentUser.UserId, request, ct);
         return Ok(result);
     }
+
+    /// <summary>UC-A-08 — suspender: oculta su catálogo del público y de la IA, y le impide operar.</summary>
+    [HttpPost("{id:guid}/suspend")]
+    public async Task<ActionResult<CompanyResponse>> Suspend(Guid id, CancellationToken ct) =>
+        Ok(await companyService.SuspendAsync(id, ct));
+
+    /// <summary>UC-A-08 — reactivar: cada producto reaparece con el estado que conservó.</summary>
+    [HttpPost("{id:guid}/reactivate")]
+    public async Task<ActionResult<CompanyResponse>> Reactivate(Guid id, CancellationToken ct) =>
+        Ok(await companyService.ReactivateAsync(id, ct));
 }

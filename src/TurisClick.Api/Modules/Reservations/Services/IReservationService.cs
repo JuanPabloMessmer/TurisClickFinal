@@ -22,4 +22,10 @@ public interface IReservationService
 
     /// <summary>UC-T-19/UC-SYS-02/UC-SYS-07 — pagar una reserva propia en PENDING_PAYMENT (403 si no es dueño).</summary>
     Task<ReservationResponse> PayAsync(Guid id, PayReservationRequest request, CancellationToken ct);
+
+    /// <summary>UC-T-11 — el turista cancela su reserva completa y libera el cupo (UC-SYS-08).</summary>
+    Task<ReservationResponse> CancelAsync(Guid id, CancellationToken ct);
+
+    /// <summary>UC-P-14 — el proveedor cancela solo su línea, con motivo. La Reservation padre sigue activa.</summary>
+    Task<ReservationItemResponse> CancelItemAsync(Guid itemId, CancelReservationItemRequest request, CancellationToken ct);
 }

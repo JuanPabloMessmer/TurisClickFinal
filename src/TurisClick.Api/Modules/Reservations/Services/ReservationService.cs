@@ -13,6 +13,7 @@ using TurisClick.Api.Modules.Reservations.Payments;
 using TurisClick.Api.Modules.Reservations.Repositories;
 using TurisClick.Api.Shared.Exceptions;
 using TurisClick.Api.Shared.Responses;
+using TurisClick.Api.Modules.Companies.Entities;
 
 namespace TurisClick.Api.Modules.Reservations.Services;
 
@@ -22,6 +23,7 @@ public class ReservationService(
     IExperienceAvailabilityRepository experienceAvailabilityRepository,
     IPackageAvailabilityRepository packageAvailabilityRepository,
     IPaymentGateway paymentGateway,
+    IReservationBookingService bookingService,
     ICurrentUserContext currentUser,
     ICompanyOwnershipGuard ownershipGuard,
     ILogger<ReservationService> logger,
@@ -74,7 +76,10 @@ public class ReservationService(
             ?? throw new InvalidOperationException("La disponibilidad no tiene una Experience asociada.");
 
         // UC-T-05/precondición UC-T-08: una Experience no publicada no existe para el TOURIST.
-        if (experience.Status != PublicationStatus.PUBLISHED)
+        // UC-A-08: si la empresa está suspendida su catálogo no existe para el turista — tampoco por
+        // la puerta de atrás de reservar directo una availability cuyo id ya conocía.
+        if (experience.Status != PublicationStatus.PUBLISHED
+            || experience.Company?.Status == CompanyStatus.SUSPENDED)
             throw new NotFoundAppException("Experiencia no encontrada.");
 
         // UC-T-08 excepción: "slot ya no existe/expiró" → 410 (distinto de sin-cupo, que es 409).
@@ -130,7 +135,8 @@ public class ReservationService(
             ?? throw new InvalidOperationException("La disponibilidad no tiene un Package asociado.");
 
         // UC-T-07/precondición UC-T-09: un Package no publicado no existe para el TOURIST.
-        if (package.Status != PublicationStatus.PUBLISHED)
+        if (package.Status != PublicationStatus.PUBLISHED
+            || package.Company?.Status == CompanyStatus.SUSPENDED)
             throw new NotFoundAppException("Paquete no encontrado.");
 
         if (availability.Status != AvailabilitySlotStatus.OPEN)
@@ -236,6 +242,13 @@ public class ReservationService(
         if (reservation.TouristId != currentUser.UserId)
             throw new ForbiddenAppException("Esta reserva no te pertenece.");
 
+        // Una reserva ya expirada es un 410 y no un 409: el recurso existió pero su hold de cupo ya se
+        // liberó, que es exactamente la semántica de Gone (mismo criterio que el chequeo de ExpiresAt
+        // de más abajo). El resto de los estados no pagables siguen siendo un conflicto común.
+        if (reservation.Status == ReservationStatus.EXPIRED)
+            throw new GoneAppException(
+                "La reserva expiró y su cupo ya fue liberado.", ErrorCodes.ReservationNoLongerPayable);
+
         if (reservation.Status != ReservationStatus.PENDING_PAYMENT)
             throw new ConflictAppException($"La reserva está en estado {reservation.Status}; no admite pago.");
 
@@ -308,8 +321,38 @@ public class ReservationService(
         if (chargeResult.Approved)
         {
             // UC-SYS-07: confirmación automática, sin aprobación manual del Provider (Decisión 6).
+            //
+            // La transición se hace CONDICIONAL y no asignando la entidad trackeada: entre la lectura de
+            // arriba y este punto pasó una llamada al gateway, y en esa ventana el proceso de expiración
+            // (UC-SYS-08) pudo haber liberado el cupo y dejado la reserva en EXPIRED. Sin esta condición
+            // se confirmaría una reserva sin cupo retenido. Pago y expiración compiten por la misma fila
+            // y solo una transición puede ganar; si perdemos, no se confirma nada.
+            var confirmed = await db.Reservations
+                .Where(r => r.Id == reservation.Id && r.Status == ReservationStatus.PENDING_PAYMENT)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(r => r.Status, ReservationStatus.CONFIRMED)
+                    .SetProperty(r => r.ConfirmedAt, now), ct);
+
+            if (confirmed != 1)
+            {
+                await tx.RollbackAsync(ct);
+
+                logger.LogWarning(
+                    "Pago de la reserva {ReservationId} llegó tarde: otra transición (expiración o cancelación) ganó la carrera.",
+                    reservation.Id);
+
+                throw new GoneAppException(
+                    "La reserva expiró o dejó de estar pendiente de pago mientras se procesaba el cobro; el cupo retenido ya no es válido.",
+                    ErrorCodes.ReservationNoLongerPayable);
+            }
+
+            // Se reflejan también en la entidad trackeada: el ExecuteUpdate de arriba no pasa por el
+            // change tracker, así que sin esto la respuesta seguiría diciendo PENDING_PAYMENT. El
+            // SaveChanges de más abajo reescribe los mismos valores sobre la fila que esta misma
+            // transacción ya bloqueó, así que es inofensivo.
             reservation.Status = ReservationStatus.CONFIRMED;
             reservation.ConfirmedAt = now;
+
             foreach (var item in reservation.Items)
                 item.Status = ReservationItemStatus.CONFIRMED;
         }
@@ -326,6 +369,122 @@ public class ReservationService(
         return ToResponse(reservation,
             paymentApproved: chargeResult.Approved,
             paymentFailureReason: chargeResult.FailureReason);
+    }
+
+    /// <summary>
+    /// UC-T-11 — el turista cancela su reserva completa y se libera todo el cupo.
+    ///
+    /// En esta oleada solo se admite PENDING_PAYMENT: cancelar una reserva ya CONFIRMED implicaría una
+    /// devolución de dinero, y no existe todavía ni entidad Payment ni pasarela real, así que inventar
+    /// una política comercial acá sería peor que no ofrecer la operación (decisión de dominio Oleada 8).
+    /// </summary>
+    public async Task<ReservationResponse> CancelAsync(Guid id, CancellationToken ct)
+    {
+        var reservation = await reservationRepository.GetByIdForCancellationAsync(id, ct)
+            ?? throw new NotFoundAppException("Reserva no encontrada.");
+
+        if (reservation.TouristId != currentUser.UserId)
+            throw new ForbiddenAppException("Esta reserva no te pertenece.");
+
+        if (reservation.Status == ReservationStatus.CONFIRMED)
+            throw new ConflictAppException(
+                "Una reserva ya confirmada no se puede cancelar todavía: falta definir la política de reembolso.",
+                ErrorCodes.RefundPolicyRequired);
+
+        if (reservation.Status != ReservationStatus.PENDING_PAYMENT)
+            throw new ConflictAppException(
+                $"Una reserva en estado {reservation.Status} no se puede cancelar.",
+                ErrorCodes.ReservationNotCancellable);
+
+        var now = DateTimeOffset.UtcNow;
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        // Misma autoridad que en la expiración: gana quien consigue la transición. Si el pago la
+        // confirmó o el proceso de expiración se adelantó, acá no se libera nada.
+        var won = await db.Reservations
+            .Where(r => r.Id == id && r.Status == ReservationStatus.PENDING_PAYMENT)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(r => r.Status, ReservationStatus.CANCELLED)
+                .SetProperty(r => r.CancelledAt, now), ct);
+
+        if (won != 1)
+        {
+            await tx.RollbackAsync(ct);
+            throw new ConflictAppException(
+                "La reserva cambió de estado mientras se cancelaba; volvé a consultarla.",
+                ErrorCodes.ReservationNotCancellable);
+        }
+
+        // Solo las líneas todavía activas: una que el proveedor ya canceló conserva su estado y su motivo.
+        var activeItems = reservation.Items
+            .Where(i => i.Status == ReservationItemStatus.PENDING_PAYMENT)
+            .ToList();
+
+        await bookingService.ReleaseHoldsAsync(activeItems, ct);
+
+        await db.ReservationItems
+            .Where(i => i.ReservationId == id && i.Status == ReservationItemStatus.PENDING_PAYMENT)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(i => i.Status, ReservationItemStatus.CANCELLED)
+                .SetProperty(i => i.CancelledAt, now), ct);
+
+        await tx.CommitAsync(ct);
+
+        logger.LogInformation(
+            "Reserva {ReservationId} cancelada por el turista: {Items} línea(s) liberada(s).", id, activeItems.Count);
+
+        return await GetByIdForTouristAsync(id, ct);
+    }
+
+    /// <summary>
+    /// UC-P-14 — cancelación excepcional del proveedor sobre SU línea. Los demás ítems y la Reservation
+    /// padre siguen activos (domain-model.md: no existe PARTIALLY_CANCELLED, se deriva de los ítems).
+    /// </summary>
+    public async Task<ReservationItemResponse> CancelItemAsync(Guid itemId, CancelReservationItemRequest request, CancellationToken ct)
+    {
+        var item = await reservationItemRepository.GetByIdForUpdateAsync(itemId, ct)
+            ?? throw new NotFoundAppException("Reserva no encontrada.");
+
+        ownershipGuard.EnsureOwns(item.CompanyId);
+
+        if (item.Status is not (ReservationItemStatus.PENDING_PAYMENT or ReservationItemStatus.CONFIRMED))
+            throw new ConflictAppException(
+                $"Una línea en estado {item.Status} no se puede cancelar.",
+                ErrorCodes.ReservationNotCancellable);
+
+        var now = DateTimeOffset.UtcNow;
+        var reason = request.Reason.Trim();
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        // Transición condicional sobre el MISMO estado que se leyó: si el turista canceló la reserva
+        // entera o expiró en el medio, esta ejecución no libera cupo dos veces.
+        var previousStatus = item.Status;
+        var won = await db.ReservationItems
+            .Where(i => i.Id == itemId && i.Status == previousStatus)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(i => i.Status, ReservationItemStatus.CANCELLED)
+                .SetProperty(i => i.CancelledAt, now)
+                .SetProperty(i => i.CancellationReason, reason), ct);
+
+        if (won != 1)
+        {
+            await tx.RollbackAsync(ct);
+            throw new ConflictAppException(
+                "La línea cambió de estado mientras se cancelaba; volvé a consultarla.",
+                ErrorCodes.ReservationNotCancellable);
+        }
+
+        await bookingService.ReleaseHoldsAsync([item], ct);
+
+        await tx.CommitAsync(ct);
+
+        logger.LogInformation(
+            "El proveedor {CompanyId} canceló la línea {ItemId} de la reserva {ReservationId}.",
+            item.CompanyId, itemId, item.ReservationId);
+
+        return await GetReceivedItemByIdAsync(itemId, ct);
     }
 
     private sealed record PriceRevalidation(bool Changed, decimal CurrentUnitPrice, string CurrentCurrency);
@@ -389,6 +548,8 @@ public class ReservationService(
         Currency = item.Currency,
         Subtotal = item.Subtotal,
         Status = item.Status.ToString(),
+        CancelledAt = item.CancelledAt,
+        CancellationReason = item.CancellationReason,
         Date = item.ExperienceAvailability?.Date ?? item.PackageAvailability?.DepartureDate,
         StartTime = item.ExperienceAvailability?.StartTime,
         CreatedAt = item.CreatedAt,

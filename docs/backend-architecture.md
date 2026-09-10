@@ -337,3 +337,19 @@ Tres detalles de concurrencia que conviene no perder de vista:
 ---
 
 Arquitectura documentada y lista para bootstrap. Continúo con **FASE 5 — bootstrap físico del proyecto**.
+
+---
+
+## 16. Expiración, cancelación y sanciones (Oleada 8)
+
+**La transición de estado es la autoridad, no el reloj ni el chequeo previo.** Expirar, cancelar y confirmar un pago compiten por la misma fila de `reservations`, y las tres lo resuelven igual: un `UPDATE` condicional sobre el estado esperado y un chequeo de `affectedRows`. Solo quien afecta 1 fila ejecuta el efecto (liberar o retener cupo). De ahí salen tres propiedades sin infraestructura extra:
+
+- **Idempotencia:** expirar o cancelar dos veces libera el cupo una sola vez — la segunda ejecución no gana la transición y no toca nada.
+- **Multi-instancia:** dos backends procesando el mismo lote no se pisan; no hacen falta locks distribuidos ni `FOR UPDATE SKIP LOCKED` (que además no encajaría con una transacción por reserva).
+- **Pago vs expiración:** `PayAsync` llama al gateway fuera de la transacción y luego intenta la transición condicional a `CONFIRMED`. Si la expiración ganó en el medio, ese `UPDATE` afecta 0 filas y el pago responde 410 `RESERVATION_NO_LONGER_PAYABLE` en vez de confirmar una reserva cuyo cupo ya se liberó.
+
+**Frontera transaccional.** Expirar una reserva es una sola transacción: transición + liberación de todos sus holds + ítems a `EXPIRED` + `AiItinerary BOOKED → SAVED` si aplica. Una transacción **por reserva** y no por lote, para que un fallo aislado no impida procesar el resto. Cancelación del turista y cancelación parcial del proveedor siguen el mismo patrón sobre su propio alcance.
+
+**El proceso de fondo es deliberadamente tonto.** `ReservationExpirationBackgroundService` solo despierta cada N segundos y llama a `IReservationExpirationService`; no tiene ninguna regla de negocio. Así los tests ejercitan la lógica invocando el servicio y nunca esperan un timer real (en el entorno de tests el proceso se apaga por configuración).
+
+**Sanciones administrativas: aplicarlas, no solo registrarlas.** Cambiar un enum en la base no es una sanción. `SUSPENDED` en un usuario ya bloqueaba login y refresh; en contenido, además de sacarlo del catálogo, ahora impide que el proveedor lo republique (antes podía anular la sanción llamando a `publish`); y en una empresa actúa como **filtro de visibilidad y de operación** —catálogo público, retrieval de la IA, creación de reservas y publicación— **sin cascada** sobre el estado de sus productos, para que reactivarla no tenga que "restaurar" nada.

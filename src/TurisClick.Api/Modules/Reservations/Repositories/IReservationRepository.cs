@@ -7,6 +7,12 @@ public interface IReservationRepository
     /// <summary>UC-T-18 — la reserva ya creada desde un itinerario IA (relación 1-1, ver domain-model.md). Sirve para responder "ya estaba reservado, es esta".</summary>
     Task<Reservation?> GetByAiItineraryIdAsync(Guid aiItineraryId, CancellationToken ct);
 
+    /// <summary>UC-SYS-08 — ids de reservas PENDING_PAYMENT cuyo hold ya venció. Sin lock: la autoridad es la transición condicional posterior.</summary>
+    Task<List<Guid>> ListExpiredCandidateIdsAsync(DateTimeOffset now, int batchSize, CancellationToken ct);
+
+    /// <summary>Trackeado y con sus ítems — para cancelar (UC-T-11).</summary>
+    Task<Reservation?> GetByIdForCancellationAsync(Guid id, CancellationToken ct);
+
     Task AddAsync(Reservation reservation, CancellationToken ct);
 
     /// <summary>AsNoTracking, con Items + Experience + Company + ExperienceAvailability cargados — detalle completo para el TOURIST dueño.</summary>

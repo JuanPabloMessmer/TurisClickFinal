@@ -44,4 +44,16 @@ public class ReservationsController(IReservationService reservationService) : Co
         var result = await reservationService.PayAsync(id, request, ct);
         return Ok(result);
     }
+
+    /// <summary>
+    /// UC-T-11 — cancelar la reserva completa y liberar el cupo. En esta oleada solo se admite una
+    /// reserva PENDING_PAYMENT: cancelar una ya confirmada exige una política de reembolso que todavía
+    /// no existe (409 `REFUND_POLICY_REQUIRED`).
+    /// </summary>
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<ActionResult<ReservationResponse>> Cancel(Guid id, CancellationToken ct)
+    {
+        var result = await reservationService.CancelAsync(id, ct);
+        return Ok(result);
+    }
 }

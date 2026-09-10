@@ -128,6 +128,18 @@ public class PackageService(
 
         ownershipGuard.EnsureOwns(package.CompanyId);
 
+        // UC-A-07 (Oleada 8): SUSPENDED es una sanción administrativa, no un estado de publicación más.
+        // Sin este chequeo el proveedor podría deshacerla llamando a publish, que es exactamente lo que
+        // la sanción tiene que impedir. Solo un ADMIN puede levantarla.
+        // UC-A-08: una empresa suspendida no puede realizar operaciones comerciales nuevas. No se
+        // cambia el estado de sus productos (nunca hubo cascada): simplemente no puede publicar.
+        await EnsureCompanyNotSuspendedAsync(package.CompanyId, ct);
+
+        if (package.Status == PublicationStatus.SUSPENDED)
+            throw new ConflictAppException(
+                "Este paquete fue suspendido por un administrador; solo un administrador puede restablecerlo.",
+                ErrorCodes.ContentSuspended);
+
         if (package.Status != PublicationStatus.PUBLISHED)
         {
             // Reglas explícitas (no basta con cambiar el estado): ver docs/use-cases.md UC-P-09.
@@ -194,7 +206,10 @@ public class PackageService(
     {
         var package = await packageRepository.GetByIdForReadAsync(id, ct);
 
-        if (package is null || package.Status != PublicationStatus.PUBLISHED)
+        // UC-A-08: ídem Experiences.
+        if (package is null
+            || package.Status != PublicationStatus.PUBLISHED
+            || package.Company?.Status == CompanyStatus.SUSPENDED)
             throw new NotFoundAppException("Paquete no encontrado.");
 
         return ToResponse(package);
@@ -360,4 +375,13 @@ public class PackageService(
         CompanyName = package.Company!.Name,
         Status = package.Status.ToString()
     };
+
+    /// <summary>UC-A-08 — la suspensión de la empresa bloquea sus operaciones comerciales sin tocar el estado de cada producto.</summary>
+    private async Task EnsureCompanyNotSuspendedAsync(Guid companyId, CancellationToken ct)
+    {
+        var company = await companyRepository.GetByIdAsync(companyId, ct);
+        if (company?.Status == CompanyStatus.SUSPENDED)
+            throw new ForbiddenAppException(
+                "Tu empresa está suspendida; no podés realizar esta operación.", ErrorCodes.CompanySuspended);
+    }
 }

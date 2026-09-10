@@ -249,6 +249,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Entidades involucradas:** `Reservation`
 - **Endpoints probables:** `POST /api/reservations/{id}/cancel`
 - **Prioridad:** Oleada 8 (no bloqueante para las primeras oleadas).
+- **Implementación (Oleada 8):** se cancela la reserva **completa** y se libera el cupo de todas sus líneas todavía activas (las que un proveedor ya canceló conservan su estado y su motivo). Solo se admite `PENDING_PAYMENT`: cancelar una reserva ya `CONFIRMED` implicaría devolver dinero y **no existe todavía entidad `Payment` ni pasarela real**, así que el endpoint responde 409 `REFUND_POLICY_REQUIRED` en vez de inventar una política comercial. Cancelación de reservas confirmadas + reembolsos quedan pendientes de una política futura.
 
 ### UC-T-12 — Iniciar conversación con TurisClick AI
 
@@ -493,6 +494,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Entidades involucradas:** `ReservationItem`, `Reservation`
 - **Endpoints probables:** `POST /api/companies/me/reservations/{id}/cancel`
 - **Prioridad:** Oleada 8.
+- **Implementación (Oleada 8):** el proveedor cancela **solo su `ReservationItem`**, con motivo obligatorio que se persiste en la línea (`cancellation_reason` + `cancelled_at`). Las demás líneas y la `Reservation` padre siguen activas — no se agrega `PARTIALLY_CANCELLED`, se deriva de los ítems (decisión 4 del modelo de dominio). Solo se libera el cupo de esa línea. La notificación al turista queda fuera de alcance: no hay infraestructura de notificaciones todavía.
 
 ---
 
@@ -550,6 +552,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Entidades involucradas:** `User`
 - **Endpoints probables:** `GET /api/admin/users`, `POST /api/admin/users/{id}/suspend`
 - **Prioridad:** Oleada 8.
+- **Implementación (Oleada 8):** listado con filtros por rol/estado y búsqueda, más `suspend` y `activate` (sin la contrapartida la sanción sería irreversible). La suspensión ya se aplicaba sola desde Oleada 0: `AuthService` rechaza login y refresh de un usuario `SUSPENDED`. Un admin no puede suspender su propia cuenta.
 
 ### UC-A-07 — Suspender/despublicar contenido
 
@@ -559,6 +562,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Entidades involucradas:** `Experience`, `Package`
 - **Endpoints probables:** `POST /api/admin/experiences/{id}/suspend`, `POST /api/admin/packages/{id}/suspend`
 - **Prioridad:** Oleada 8.
+- **Implementación (Oleada 8):** `SUSPENDED` es una **sanción administrativa**, no un estado más de publicación: solo un ADMIN puede ponerla y solo un ADMIN puede levantarla (`/restore`, que devuelve el contenido a `UNPUBLISHED` para que republicar siga siendo decisión del proveedor). Se cerró un agujero real: `PublishAsync` solo comprobaba `!= PUBLISHED`, así que **el proveedor podía anular la sanción republicando**; ahora eso devuelve 409 `CONTENT_SUSPENDED`. Un producto suspendido desaparece del catálogo público y del retrieval de la IA por el mismo filtro de siempre (todas esas consultas exigen `PUBLISHED`).
 
 ### UC-A-08 — Suspender una empresa
 
@@ -568,6 +572,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Entidades involucradas:** `Company`
 - **Endpoints probables:** `POST /api/admin/companies/{id}/suspend`
 - **Prioridad:** Oleada 8.
+- **Implementación (Oleada 8):** **sin cascada sobre los productos.** La suspensión actúa como filtro de visibilidad y de operación: el catálogo público (búsqueda y detalle), el retrieval de la IA y la creación de reservas excluyen los productos de una empresa `SUSPENDED`, y el proveedor no puede publicar mientras lo esté (403 `COMPANY_SUSPENDED`). Como nunca se tocan los estados individuales, al reactivar (`/reactivate`) cada producto reaparece exactamente como estaba: `PUBLISHED` vuelve a verse, `DRAFT` sigue `DRAFT`, `UNPUBLISHED` sigue `UNPUBLISHED` y lo suspendido individualmente por un admin sigue `SUSPENDED`. No hay nada que "restaurar".
 
 ---
 
@@ -684,6 +689,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Invocado por:** UC-T-11, UC-P-14, proceso propio de expiración por tiempo.
 - **Entidades involucradas:** `Reservation`, `ExperienceAvailability`, `PackageAvailability`
 - **Prioridad:** Oleada 8.
+- **Implementación (Oleada 8):** el "proceso propio de expiración" es un `BackgroundService` deliberadamente delgado que cada N segundos (configurable, 60 por defecto) delega en `IReservationExpirationService`; toda la lógica vive en el servicio, así que se testea sin depender de relojes. **La transición de estado es la única autoridad**: se hace un `UPDATE` condicional (`WHERE status = 'PENDING_PAYMENT' AND expires_at < now()`) y solo quien afecta 1 fila libera cupo. Eso hace la operación idempotente, resuelve el doble procesamiento con varias instancias del backend, y define quién gana frente a un pago concurrente — sin locks distribuidos. La liberación usa el `UPDATE` condicional inverso al hold (`reserved_slots >= n`), agrupado por availability y en orden determinístico. Todo (transición, liberación, ítems a `EXPIRED` y `AiItinerary BOOKED → SAVED` si corresponde) ocurre en **una transacción por reserva**: si algo falla, no se libera nada y el resto del lote sigue.
 
 ### UC-SYS-09 — Reindexar catálogo para recuperación (RAG)
 

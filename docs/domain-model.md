@@ -253,7 +253,7 @@ Soporta UC-T-08/09/10/18/19, UC-SYS-04/05/07/08. Es el mismo tipo de entidad tan
 |---|---|
 | Id | — |
 | TouristId | FK a `User` |
-| AiItineraryId | FK opcional a `AiItinerary` — presente únicamente si esta reserva se originó en un itinerario IA (UC-T-18). **Único** (índice único parcial, migración 0007): un itinerario produce como máximo una reserva, y es esa unicidad la que hace idempotente al booking ante dos requests concurrentes |
+| AiItineraryId | FK opcional a `AiItinerary` — presente únicamente si esta reserva se originó en un itinerario IA (UC-T-18). **Único entre las reservas ACTIVAS** (índice único parcial `WHERE ai_itinerary_id IS NOT NULL AND status NOT IN ('EXPIRED','CANCELLED')`, migración 0008): un itinerario tiene como máximo una reserva reteniendo cupo, y es esa unicidad la que hace idempotente al booking ante dos requests concurrentes. Las reservas terminales se conservan para auditoría, lo que permite volver a reservar un itinerario cuya reserva expiró (Oleada 8). El filtro excluye estados terminales en vez de listar los activos: así cualquier estado nuevo bloquea por defecto, que es el lado seguro |
 | Status | `ReservationStatus`: `PENDING_PAYMENT`, `CONFIRMED`, `PAYMENT_FAILED`, `CANCELLED`, `EXPIRED` — representa el ciclo de vida de la reserva **como un todo** (pago, cancelación explícita del turista, expiración); no cambia automáticamente por una cancelación parcial a nivel de ítem (ver nota más abajo) |
 | ExpiresAt | Límite del hold de cupo mientras está `PENDING_PAYMENT` (UC-SYS-08) |
 | CreatedAt, ConfirmedAt, CancelledAt | Nulos según corresponda |
@@ -263,6 +263,8 @@ Soporta UC-T-08/09/10/18/19, UC-SYS-04/05/07/08. Es el mismo tipo de entidad tan
 > **Cambio respecto a la versión anterior — se eliminan `TotalPrice`/`Currency` de `Reservation`.** Un itinerario IA puede combinar `ReservationItem` de distintos proveedores con distinta `Currency` (decisión de moneda múltiple), así que un total único agregado dejaría de ser válido en ese caso. El total se calcula en Service/DTO agrupando `Subtotal` por `Currency` de sus `ReservationItem`: en el caso típico (reserva directa, o itinerario mono-moneda) da un solo total; si hay mezcla, se presenta el desglose por moneda. No se persiste por ser puro dato derivado.
 
 > Nota de diseño: **no** se agrega un campo `Type` (directa-experiencia / directa-paquete / itinerario-IA) porque es derivable — si `AiItineraryId` no es nulo, es de itinerario; si es nulo, se infiere del único `ReservationItem.ProductType` (una reserva directa siempre tiene exactamente un ítem, UC-SYS-04). Persistirlo sería un dato redundante sin caso de uso propio; si en el futuro se necesita para reportes, se calcula en la capa de Service/DTO.
+
+> **Expiración y AiItinerary (Oleada 8).** Cuando una `Reservation` `PENDING_PAYMENT` vence sin pago (UC-SYS-08), la reserva pasa a `EXPIRED`, sus líneas activas también, se libera el cupo y —si venía de un itinerario IA— el `AiItinerary` vuelve de `BOOKED` a `SAVED`, todo en la misma transacción. El turista puede volver a reservarlo, pero **siempre pasando de nuevo por toda la revalidación final de UC-T-18**: nunca se reutilizan como verdad los precios ni la disponibilidad anteriores. Qué ocurre al expirar una reserva `CONFIRMED` no aplica: una reserva confirmada no expira.
 
 > **Cancelación parcial (decisión del usuario).** Un proveedor puede cancelar únicamente el `ReservationItem` que le corresponde (UC-P-14); los demás ítems y la `Reservation` padre siguen activos. No se agrega un estado `PARTIALLY_CANCELLED` a `ReservationStatus`: es derivable y barato de calcular — si existe al menos un `ReservationItem` en `CANCELLED` y al menos otro que no lo está, la UI presenta la reserva como "parcialmente cancelada" a partir de un `GROUP BY Status` sobre sus ítems (una reserva rara vez tiene más de una decena de líneas). `Reservation.Status` solo pasa a `CANCELLED` cuando la cancela explícitamente el turista (UC-T-11) o el sistema la cancela por completo (ej. expiración sin pago, UC-SYS-08).
 
@@ -283,7 +285,9 @@ Soporta UC-T-10/18/19, UC-P-12/13/14, UC-SYS-01/02/04/05/06/07/08. Representa **
 | UnitPrice | Precio **congelado** al momento de reservar (snapshot, resultado de UC-SYS-02) |
 | Currency | Moneda de `UnitPrice`/`Subtotal` — snapshot propio por línea; no se asume igual a la de otros ítems de la misma `Reservation` (decisión de moneda múltiple) |
 | Subtotal | `UnitPrice * Travelers` en el caso general |
-| Status | `ReservationItemStatus`: `PENDING_PAYMENT`, `CONFIRMED`, `CANCELLED` — puede diferir del estado del padre si un proveedor cancela solo su parte (UC-P-14) |
+| Status | `ReservationItemStatus`: `PENDING_PAYMENT`, `CONFIRMED`, `CANCELLED`, `EXPIRED` — puede diferir del estado del padre si un proveedor cancela solo su parte (UC-P-14). `EXPIRED` se agrega en Oleada 8 para distinguir "venció sin pago" de "alguien decidió cancelar": son eventos de dominio distintos y conviene auditarlos por separado |
+| CancelledAt | Cuándo dejó de estar activa la línea (cancelación o expiración). Nulo mientras siga vigente |
+| CancellationReason | Motivo que dejó el proveedor al cancelar su línea (UC-P-14). Nulo en el resto de los casos — **quién** canceló es derivable: si la `Reservation` padre también tiene `CancelledAt`, fue el turista sobre todo el viaje; si solo lo tiene la línea, fue el proveedor sobre su parte |
 | DayNumber | Opcional; solo tiene sentido si `Reservation.AiItineraryId` no es nulo, para reconstruir el orden del viaje en UC-T-10 |
 | CreatedAt | — |
 
@@ -382,7 +386,7 @@ Soporta UC-AI-04/05, UC-T-14, UC-SYS-05. Mismo patrón que `ReservationItem` por
 | `PackageItemKind` | `EXPERIENCE_REFERENCE`, `DESCRIPTIVE` |
 | `AvailabilitySlotStatus` | `OPEN`, `CLOSED` |
 | `ReservationStatus` | `PENDING_PAYMENT`, `CONFIRMED`, `PAYMENT_FAILED`, `CANCELLED`, `EXPIRED` |
-| `ReservationItemStatus` | `PENDING_PAYMENT`, `CONFIRMED`, `CANCELLED` |
+| `ReservationItemStatus` | `PENDING_PAYMENT`, `CONFIRMED`, `CANCELLED`, `EXPIRED` |
 | `ProductType` (ReservationItem y AiItineraryItem) | `EXPERIENCE`, `PACKAGE` |
 | `AiConversationStatus` | `ACTIVE`, `CLOSED` |
 | `MessageSender` | `TOURIST`, `AI` |

@@ -38,7 +38,12 @@ public class TurisClickApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
                 ["Jwt:Issuer"] = "TurisClick.Api.Tests",
                 ["Jwt:Audience"] = "TurisClick.Client.Tests",
                 ["Jwt:AccessTokenExpirationMinutes"] = "15",
-                ["Jwt:RefreshTokenExpirationDays"] = "30"
+                ["Jwt:RefreshTokenExpirationDays"] = "30",
+                // El proceso automático de expiración (UC-SYS-08) se apaga en los tests: si corriera
+                // por su cuenta podría expirar una reserva en medio de otra prueba. Los tests que
+                // ejercitan la expiración invocan IReservationExpirationService directamente, sin
+                // depender de un timer real.
+                ["Reservations:Expiration:Enabled"] = "false"
             });
         });
     }

@@ -50,6 +50,11 @@ public class ReservationItemConfiguration : IEntityTypeConfiguration<Reservation
             .IsRequired()
             .HasDefaultValue(ReservationItemStatus.PENDING_PAYMENT);
 
+        // UC-P-14 (Oleada 8): trazabilidad de la cancelación a nivel de línea, que es el grano en el que
+        // cancela un proveedor. Ambos nulos mientras la línea siga vigente.
+        builder.Property(i => i.CancelledAt).HasColumnName("cancelled_at");
+        builder.Property(i => i.CancellationReason).HasColumnName("cancellation_reason").HasMaxLength(500);
+
         builder.Property(i => i.DayNumber).HasColumnName("day_number");
         builder.Property(i => i.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
 

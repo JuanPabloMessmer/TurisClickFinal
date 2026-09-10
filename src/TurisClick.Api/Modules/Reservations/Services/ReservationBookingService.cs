@@ -110,4 +110,50 @@ public class ReservationBookingService(
 
         return reservation;
     }
+
+    public async Task ReleaseHoldsAsync(IReadOnlyList<ReservationItem> items, CancellationToken ct)
+    {
+        if (items.Count == 0) return;
+
+        // Mismo criterio que el hold: se agrupa por availability porque dos líneas pueden compartir
+        // slot, y se ordena determinísticamente para no cruzarse con otra transacción que esté
+        // tomando/liberando las mismas filas.
+        var releases = items
+            .Select(i => new
+            {
+                i.ProductType,
+                AvailabilityId = i.ExperienceAvailabilityId ?? i.PackageAvailabilityId,
+                i.Travelers
+            })
+            .Where(r => r.AvailabilityId.HasValue)
+            .GroupBy(r => (r.ProductType, r.AvailabilityId!.Value))
+            .Select(g => new { g.Key.ProductType, AvailabilityId = g.Key.Item2, Travelers = g.Sum(r => r.Travelers) })
+            .OrderBy(r => r.ProductType)
+            .ThenBy(r => r.AvailabilityId)
+            .ToList();
+
+        foreach (var release in releases)
+        {
+            // El `reserved_slots >= n` de la condición hace imposible dejar la capacidad negativa
+            // aunque alguien invocara esto de más; el CHECK de la tabla queda como última red.
+            var affectedRows = release.ProductType == ProductType.EXPERIENCE
+                ? await db.ExperienceAvailabilities
+                    .Where(a => a.Id == release.AvailabilityId && a.ReservedSlots >= release.Travelers)
+                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots - release.Travelers), ct)
+                : await db.PackageAvailabilities
+                    .Where(a => a.Id == release.AvailabilityId && a.ReservedSlots >= release.Travelers)
+                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots - release.Travelers), ct);
+
+            if (affectedRows != 1)
+            {
+                // No se aborta: liberar de menos es preferible a romper la operación de dominio (la
+                // reserva igual deja de retener el cupo lógicamente). Se registra para poder auditarlo.
+                logger.LogError(
+                    "Release inconsistente: {ProductType} {AvailabilityId} no tenía {Travelers} cupo(s) retenido(s) para devolver.",
+                    release.ProductType, release.AvailabilityId, release.Travelers);
+            }
+        }
+
+        logger.LogInformation("Liberados {Count} hold(s) de cupo.", releases.Count);
+    }
 }

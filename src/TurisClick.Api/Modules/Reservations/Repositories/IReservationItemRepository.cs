@@ -10,4 +10,7 @@ public interface IReservationItemRepository
 
     /// <summary>Sin filtrar por empresa — el Service decide 403 vs 200 tras cargarlo (UC-SYS-03).</summary>
     Task<ReservationItem?> GetByIdAsync(Guid id, CancellationToken ct);
+
+    /// <summary>Trackeado — para que el proveedor cancele su propia línea (UC-P-14).</summary>
+    Task<ReservationItem?> GetByIdForUpdateAsync(Guid id, CancellationToken ct);
 }

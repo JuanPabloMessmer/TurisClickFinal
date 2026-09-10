@@ -12,7 +12,7 @@ public class ExperienceAvailabilityRepository(TurisClickDbContext db) : IExperie
     public Task<ExperienceAvailability?> GetByIdWithExperienceAsync(Guid id, CancellationToken ct) =>
         db.ExperienceAvailabilities
             .AsNoTracking()
-            .Include(a => a.Experience)
+            .Include(a => a.Experience).ThenInclude(e => e!.Company)
             .FirstOrDefaultAsync(a => a.Id == id, ct);
 
     public Task<bool> ExistsAsync(Guid experienceId, DateOnly date, TimeOnly? startTime, CancellationToken ct) =>
