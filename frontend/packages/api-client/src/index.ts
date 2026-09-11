@@ -2,6 +2,7 @@ export { createHttpClient } from './http'
 export * from './types'
 
 export * as authApi from './modules/auth'
+export * as catalogApi from './modules/catalog'
 export * as categoriesApi from './modules/categories'
 export * as companiesApi from './modules/companies'
 export * as destinationsApi from './modules/destinations'

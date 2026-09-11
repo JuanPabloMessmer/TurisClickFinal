@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "TurisClick",
+    "slug": "turisclick-tourist",
+    "scheme": "turisclick",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F6F9FA",
+    "splash": {
+      "backgroundColor": "#005F73",
+      "resizeMode": "contain",
+      "image": "./assets/splash-icon.png"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.turisclick.tourist"
+    },
+    "android": {
+      "package": "com.turisclick.tourist",
+      "adaptiveIcon": {
+        "backgroundColor": "#005F73",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "usesCleartextTraffic": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-router", "expo-secure-store"]
+  }
+}

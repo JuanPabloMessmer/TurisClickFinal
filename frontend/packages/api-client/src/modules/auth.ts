@@ -1,5 +1,15 @@
 import type { AxiosInstance } from 'axios'
-import type { AuthResultResponse, LoginRequest, LogoutRequest, RefreshTokenRequest } from '../types'
+import type {
+  AuthResultResponse,
+  LoginRequest,
+  LogoutRequest,
+  RefreshTokenRequest,
+  RegisterTouristRequest,
+} from '../types'
+
+/** UC-AUTH-01 — alta autoservicio de TOURIST. Devuelve la sesión ya iniciada, igual que login. */
+export const registerTourist = (http: AxiosInstance, body: RegisterTouristRequest) =>
+  http.post<AuthResultResponse>('/api/auth/register', body).then((r) => r.data)
 
 /** UC-AUTH-02. */
 export const login = (http: AxiosInstance, body: LoginRequest) =>

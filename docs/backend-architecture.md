@@ -183,6 +183,17 @@ options.AddPolicy("RequireTourist", p => p.RequireRole("TOURIST"));
 
 Cada Controller aplica `[Authorize(Policy = "RequireProvider")]` a nivel de acción o de clase, según lo defina `use-cases.md` (ej. todo `CompaniesController.UpdateMyCompany` es `RequireProvider`; `AdminController` entero es `RequireAdmin`). Los endpoints de exploración/búsqueda (UC-T-03..07) quedan `[AllowAnonymous]`, tal como indica su documentación de caso de uso.
 
+**Catálogos maestros: lectura pública, gestión restringida.** Cuando un catálogo maestro alimenta un filtro público hace falta poder leerlo sin sesión, pero no abrir su gestión. El patrón es **dos controllers sobre el mismo Service**, no relajar la política del controller existente:
+
+| Controller | Ruta | Política |
+|---|---|---|
+| `PublicDestinationsController` | `GET /api/destinations` | `[AllowAnonymous]` |
+| `DestinationsController` | `POST/PUT/DELETE /api/admin/destinations` | `RequireAdmin` |
+| `PublicCategoriesController` | `GET /api/categories` | `[AllowAnonymous]` |
+| `CategoriesController` | `POST/PUT/DELETE /api/admin/categories` | `RequireAdmin` |
+
+La lectura pública se agregó porque el filtro `categoryId` de UC-T-04/UC-T-06 es inútil si el cliente no puede listar las categorías; devuelve el mismo `CategoryResponse` mínimo (id, nombre, descripción) sin exponer nada de gestión.
+
 ---
 
 ## 7. UC-SYS-03 — Aislamiento por `company_id`

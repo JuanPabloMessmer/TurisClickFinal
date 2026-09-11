@@ -9,6 +9,7 @@ export type Schemas = components['schemas']
 export type AuthResultResponse = Schemas['AuthResultResponse']
 export type UserSummaryResponse = Schemas['UserSummaryResponse']
 export type LoginRequest = Schemas['LoginRequest']
+export type RegisterTouristRequest = Schemas['RegisterTouristRequest']
 export type RefreshTokenRequest = Schemas['RefreshTokenRequest']
 export type LogoutRequest = Schemas['LogoutRequest']
 
