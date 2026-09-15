@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router'
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { ScrollView, Text, View } from 'react-native'
 import {
   AvailabilityRow,
@@ -19,8 +19,10 @@ import { CatalogImage, Chip, ErrorState } from '@/ui'
  */
 export default function ExperienceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
   const experience = useExperience(id)
   const availability = useExperienceAvailability(id)
+  const noDates = availability.isSuccess && availability.data.length === 0
 
   return (
     <View className="flex-1 bg-background">
@@ -80,6 +82,9 @@ export default function ExperienceDetailScreen() {
           amount={experience.data.price}
           currency={experience.data.currency}
           priceLabel="Precio por persona"
+          ctaLabel={noDates ? 'Sin fechas disponibles' : 'Elegir fecha'}
+          disabled={noDates}
+          onPress={() => router.push(`/book/experience/${id}` as Href)}
         />
       ) : null}
     </View>

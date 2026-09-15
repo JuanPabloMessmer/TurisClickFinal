@@ -33,6 +33,7 @@ export default function ProfileScreen() {
 }
 
 function SignedIn() {
+  const router = useRouter()
   const { user, logout } = useSession()
   const initial = (user?.firstName ?? user?.email ?? '?').charAt(0).toUpperCase()
 
@@ -47,15 +48,10 @@ function SignedIn() {
       </View>
 
       {/*
-        Los datos de la cuenta son de solo lectura en Fase 1: el backend todavía no expone un endpoint
-        de edición de perfil, así que ofrecer un formulario sería prometer algo que no existe.
+        Los datos de la cuenta son de solo lectura: el backend todavía no expone un endpoint de edición de
+        perfil, así que ofrecer un formulario sería prometer algo que no existe.
       */}
-      <View className="rounded-2xl bg-surface p-5" style={{ elevation: 1 }}>
-        <Text className="text-base font-semibold text-ink">Tus viajes</Text>
-        <Text className="mt-1.5 text-sm leading-5 text-[#5B7285]">
-          Cuando puedas reservar desde la app, tus reservas van a aparecer acá.
-        </Text>
-      </View>
+      <Button label="Ver mis viajes" onPress={() => router.push('/trips')} />
 
       <Button label="Cerrar sesión" variant="outline" onPress={() => void logout()} />
     </View>
@@ -71,7 +67,7 @@ function SignedOut() {
         <Text className="text-xl font-bold text-ink">Todavía no iniciaste sesión</Text>
         <Text className="mt-2 text-base leading-6 text-[#5B7285]">
           Podés seguir explorando experiencias y paquetes sin cuenta. Creá una para guardar tus datos y
-          reservar cuando esté disponible.
+          reservar.
         </Text>
       </View>
 

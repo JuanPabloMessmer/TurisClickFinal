@@ -169,6 +169,764 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/companies/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompanyResponse"];
+                        "application/json": components["schemas"]["CompanyResponse"];
+                        "text/json": components["schemas"]["CompanyResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/companies/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompanyResponse"];
+                        "application/json": components["schemas"]["CompanyResponse"];
+                        "text/json": components["schemas"]["CompanyResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/experiences/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminContentResponse"];
+                        "application/json": components["schemas"]["AdminContentResponse"];
+                        "text/json": components["schemas"]["AdminContentResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/experiences/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminContentResponse"];
+                        "application/json": components["schemas"]["AdminContentResponse"];
+                        "text/json": components["schemas"]["AdminContentResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/packages/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminContentResponse"];
+                        "application/json": components["schemas"]["AdminContentResponse"];
+                        "text/json": components["schemas"]["AdminContentResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/packages/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminContentResponse"];
+                        "application/json": components["schemas"]["AdminContentResponse"];
+                        "text/json": components["schemas"]["AdminContentResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    role?: components["schemas"]["UserRole"];
+                    status?: components["schemas"]["UserStatus"];
+                    search?: string;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminUserResponsePagedResult"];
+                        "application/json": components["schemas"]["AdminUserResponsePagedResult"];
+                        "text/json": components["schemas"]["AdminUserResponsePagedResult"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminUserResponse"];
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                        "text/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminUserResponse"];
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                        "text/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ConversationResponse"];
+                        "application/json": components["schemas"]["ConversationResponse"];
+                        "text/json": components["schemas"]["ConversationResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/conversations/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ConversationSummaryResponsePagedResult"];
+                        "application/json": components["schemas"]["ConversationSummaryResponsePagedResult"];
+                        "text/json": components["schemas"]["ConversationSummaryResponsePagedResult"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/conversations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ConversationResponse"];
+                        "application/json": components["schemas"]["ConversationResponse"];
+                        "text/json": components["schemas"]["ConversationResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SendMessageRequest"];
+                    "text/json": components["schemas"]["SendMessageRequest"];
+                    "application/*+json": components["schemas"]["SendMessageRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SendMessageResponse"];
+                        "application/json": components["schemas"]["SendMessageResponse"];
+                        "text/json": components["schemas"]["SendMessageResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/conversations/{id}/itinerary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ItineraryResponse"];
+                        "application/json": components["schemas"]["ItineraryResponse"];
+                        "text/json": components["schemas"]["ItineraryResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/itineraries/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SavedItinerarySummaryResponsePagedResult"];
+                        "application/json": components["schemas"]["SavedItinerarySummaryResponsePagedResult"];
+                        "text/json": components["schemas"]["SavedItinerarySummaryResponsePagedResult"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/itineraries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ItineraryResponse"];
+                        "application/json": components["schemas"]["ItineraryResponse"];
+                        "text/json": components["schemas"]["ItineraryResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/itineraries/{id}/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ItineraryResponse"];
+                        "application/json": components["schemas"]["ItineraryResponse"];
+                        "text/json": components["schemas"]["ItineraryResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/itineraries/{id}/book": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["BookItineraryRequest"];
+                    "text/json": components["schemas"]["BookItineraryRequest"];
+                    "application/*+json": components["schemas"]["BookItineraryRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BookItineraryResponse"];
+                        "application/json": components["schemas"]["BookItineraryResponse"];
+                        "text/json": components["schemas"]["BookItineraryResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/itineraries/{id}/items/{itemId}/explanation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ItemExplanationResponse"];
+                        "application/json": components["schemas"]["ItemExplanationResponse"];
+                        "text/json": components["schemas"]["ItemExplanationResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/register": {
         parameters: {
             query?: never;
@@ -669,6 +1427,51 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/companies/me/reservations/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CancelReservationItemRequest"];
+                    "text/json": components["schemas"]["CancelReservationItemRequest"];
+                    "application/*+json": components["schemas"]["CancelReservationItemRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReservationItemResponse"];
+                        "application/json": components["schemas"]["ReservationItemResponse"];
+                        "text/json": components["schemas"]["ReservationItemResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1693,6 +2496,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CategoryResponse"][];
+                        "application/json": components["schemas"]["CategoryResponse"][];
+                        "text/json": components["schemas"]["CategoryResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/destinations": {
         parameters: {
             query?: never;
@@ -1939,16 +2779,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reservations/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReservationResponse"];
+                        "application/json": components["schemas"]["ReservationResponse"];
+                        "text/json": components["schemas"]["ReservationResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AdminContentResponse: {
+            /** Format: uuid */
+            id?: string;
+            productType?: string | null;
+            title?: string | null;
+            status?: string | null;
+            /** Format: uuid */
+            companyId?: string;
+        };
+        AdminUserResponse: {
+            /** Format: uuid */
+            id?: string;
+            firstName?: string | null;
+            lastName?: string | null;
+            email?: string | null;
+            role?: string | null;
+            status?: string | null;
+            /** Format: uuid */
+            companyId?: string | null;
+            companyName?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        AdminUserResponsePagedResult: {
+            items?: components["schemas"]["AdminUserResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            readonly totalPages?: number;
+        };
         AuthResultResponse: {
             accessToken?: string | null;
             refreshToken?: string | null;
             /** Format: date-time */
             expiresAtUtc?: string;
             user?: components["schemas"]["UserSummaryResponse"];
+        };
+        BookItineraryRequest: {
+            acceptPriceChanges?: boolean;
+        };
+        BookItineraryResponse: {
+            reservation?: components["schemas"]["ReservationResponse"];
+            requiresPriceAcceptance?: boolean;
+            changes?: components["schemas"]["ItineraryPriceChangeResponse"][] | null;
+        };
+        CancelReservationItemRequest: {
+            reason: string;
         };
         CategoryResponse: {
             /** Format: uuid */
@@ -1992,6 +2916,42 @@ export interface components {
             id?: string;
             name?: string | null;
             status?: string | null;
+        };
+        ConversationResponse: {
+            /** Format: uuid */
+            id?: string;
+            status?: string | null;
+            preferences?: components["schemas"]["PreferencesResponse"];
+            messages?: components["schemas"]["MessageResponse"][] | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        ConversationSummaryResponse: {
+            /** Format: uuid */
+            id?: string;
+            status?: string | null;
+            preferredDestinationName?: string | null;
+            /** Format: date */
+            startDate?: string | null;
+            /** Format: date */
+            endDate?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        ConversationSummaryResponsePagedResult: {
+            items?: components["schemas"]["ConversationSummaryResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            readonly totalPages?: number;
         };
         CreateCategoryRequest: {
             name: string;
@@ -2152,6 +3112,83 @@ export interface components {
             /** Format: int32 */
             readonly totalPages?: number;
         };
+        ItemExplanationResponse: {
+            /** Format: uuid */
+            itineraryId?: string;
+            /** Format: uuid */
+            itemId?: string;
+            explanation?: string | null;
+            facts?: string[] | null;
+        };
+        ItineraryItemResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: int32 */
+            dayNumber?: number;
+            /** Format: int32 */
+            sortOrder?: number;
+            productType?: string | null;
+            /** Format: uuid */
+            experienceId?: string | null;
+            experienceTitle?: string | null;
+            /** Format: uuid */
+            packageId?: string | null;
+            packageTitle?: string | null;
+            /** Format: date */
+            date?: string | null;
+            /** Format: double */
+            estimatedUnitPrice?: number;
+            currency?: string | null;
+            /** Format: int32 */
+            travelers?: number;
+            /** Format: double */
+            subtotal?: number;
+            /** Format: double */
+            currentPrice?: number | null;
+            currentCurrency?: string | null;
+            /** Format: int32 */
+            currentAvailableSlots?: number | null;
+            priceChanged?: boolean;
+            availabilityState?: string | null;
+            isStillAvailable?: boolean;
+            warnings?: string[] | null;
+        };
+        ItineraryPriceChangeResponse: {
+            /** Format: uuid */
+            itineraryItemId?: string;
+            productType?: string | null;
+            productTitle?: string | null;
+            changeType?: string | null;
+            /** Format: double */
+            previousUnitPrice?: number;
+            previousCurrency?: string | null;
+            /** Format: double */
+            currentUnitPrice?: number;
+            currentCurrency?: string | null;
+        };
+        ItineraryResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            aiConversationId?: string;
+            title?: string | null;
+            status?: string | null;
+            /** Format: int32 */
+            version?: number;
+            items?: components["schemas"]["ItineraryItemResponse"][] | null;
+            totals?: components["schemas"]["ItineraryTotalResponse"][] | null;
+            warnings?: string[] | null;
+            isStillBookable?: boolean;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        ItineraryTotalResponse: {
+            currency?: string | null;
+            /** Format: double */
+            amount?: number;
+        };
         LoginRequest: {
             /** Format: email */
             email: string;
@@ -2159,6 +3196,14 @@ export interface components {
         };
         LogoutRequest: {
             refreshToken: string;
+        };
+        MessageResponse: {
+            /** Format: uuid */
+            id?: string;
+            sender?: string | null;
+            content?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
         };
         PackageAvailabilityResponse: {
             /** Format: uuid */
@@ -2268,6 +3313,24 @@ export interface components {
             success?: boolean;
             acceptPriceChanges?: boolean;
         };
+        PreferencesResponse: {
+            /** Format: uuid */
+            preferredDestinationId?: string | null;
+            preferredDestinationName?: string | null;
+            /** Format: date */
+            startDate?: string | null;
+            /** Format: date */
+            endDate?: string | null;
+            /** Format: int32 */
+            durationDays?: number | null;
+            /** Format: int32 */
+            travelersCount?: number | null;
+            /** Format: double */
+            budgetTotal?: number | null;
+            budgetCurrency?: string | null;
+            restrictionsNotes?: string | null;
+            categories?: components["schemas"]["CategoryResponse"][] | null;
+        };
         ProblemDetails: {
             type?: string | null;
             title?: string | null;
@@ -2350,6 +3413,9 @@ export interface components {
             /** Format: double */
             subtotal?: number;
             status?: string | null;
+            /** Format: date-time */
+            cancelledAt?: string | null;
+            cancellationReason?: string | null;
             /** Format: date */
             date?: string | null;
             /** Format: time */
@@ -2406,6 +3472,45 @@ export interface components {
             /** Format: double */
             amount?: number;
         };
+        SavedItinerarySummaryResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            aiConversationId?: string;
+            title?: string | null;
+            status?: string | null;
+            /** Format: int32 */
+            version?: number;
+            /** Format: int32 */
+            itemCount?: number;
+            totals?: components["schemas"]["ItineraryTotalResponse"][] | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        SavedItinerarySummaryResponsePagedResult: {
+            items?: components["schemas"]["SavedItinerarySummaryResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            readonly totalPages?: number;
+        };
+        SendMessageRequest: {
+            content: string;
+        };
+        SendMessageResponse: {
+            assistantMessage?: string | null;
+            parsedPreferences?: components["schemas"]["PreferencesResponse"];
+            clarificationNeeded?: boolean;
+            missingInformation?: string[] | null;
+            itinerary?: components["schemas"]["ItineraryResponse"];
+            warnings?: string[] | null;
+        };
         UpdateCategoryRequest: {
             name: string;
             description?: string | null;
@@ -2451,6 +3556,16 @@ export interface components {
             items?: components["schemas"]["PackageItemRequest"][] | null;
             images?: components["schemas"]["PackageImageRequest"][] | null;
         };
+        /**
+         * Format: int32
+         * @enum {integer}
+         */
+        UserRole: 0 | 1 | 2;
+        /**
+         * Format: int32
+         * @enum {integer}
+         */
+        UserStatus: 0 | 1;
         UserSummaryResponse: {
             /** Format: uuid */
             id?: string;

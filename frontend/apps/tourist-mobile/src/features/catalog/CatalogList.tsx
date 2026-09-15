@@ -23,11 +23,14 @@ export function CatalogList<TItem extends { id?: string }>({
   renderItem,
   emptyTitle,
   emptyMessage,
+  renderSkeleton,
 }: {
   query: UseInfiniteQueryResult<{ pages: PagedResponse<TItem>[] }, Error>
   renderItem: (item: TItem) => React.ReactElement
   emptyTitle: string
   emptyMessage: string
+  /** Silueta de carga propia; por defecto, la de las tarjetas del catálogo. */
+  renderSkeleton?: () => React.ReactElement
 }) {
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items ?? []) ?? [], [query.data])
 
@@ -39,7 +42,7 @@ export function CatalogList<TItem extends { id?: string }>({
     return (
       <View className="gap-4 px-5">
         {[0, 1, 2].map((key) => (
-          <CardSkeleton key={key} />
+          <View key={key}>{renderSkeleton ? renderSkeleton() : <CardSkeleton />}</View>
         ))}
       </View>
     )

@@ -32,3 +32,9 @@ export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? inferDevBase
 
 /** Versión declarada en app.json; se muestra en Perfil para poder identificar un build al reportar bugs. */
 export const APP_VERSION = Constants.expoConfig?.version ?? '0.0.0'
+
+/**
+ * true solo en builds de desarrollo (Metro/Expo Go). Habilita herramientas de demostración que no deben
+ * existir en producción, como simular un pago rechazado.
+ */
+export const IS_DEVELOPMENT = typeof __DEV__ !== 'undefined' && __DEV__

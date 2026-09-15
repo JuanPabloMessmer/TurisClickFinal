@@ -212,11 +212,16 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
   3. Sistema ejecuta UC-SYS-04 (crear reserva) en estado `PENDING_PAYMENT`, reteniendo el cupo (UC-SYS-06).
   4. Sistema devuelve la reserva creada.
 - **Flujos alternativos:** —
-- **Excepciones:** Sin cupo suficiente → 409; slot ya no existe/expiró → 410; precio cambió (informativo, no bloqueante) → se informa antes de confirmar.
+- **Excepciones:** Sin cupo suficiente → 409; slot cerrado o con fecha pasada → 410; experiencia no publicada, empresa suspendida o disponibilidad inexistente → 404. Ninguna de estas respuestas trae `errorCode`.
 - **Postcondiciones:** Reserva creada en `PENDING_PAYMENT`; cupo retenido temporalmente.
 - **Reglas de negocio relacionadas:** Regla 3 y 4 del documento de decisiones.
 - **Entidades involucradas:** `Reservation`, `ReservationItem`, `Experience`, `ExperienceAvailability`
-- **Endpoints probables:** `POST /api/reservations` (`type: EXPERIENCE`)
+- **Endpoints:** `POST /api/reservations` con `{ experienceAvailabilityId, travelers }` (UC-T-09 usa `packageAvailabilityId`; exactamente uno de los dos).
+- **Implementación real (verificada en código y tests):**
+  - **Precio al crear:** no hay comparación ni aviso de cambio de precio al crear. El backend lee `Price`/`Currency` vigentes del producto y los congela como snapshot en `ReservationItem`; el cliente nunca envía precio. La revalidación de precio ocurre **al pagar** (UC-T-19) y es **bloqueante**, no informativa. Un cliente puede comparar el snapshot devuelto con el precio que mostró antes para avisar (Tourist Mobile lo hace).
+  - **Hold:** `UPDATE` condicional atómico sobre `reserved_slots` dentro de una transacción; `ExpiresAt = CreatedAt + 30 min` (constante `HoldWindow`, no configurable).
+  - **Deuda técnica — sin idempotencia:** `POST /api/reservations` no acepta clave de idempotencia. Si la respuesta se pierde (timeout, corte de red) y el cliente reintenta, puede crearse una segunda reserva que también retiene cupo hasta cancelarse o expirar. Tourist Mobile lo mitiga (sin reintento automático, botón bloqueado durante la request, aviso de revisar "Mis viajes"), pero la garantía real requeriría una clave de idempotencia en el backend.
+  - **Limitación de fechas (UTC):** "hoy" se calcula con `DateTime.UtcNow`. En Bolivia (UTC-4), desde las 20:00 hora local los slots de ese mismo día local dejan de listarse y crear responde 410; además, el chequeo es por fecha y no por `StartTime`, así que un slot de hoy puede reservarse después de su hora de inicio. No se corrige en esta fase.
 
 ### UC-T-09 — Reservar un paquete de proveedor
 
@@ -339,11 +344,16 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 - **Objetivo:** Resolver el pago de una reserva en `PENDING_PAYMENT` para que se confirme.
 - **Precondiciones:** Reserva en `PENDING_PAYMENT` y no expirada.
 - **Flujo principal:** 1. Usuario inicia pago. 2. Sistema procesa el pago (simulado/placeholder en primeras oleadas). 3. Sistema invoca UC-SYS-07.
-- **Excepciones:** Pago rechazado → reserva permanece `PENDING_PAYMENT` o pasa a `PAYMENT_FAILED`; cupo eventualmente liberado por expiración (UC-SYS-08).
+- **Excepciones:** Pago rechazado → la reserva **permanece `PENDING_PAYMENT`** y se puede reintentar mientras no venza `ExpiresAt`; el cupo se libera por expiración (UC-SYS-08) si nunca se paga. `PAYMENT_FAILED` existe en el enum pero **ningún código lo escribe hoy**.
 - **Postcondiciones:** Reserva `CONFIRMED` (si el pago fue exitoso).
 - **Reglas de negocio relacionadas:** Decisión 4 y 6.
 - **Entidades involucradas:** `Reservation`
-- **Endpoints probables:** `POST /api/reservations/{id}/pay`
+- **Endpoints:** `POST /api/reservations/{id}/pay` con `{ success, acceptPriceChanges }`.
+- **Implementación real (verificada en código y tests):**
+  - **Gateway simulado:** `success` lo envía el cliente y decide el resultado (`SimulatedPaymentGateway`). Se hace un cargo por moneda.
+  - **Una respuesta 200 puede significar tres cosas:** `requiresPriceAcceptance: true` (el precio o la moneda vigentes difieren del snapshot: no se cobró ni se guardó nada, cada ítem trae `priceChanged`, `currentUnitPrice`, `currentCurrency`); `paymentApproved: false` con `paymentFailureReason` (rechazo, sigue `PENDING_PAYMENT`); `paymentApproved: true` (`CONFIRMED`).
+  - **Aceptar el precio:** reenviar el mismo `POST` con `acceptPriceChanges: true` recongela `UnitPrice`/`Currency`/`Subtotal` con el valor vigente **en ese momento** y cobra. La aceptación no está atada al precio que el cliente mostró; el importe final es el de la respuesta. El precio recongelado se persiste aunque el cobro se rechace.
+  - **Errores:** 410 con `errorCode: RESERVATION_NO_LONGER_PAYABLE` si la reserva ya está `EXPIRED` o si la expiración gana la carrera durante el cobro; **410 sin `errorCode`** si sigue `PENDING_PAYMENT` pero `ExpiresAt` ya venció (el job todavía no la expiró); 409 sin código si está en otro estado (ej. ya `CONFIRMED`); 403 si no es del turista; 404 si no existe.
 
 ---
 

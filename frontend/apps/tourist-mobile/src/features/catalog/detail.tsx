@@ -94,17 +94,24 @@ export function AvailabilitySection({
 }
 
 /**
- * Barra de precio + CTA. En Fase 1 el botón está deshabilitado y lo dice explícitamente: prepara el
- * layout definitivo sin simular una función que todavía no existe (reservar llega en Fase 2).
+ * Barra de precio + CTA de reserva. El CTA lleva a elegir fecha/salida y viajeros; se deshabilita solo si
+ * el producto no tiene fechas con cupo (y lo dice). Elegir es público: la sesión se pide al crear la
+ * reserva.
  */
 export function BookingBar({
   amount,
   currency,
   priceLabel,
+  ctaLabel,
+  onPress,
+  disabled = false,
 }: {
   amount?: number | null
   currency?: string | null
   priceLabel: string
+  ctaLabel: string
+  onPress: () => void
+  disabled?: boolean
 }) {
   const insets = useSafeAreaInsets()
 
@@ -117,7 +124,7 @@ export function BookingBar({
         <Text className="text-sm text-[#5B7285]">{priceLabel}</Text>
         <Price amount={amount} currency={currency} size="lg" />
       </View>
-      <Button label="Reservas disponibles próximamente" disabled />
+      <Button label={ctaLabel} onPress={onPress} disabled={disabled} />
     </View>
   )
 }

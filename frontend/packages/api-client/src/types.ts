@@ -55,6 +55,22 @@ export type CreatePackageAvailabilityRequest = Schemas['CreatePackageAvailabilit
 export type ReservationItemResponse = Schemas['ReservationItemResponse']
 export type ReservationItemResponsePagedResult = Schemas['ReservationItemResponsePagedResult']
 
+export type CreateReservationRequest = Schemas['CreateReservationRequest']
+export type PayReservationRequest = Schemas['PayReservationRequest']
+export type ReservationResponse = Schemas['ReservationResponse']
+export type ReservationResponsePagedResult = Schemas['ReservationResponsePagedResult']
+export type ReservationTotalResponse = Schemas['ReservationTotalResponse']
+
+/**
+ * Valores reales de `ReservationResponse.status`. `PAYMENT_FAILED` existe en el enum del backend pero hoy
+ * ningún código lo escribe: un pago rechazado deja la reserva en `PENDING_PAYMENT`.
+ */
+export const ReservationStatuses = ['PENDING_PAYMENT', 'CONFIRMED', 'PAYMENT_FAILED', 'CANCELLED', 'EXPIRED'] as const
+export type ReservationStatusValue = (typeof ReservationStatuses)[number]
+
+export const ReservationItemStatuses = ['PENDING_PAYMENT', 'CONFIRMED', 'CANCELLED', 'EXPIRED'] as const
+export type ReservationItemStatusValue = (typeof ReservationItemStatuses)[number]
+
 /** Valores reales devueltos por el backend (DTOs los exponen como string, no como enum numérico). */
 export const DestinationTypes = ['COUNTRY', 'REGION', 'CITY'] as const
 export type DestinationTypeValue = (typeof DestinationTypes)[number]

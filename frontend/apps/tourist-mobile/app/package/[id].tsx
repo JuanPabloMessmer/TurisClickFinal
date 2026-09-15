@@ -1,5 +1,5 @@
 import type { PackageItemResponse } from '@turisclick/api-client'
-import { Stack, useLocalSearchParams } from 'expo-router'
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { ScrollView, Text, View } from 'react-native'
 import {
   AvailabilityRow,
@@ -22,8 +22,10 @@ import { CatalogImage, ErrorState } from '@/ui'
  */
 export default function PackageDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
   const pkg = usePackage(id)
   const availability = usePackageAvailability(id)
+  const noDates = availability.isSuccess && availability.data.length === 0
 
   return (
     <View className="flex-1 bg-background">
@@ -74,7 +76,14 @@ export default function PackageDetailScreen() {
       )}
 
       {pkg.data ? (
-        <BookingBar amount={pkg.data.price} currency={pkg.data.currency} priceLabel="Precio por persona" />
+        <BookingBar
+          amount={pkg.data.price}
+          currency={pkg.data.currency}
+          priceLabel="Precio por persona"
+          ctaLabel={noDates ? 'Sin salidas disponibles' : 'Elegir salida'}
+          disabled={noDates}
+          onPress={() => router.push(`/book/package/${id}` as Href)}
+        />
       ) : null}
     </View>
   )

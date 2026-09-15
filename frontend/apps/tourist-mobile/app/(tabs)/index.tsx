@@ -91,6 +91,18 @@ export default function HomeScreen() {
   )
 }
 
+let shortcutSequence = 0
+
+/**
+ * Marca única por toque. Explorar vive montada en su tab y solo aplica un acceso rápido cuando esta marca
+ * cambia: sin ella, volver a tocar el mismo destino no tendría efecto si mientras tanto se cambió el
+ * filtro desde el panel.
+ */
+function nextShortcutToken() {
+  shortcutSequence += 1
+  return `${Date.now()}-${shortcutSequence}`
+}
+
 /** Atajo a Explorar ya filtrado por destino. Se oculta entero si falla o no hay ciudades. */
 function DestinationsRow() {
   const router = useRouter()
@@ -115,7 +127,12 @@ function DestinationsRow() {
                   key={city.id}
                   accessibilityRole="button"
                   accessibilityLabel={`Explorar ${city.name}`}
-                  onPress={() => router.push({ pathname: '/explore', params: { destinationId: city.id } })}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/explore',
+                      params: { destinationId: city.id, shortcutAt: nextShortcutToken() },
+                    })
+                  }
                   className="h-24 w-36 justify-end rounded-2xl bg-primary p-3 active:opacity-80"
                 >
                   <Text className="text-sm font-semibold text-white" numberOfLines={2}>

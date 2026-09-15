@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
+import { useOnTouristLeave } from '@/auth/useOnTouristLeave'
 import { ExperienceCard, PackageCard } from '@/features/catalog/cards'
 import { CatalogList } from '@/features/catalog/CatalogList'
 import { FilterSheet } from '@/features/catalog/FilterSheet'
@@ -23,8 +24,9 @@ import { Badge, Screen, SegmentedControl } from '@/ui'
  * nada ni pierde las páginas ya cargadas.
  */
 export default function ExploreScreen() {
-  // Home puede entrar acá ya filtrado por un destino concreto.
-  const params = useLocalSearchParams<{ destinationId?: string }>()
+  // Inicio puede entrar acá con un destino (acceso rápido "Explorá destinos"). `shortcutAt` es una marca
+  // única por toque: permite reaplicar el MISMO destino aunque la persona lo haya cambiado desde el panel.
+  const params = useLocalSearchParams<{ destinationId?: string; shortcutAt?: string }>()
 
   const [tab, setTab] = useState<CatalogTab>('experiences')
   const [filters, setFilters] = useState<CatalogFilters>({
@@ -32,6 +34,29 @@ export default function ExploreScreen() {
     destinationId: params.destinationId,
   })
   const [filtersOpen, setFiltersOpen] = useState(false)
+
+  // Explorar queda montada en su tab, así que el estado inicial de arriba solo sirve para el primer
+  // acceso. Cada toque NUEVO desde Inicio es una búsqueda nueva por ese destino: reemplaza el destino
+  // (sigue siendo selección única) y descarta el resto de filtros, para no mezclarla con la búsqueda
+  // anterior. Se ajusta durante el render para no disparar una búsqueda con los filtros viejos.
+  const shortcutKey = params.destinationId ? `${params.destinationId}|${params.shortcutAt ?? ''}` : null
+  const [appliedShortcutKey, setAppliedShortcutKey] = useState(shortcutKey)
+  if (shortcutKey !== appliedShortcutKey) {
+    setAppliedShortcutKey(shortcutKey)
+    if (params.destinationId) {
+      setFilters({ ...EMPTY_FILTERS, destinationId: params.destinationId })
+      setFiltersOpen(false)
+    }
+  }
+
+  // Explorar queda montada en su tab entre sesiones: sin esto, los filtros que eligió un turista le
+  // quedarían aplicados al siguiente. Solo se resetea este estado local; la caché pública del catálogo
+  // no se toca. Mientras la sesión no cambie, los filtros se conservan al navegar.
+  useOnTouristLeave(() => {
+    setFilters(EMPTY_FILTERS)
+    setTab('experiences')
+    setFiltersOpen(false)
+  })
 
   const experiences = useInfiniteExperiences(useMemo(() => toExperienceParams(filters), [filters]))
   const packages = useInfinitePackages(useMemo(() => toPackageParams(filters), [filters]))

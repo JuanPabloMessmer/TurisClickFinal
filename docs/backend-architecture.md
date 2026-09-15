@@ -364,3 +364,18 @@ Arquitectura documentada y lista para bootstrap. Continúo con **FASE 5 — boot
 **El proceso de fondo es deliberadamente tonto.** `ReservationExpirationBackgroundService` solo despierta cada N segundos y llama a `IReservationExpirationService`; no tiene ninguna regla de negocio. Así los tests ejercitan la lógica invocando el servicio y nunca esperan un timer real (en el entorno de tests el proceso se apaga por configuración).
 
 **Sanciones administrativas: aplicarlas, no solo registrarlas.** Cambiar un enum en la base no es una sanción. `SUSPENDED` en un usuario ya bloqueaba login y refresh; en contenido, además de sacarlo del catálogo, ahora impide que el proveedor lo republique (antes podía anular la sanción llamando a `publish`); y en una empresa actúa como **filtro de visibilidad y de operación** —catálogo público, retrieval de la IA, creación de reservas y publicación— **sin cascada** sobre el estado de sus productos, para que reactivarla no tenga que "restaurar" nada.
+
+---
+
+## Deuda técnica conocida (relevada en Tourist Mobile Fase 2)
+
+Se documenta sin corregir: Fase 2 adapta el frontend a los contratos reales y no cambia reglas del backend.
+
+| Tema | Situación actual | Impacto | Mitigación hoy |
+|---|---|---|---|
+| **Idempotencia de `POST /api/reservations`** | No acepta clave de idempotencia. Solo el booking de itinerarios IA es idempotente (índice único parcial sobre `ai_itinerary_id`). | Un reintento tras perder la respuesta puede crear una segunda reserva que retiene cupo hasta cancelarse o expirar (30 min). | Tourist Mobile no reintenta automáticamente, bloquea el botón durante la request y ante un corte de red manda a revisar "Mis viajes". |
+| **`detail` de los 500** | `GlobalExceptionHandler` pone `exception.Message` en `ProblemDetails.detail` también para errores no controlados. | Un cliente que muestre `detail` puede exponer mensajes técnicos (EF, Npgsql, nombres de tablas). | Tourist Mobile nunca muestra `detail` en respuestas 5xx. |
+| **Fechas en UTC** | "Hoy" se calcula con `DateTime.UtcNow` en disponibilidad pública y al crear reservas; el chequeo es por fecha, no por `StartTime`. | En Bolivia (UTC-4), desde las 20:00 locales los slots del mismo día local desaparecen y crear responde 410; un slot de hoy puede reservarse después de su hora de inicio. | Ninguna desde el frontend (no se corrige solo en mobile). |
+| **Dos formas de 410 al pagar** | Con `errorCode: RESERVATION_NO_LONGER_PAYABLE` (reserva `EXPIRED` o carrera perdida) y sin código (`PENDING_PAYMENT` con `ExpiresAt` vencido). | Un cliente que dependa solo del código no reconoce el segundo caso. | Tourist Mobile trata cualquier 410 al pagar como expiración. |
+| **`PAYMENT_FAILED`** | Existe en el enum y en la documentación, pero ningún código lo escribe. | Estado muerto. | Tourist Mobile lo muestra con un fallback neutral. |
+| **`totals` incluye líneas canceladas o expiradas** | `ReservationResponse.totals` agrupa todos los ítems sin filtrar por estado. | Una reserva con una línea cancelada por el proveedor sigue sumando ese subtotal. | Se muestra tal cual (no hay reembolsos) y cada ítem indica su estado. |

@@ -50,7 +50,7 @@ export function useCities() {
  * `PagedResult` expone `page` y `totalPages`, así que la página siguiente sale de ahí. Se devuelve
  * `undefined` en la última, que es como TanStack Query sabe que no hay más para pedir.
  */
-function nextPageFrom(lastPage: { page?: number; totalPages?: number }) {
+export function nextPageFrom(lastPage: { page?: number; totalPages?: number }) {
   const page = lastPage.page ?? 1
   return page < (lastPage.totalPages ?? 0) ? page + 1 : undefined
 }

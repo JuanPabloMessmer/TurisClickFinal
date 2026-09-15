@@ -4,6 +4,7 @@ import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { SessionProvider } from '@/auth/session'
+import { SessionQuerySync } from '@/auth/SessionQuerySync'
 import { queryClient } from '@/lib/queryClient'
 
 /**
@@ -16,6 +17,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
+          <SessionQuerySync />
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F6F9FA' } }}>
             <Stack.Screen name="(tabs)" />

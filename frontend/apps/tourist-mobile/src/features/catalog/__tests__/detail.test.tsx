@@ -5,29 +5,47 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn() }) }))
 
 describe('BookingBar', () => {
   /**
-   * Fase 1 no tiene booking. Este test existe para que nadie convierta el CTA en algo que parezca
-   * funcional sin implementar la reserva de verdad: si el texto o el estado cambian, falla acá.
+   * CAMBIO INTENCIONAL DE FASE 2. En Fase 1 este test fijaba un CTA deshabilitado con el texto "Reservas
+   * disponibles próximamente", para que nadie simulara una reserva que no existía. Fase 2 implementa el
+   * flujo real, así que el test se reescribió a propósito para fijar el comportamiento nuevo.
    */
-  it('anuncia que la reserva todavía no está disponible y no se puede presionar', () => {
+  it('ofrece elegir fecha y navega al presionar', () => {
     const onPress = jest.fn()
-    render(<BookingBar amount={350} currency="BOB" priceLabel="Precio por persona" />)
+    render(<BookingBar amount={350} currency="BOB" priceLabel="Precio por persona" ctaLabel="Elegir fecha" onPress={onPress} />)
 
-    const cta = screen.getByText('Reservas disponibles próximamente')
-    expect(cta).toBeTruthy()
+    fireEvent.press(screen.getByText('Elegir fecha'))
 
-    fireEvent.press(cta)
+    expect(onPress).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button').props.accessibilityState).toMatchObject({ disabled: false })
+  })
+
+  it('ya no anuncia "Reservas disponibles próximamente"', () => {
+    render(<BookingBar amount={350} currency="BOB" priceLabel="Precio por persona" ctaLabel="Elegir fecha" onPress={jest.fn()} />)
+
+    expect(screen.queryByText('Reservas disponibles próximamente')).toBeNull()
+  })
+
+  it('sin fechas se deshabilita y lo dice, en vez de llevar a una pantalla vacía', () => {
+    const onPress = jest.fn()
+    render(
+      <BookingBar
+        amount={350}
+        currency="BOB"
+        priceLabel="Precio por persona"
+        ctaLabel="Sin fechas disponibles"
+        disabled
+        onPress={onPress}
+      />,
+    )
+
+    fireEvent.press(screen.getByText('Sin fechas disponibles'))
+
     expect(onPress).not.toHaveBeenCalled()
     expect(screen.getByRole('button').props.accessibilityState).toMatchObject({ disabled: true })
   })
 
-  it('no dice "Reservar" en ninguna parte', () => {
-    render(<BookingBar amount={350} currency="BOB" priceLabel="Precio por persona" />)
-
-    expect(screen.queryByText('Reservar')).toBeNull()
-  })
-
   it('muestra el precio junto a su etiqueta', () => {
-    render(<BookingBar amount={350} currency="BOB" priceLabel="Precio por persona" />)
+    render(<BookingBar amount={350} currency="BOB" priceLabel="Precio por persona" ctaLabel="Elegir fecha" onPress={jest.fn()} />)
 
     expect(screen.getByText('Precio por persona')).toBeTruthy()
     expect(screen.getByText(/BOB\s+350\.00/)).toBeTruthy()

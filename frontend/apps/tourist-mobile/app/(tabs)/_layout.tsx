@@ -27,6 +27,10 @@ export default function TabsLayout() {
         options={{ title: 'Explorar', tabBarIcon: ({ color }) => <TabIcon icon="🔍" color={color} /> }}
       />
       <Tabs.Screen
+        name="trips"
+        options={{ title: 'Mis viajes', tabBarIcon: ({ color }) => <TabIcon icon="🧳" color={color} /> }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{ title: 'Perfil', tabBarIcon: ({ color }) => <TabIcon icon="👤" color={color} /> }}
       />
