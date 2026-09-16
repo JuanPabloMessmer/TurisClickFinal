@@ -1,0 +1,22 @@
+# Estado y planes: nunca se versionan (el state vive en Azure Storage).
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+*.tfplan
+*.tfplan.json
+
+# Logs y overrides locales.
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Variables locales que podrían contener datos sensibles. dev.tfvars sí se versiona.
+*.auto.tfvars
+*.auto.tfvars.json
+*.local.tfvars
+
+# .terraform.lock.hcl SÍ se versiona.
