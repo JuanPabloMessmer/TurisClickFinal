@@ -40,8 +40,8 @@ rg-turisclick-tfstate
 | Secreto | Lo carga | Usado por |
 |---|---|---|
 | `db-connection-string` | `create-db-role.ps1` | `ConnectionStrings__DefaultConnection` |
-| `jwt-key` | `set-keyvault-secrets.ps1` | `Jwt__Key` |
-| `seed-admin-password` | `set-keyvault-secrets.ps1` | `run-seed.ps1` (no la app) |
+| `jwt-key` | `set-keyvault-secrets.ps1 -Secret jwt-key` | `Jwt__Key` |
+| `seed-admin-password` | `set-keyvault-secrets.ps1 -Secret seed-admin-password` | `run-seed.ps1` (no la app) |
 
 ## Ejecutar Terraform
 
@@ -62,12 +62,12 @@ Antes de cualquier `apply`, el plan debe mostrar sólo creaciones: ningún updat
 | 1 | `bootstrap/register-providers.ps1` | ✅ ejecutado |
 | 2 | `bootstrap/bootstrap-state.ps1` | ✅ ejecutado |
 | 3 | `terraform init` / `validate` / `plan` | ✅ ejecutado (sin apply) |
-| 4 | `terraform apply` del plan revisado | pendiente de autorización |
-| 5 | `bootstrap/set-keyvault-secrets.ps1` | pendiente |
-| 6 | `bootstrap/create-db-role.ps1` | pendiente |
-| 7 | Reiniciar la Web App y verificar las referencias a Key Vault | pendiente |
+| 4 | `terraform apply` del plan revisado | ✅ ejecutado |
+| 5 | `bootstrap/set-keyvault-secrets.ps1 -Secret jwt-key` | ✅ ejecutado |
+| 6 | `bootstrap/create-db-role.ps1` | ✅ ejecutado |
+| 7 | Reiniciar la Web App y verificar las referencias a Key Vault | ✅ ambas `Resolved` |
 | 8 | `bootstrap/run-migrations.ps1` | pendiente |
-| 9 | `bootstrap/run-seed.ps1` (ejecución única) | pendiente |
+| 9 | `bootstrap/set-keyvault-secrets.ps1 -Secret seed-admin-password` y `bootstrap/run-seed.ps1` (ejecución única) | pendiente |
 | 10 | `bootstrap/lock-postgres.ps1` (después de 6, 8 y 9) | pendiente |
 | 11 | Primer deploy del backend y smoke tests | pendiente |
 | 12 | GitHub Actions con OIDC | pendiente |
