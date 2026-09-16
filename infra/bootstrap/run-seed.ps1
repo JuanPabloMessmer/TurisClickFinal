@@ -15,6 +15,10 @@
 
     Idempotente (el seeder comprueba existencia). Correr ANTES de lock-postgres.ps1 y DESPUÉS
     de run-migrations.ps1.
+
+    Abre el firewall sólo para la IP actual y lo cierra siempre. Con -SkipTemporaryFirewall no lo
+    toca: quien invoca garantiza la conectividad (por ejemplo, para verificar antes y después dentro
+    de una única ventana).
 #>
 [CmdletBinding()]
 param(
@@ -22,7 +26,8 @@ param(
     [string] $ResourceGroup    = 'rg-turisclick-dev',
     [string] $ServerName       = 'turisclick-postgres-jpm',
     [string] $ExpectedDatabase = 'turisclick_db_v2',
-    [int]    $TimeoutSeconds   = 240
+    [int]    $TimeoutSeconds   = 240,
+    [switch] $SkipTemporaryFirewall
 )
 
 . "$PSScriptRoot\common.ps1"
@@ -39,8 +44,7 @@ dotnet build (Join-Path $projectDir 'TurisClick.Api.csproj') -c Release -nologo 
 Assert-Az 'compilar la API'
 $dll = Join-Path $projectDir 'bin\Release\net10.0\TurisClick.Api.dll'
 
-try {
-    Invoke-WithTemporaryFirewallRule -ServerName $ServerName -ResourceGroup $ResourceGroup -Action {
+$work = {
         $start = New-Object System.Diagnostics.ProcessStartInfo
         $start.FileName = 'dotnet'
         $start.Arguments = "`"$dll`""
@@ -92,6 +96,13 @@ union all select 'destinos=' || count(*) from destinations;
         $password = $null
         if ($counts.ExitCode -ne 0) { throw "No se pudieron verificar los datos: $($counts.Output -join ' | ')" }
         Write-Host "Seed completado en ${ExpectedDatabase}: $($counts.Output -join ', ')"
+}
+
+try {
+    if ($SkipTemporaryFirewall) {
+        & $work
+    } else {
+        Invoke-WithTemporaryFirewallRule -ServerName $ServerName -ResourceGroup $ResourceGroup -Action $work
     }
 } finally {
     $connectionString = $null

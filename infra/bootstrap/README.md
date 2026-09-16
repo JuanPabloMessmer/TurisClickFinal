@@ -27,7 +27,7 @@ Operaciones que, a propósito, no hace Terraform (ver `../README.md`). Windows P
 .\set-keyvault-secrets.ps1 -Secret jwt-key   # sólo los secretos indicados; -Rotate para regenerar
 ```
 
-`create-db-role.ps1 -SkipTemporaryFirewall` no abre ni cierra reglas: sirve para encadenar varias operaciones dentro de una única ventana abierta con `Invoke-WithTemporaryFirewallRule`.
+`create-db-role.ps1 -SkipTemporaryFirewall` y `run-seed.ps1 -SkipTemporaryFirewall` no abren ni cierran reglas: sirven para encadenar varias operaciones dentro de una única ventana abierta con `Invoke-WithTemporaryFirewallRule`.
 
 ## PostgreSQL en Azure Flexible Server
 
