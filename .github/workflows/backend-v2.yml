@@ -1,0 +1,178 @@
+# CI/CD del backend TurisClick V2 → app-turisclick-v2-api (Azure App Service, Brazil South).
+#
+# Autenticación con Azure por OIDC (federated credential): no hay publish profile, client secret ni
+# ningún secreto de Azure en GitHub. Los identificadores de abajo NO son secretos: sólo un token OIDC
+# de este repositorio, rama master, puede canjearse por la identidad id-turisclick-v2-github-deploy,
+# que únicamente tiene Website Contributor sobre la web app V2 (ver infra/bootstrap/setup-github-oidc.ps1).
+#
+# No ejecuta migraciones ni seed: la base V2 se gestiona con los scripts de infra/bootstrap.
+
+name: Backend V2 CI/CD
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'TurisClick.slnx'
+      - '.github/workflows/backend-v2.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'TurisClick.slnx'
+      - '.github/workflows/backend-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-v2-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  build-test:
+    name: Build, tests y publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # PostgreSQL efímero sólo para los tests de integración: nace y muere con el job, así que su
+    # contraseña es un valor fijo de CI y no una credencial real.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-ephemeral-not-a-secret
+          POSTGRES_DB: turisclick_v2_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      ConnectionStrings__TestDatabase: Host=localhost;Port=5432;Database=turisclick_v2_test;Username=postgres;Password=ci-ephemeral-not-a-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore TurisClick.slnx
+
+      - name: Build (Release)
+        run: dotnet build TurisClick.slnx -c Release --no-restore
+
+      - name: Tests
+        run: dotnet test TurisClick.slnx -c Release --no-build --logger "trx;LogFileName=results.trx" --results-directory TestResults
+
+      - name: Resumen de tests
+        if: always()
+        run: |
+          trx=$(find TestResults -name '*.trx' | head -n 1)
+          if [ -z "$trx" ]; then echo "::warning title=Tests::No se generó el archivo de resultados"; exit 0; fi
+          counters=$(grep -o '<Counters [^>]*>' "$trx")
+          value() { echo "$counters" | sed -n "s/.* $1=\"\([0-9]*\)\".*/\1/p"; }
+          total=$(value total); passed=$(value passed); failed=$(value failed)
+          echo "::notice title=Tests::passed ${passed}/${total}, failed ${failed}"
+          echo "### Tests: ${passed}/${total} (failed: ${failed})" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish (Release)
+        run: dotnet publish src/TurisClick.Api/TurisClick.Api.csproj -c Release --no-build -o publish
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: turisclick-api-v2
+          path: publish
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Deploy a Azure y smoke tests
+    needs: build-test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      AZURE_CLIENT_ID: 5a55974a-f3ce-4460-95c8-7001361d5c5c
+      AZURE_TENANT_ID: e2e07518-df93-4a32-98c1-866c2ea047c2
+      AZURE_SUBSCRIPTION_ID: fd5eebd9-75df-4fd3-b733-f32f60c50be2
+      RESOURCE_GROUP: rg-turisclick-dev
+      WEB_APP: app-turisclick-v2-api
+      APP_URL: https://app-turisclick-v2-api.azurewebsites.net
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: turisclick-api-v2
+          path: publish
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Empaquetar
+        run: cd publish && zip -qr ../app.zip .
+
+      - name: Deploy a app-turisclick-v2-api
+        run: |
+          az webapp deploy \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$WEB_APP" \
+            --src-path app.zip \
+            --type zip \
+            --restart true
+
+      - name: Smoke tests
+        run: |
+          # F1 no tiene Always On: el primer request puede tardar mientras arranca el contenedor.
+          check() {
+            local path="$1" status body
+            for attempt in $(seq 1 20); do
+              status=$(curl -s -o response.json -w '%{http_code}' --max-time 90 "$APP_URL$path" || true)
+              if [ "$status" = "200" ]; then return 0; fi
+              echo "  $path -> $status (intento $attempt), reintentando..."
+              sleep 15
+            done
+            echo "::error title=Smoke test::$path no respondió 200"
+            return 1
+          }
+
+          check /api/categories
+          categories=$(jq 'if type == "array" then length else (.items | length) end' response.json)
+          echo "GET /api/categories -> 200 ($categories categorías)"
+          [ "$categories" -gt 0 ] || { echo "::error title=Smoke test::/api/categories vino vacío"; exit 1; }
+
+          check /api/destinations
+          destinations=$(jq 'if type == "array" then length else (.items | length) end' response.json)
+          echo "GET /api/destinations -> 200 ($destinations destinos)"
+          [ "$destinations" -gt 0 ] || { echo "::error title=Smoke test::/api/destinations vino vacío"; exit 1; }
+
+          check /api/experiences
+          echo "GET /api/experiences -> 200"
+          check /api/packages
+          echo "GET /api/packages -> 200"
+
+          echo "::notice title=Smoke tests::categories=$categories destinations=$destinations experiences/packages=200"

@@ -11,6 +11,7 @@ Operaciones que, a propósito, no hace Terraform (ver `../README.md`). Windows P
 | `run-migrations.ps1` | Aplica las migraciones EF Core de V2 sobre `turisclick_db_v2` | ⏸ no ejecutado |
 | `run-seed.ps1` | Seed único de datos de demo sobre `turisclick_db_v2` | ⏸ no ejecutado |
 | `lock-postgres.ps1` | Lock `CanNotDelete` sobre el servidor PostgreSQL | ⏸ no ejecutado |
+| `setup-github-oidc.ps1` | Identidad de deploy de GitHub Actions: federated credential (sólo `master`) y `Website Contributor` sólo sobre la web app V2 | ✅ ejecutado |
 | `common.ps1` | Funciones compartidas (no se ejecuta solo) | — |
 
 ## Garantías que comparten

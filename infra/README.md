@@ -66,13 +66,30 @@ Antes de cualquier `apply`, el plan debe mostrar sólo creaciones: ningún updat
 | 5 | `bootstrap/set-keyvault-secrets.ps1 -Secret jwt-key` | ✅ ejecutado |
 | 6 | `bootstrap/create-db-role.ps1` | ✅ ejecutado |
 | 7 | Reiniciar la Web App y verificar las referencias a Key Vault | ✅ ambas `Resolved` |
-| 8 | `bootstrap/run-migrations.ps1` | pendiente |
-| 9 | `bootstrap/set-keyvault-secrets.ps1 -Secret seed-admin-password` y `bootstrap/run-seed.ps1` (ejecución única) | pendiente |
+| 8 | Migraciones EF Core V2 (mecanismo de `bootstrap/run-migrations.ps1`) | ✅ 8/8 |
+| 9 | `bootstrap/set-keyvault-secrets.ps1 -Secret seed-admin-password` y `bootstrap/run-seed.ps1` (ejecución única) | ✅ ejecutado |
 | 10 | `bootstrap/lock-postgres.ps1` (después de 6, 8 y 9) | pendiente |
-| 11 | Primer deploy del backend y smoke tests | pendiente |
-| 12 | GitHub Actions con OIDC | pendiente |
+| 11 | Primer deploy manual del backend y smoke tests | ✅ ejecutado |
+| 12 | `bootstrap/setup-github-oidc.ps1` y `.github/workflows/backend-v2.yml` | ✅ ejecutado |
 
 Los pasos 6, 8 y 9 abren una regla de firewall temporal sólo para la IP actual y la eliminan al terminar. Por eso el lock del servidor va después: bloquearía el borrado de esa regla.
+
+## CI/CD (GitHub Actions)
+
+```
+push a master (src/, tests/, TurisClick.slnx, el workflow) · workflow_dispatch
+  └─ build-test (ubuntu, PostgreSQL 16 efímero como service container)
+       restore → build Release → tests → publish → artifact
+  └─ deploy (sólo master, nunca en pull requests)
+       azure/login por OIDC → az webapp deploy (zip) → smoke tests públicos
+```
+
+- **Autenticación:** `id-turisclick-v2-github-deploy` (user-assigned) con un federated credential cuyo subject es `repo:JuanPabloMessmer/TurisClickFinal:ref:refs/heads/master`. No hay client secret, publish profile ni secretos de Azure en GitHub; la autenticación básica de la web app sigue deshabilitada.
+- **Permisos:** sólo `Website Contributor` sobre `app-turisclick-v2-api`. Nada sobre PostgreSQL, Key Vault, V1 ni la subscription. La identidad de runtime (`id-turisclick-v2-app`) es otra y es la única que lee Key Vault.
+- **Tests en CI:** usan un PostgreSQL efímero del job vía `ConnectionStrings__TestDatabase`; su contraseña es un valor fijo de CI, no una credencial.
+- **Pull requests:** corren build y tests, sin deploy.
+- **Fuera del workflow:** migraciones y seed (`bootstrap/`), infraestructura (Terraform).
+- La identidad de deploy se creó con script, fuera de Terraform (el state sigue con los 6 recursos de V2).
 
 ## Plan de servicio: F1
 
