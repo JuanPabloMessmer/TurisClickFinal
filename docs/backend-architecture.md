@@ -277,10 +277,28 @@ Serilog configurado en `Infrastructure/Logging/SerilogConfigurator.cs`, iniciali
 - **Idempotente**: cada paso comprueba existencia antes de insertar (por email, por nombre de categoría, por nombre+tipo+padre de destino) — correr el seed en cada arranque de `dotnet run` en dev no duplica nada.
 - **La contraseña del admin nunca está en código**: se lee de `Seed:AdminPassword` vía `dotnet user-secrets` — si falta, el seed omite *solo* ese paso (loguea un warning) y sigue con categorías/destinos. Configurarla una vez por máquina:
   ```bash
-  dotnet user-secrets set "Seed:AdminPassword" "AdminPassword123!"
+  dotnet user-secrets set "Seed:AdminPassword" "<elegí-una-password-local>"
   ```
 - El hash se genera con el mismo `IPasswordHasherService` que usa `AuthService` — no hay una segunda implementación de hashing para seeds.
 - **Limpieza de destinos dummy de test/Postman**: además de sembrar datos, el seed también *limpia* — en cada arranque, `CleanupDummyTestDestinationsAsync` busca destinos cuyo nombre empiece con `"Ciudad-"`, `"País-"` o `"Región-"` (el patrón que usan las corridas de Postman/Newman para sus jerarquías descartables) y los borra. Antes de borrar un destino tipo CITY que todavía tiene una `Experience`/`Package` real apuntándole (con reservas/pagos reales encima, típico de pruebas manuales), reasigna esos productos a "La Paz" en vez de dejar que la FK bloquee el borrado o perder esa data. Es un no-op silencioso si no encuentra ningún destino con ese patrón — no hace falta correrlo a mano ni repetirlo.
+
+---
+
+## 12.2. Credenciales de tests de integración y Newman
+
+Ningún archivo versionado contiene credenciales: el repositorio es público.
+
+- **Base de tests**: `TurisClickApiFactory` lee `ConnectionStrings:TestDatabase` de variables de entorno o, en su defecto, de los user-secrets de `TurisClick.Api`. Si falta, los tests fallan al arrancar con un mensaje explícito — nunca caen en un valor por defecto. Además exige que el nombre de la base contenga `test`, para que un connection string equivocado no escriba sobre `turisclick_v2_dev`.
+  - Local, una vez por máquina (desde `src/TurisClick.Api`):
+    ```bash
+    dotnet user-secrets set "ConnectionStrings:TestDatabase" "Host=localhost;Port=5432;Database=turisclick_v2_test;Username=postgres;Password=<tu-password-local>"
+    ```
+  - CI: variable de entorno `ConnectionStrings__TestDatabase`, apuntando a un PostgreSQL efímero del propio job. Ahí la contraseña puede ser un valor ficticio fijo del workflow, porque esa base nace y muere con la ejecución.
+- **Admin de los tests**: `TurisClickApiFactory.AdminPassword` se genera al azar en cada corrida y la factory re-hashea el admin de `turisclick_v2_test` al iniciar. No hay contraseña fija que proteger ni que rotar.
+- **Newman**: la variable `admin_password` de la colección viene vacía. Se pasa al ejecutar, con la misma contraseña configurada en `Seed:AdminPassword`:
+  ```bash
+  newman run postman/TurisClick.postman_collection.json --env-var "admin_password=<Seed:AdminPassword>"
+  ```
 
 ---
 

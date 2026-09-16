@@ -14932,7 +14932,7 @@
     },
     {
       "key": "admin_password",
-      "value": "AdminPassword123!"
+      "value": ""
     },
     {
       "key": "destination_suffix",
