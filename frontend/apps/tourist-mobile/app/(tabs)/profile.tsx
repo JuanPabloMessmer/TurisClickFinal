@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router'
 import { ScrollView, Text, View } from 'react-native'
 import { useSession } from '@/auth/session'
-import { APP_VERSION } from '@/lib/env'
+import { API_CONFIG, API_TARGET_LABEL, APP_VERSION } from '@/lib/env'
 import { Button, Screen } from '@/ui'
 
 /**
@@ -26,7 +26,9 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <Text className="mt-10 text-center text-xs text-[#5B7285]">TurisClick · versión {APP_VERSION}</Text>
+        <Text className="mt-10 text-center text-xs text-[#5B7285]">
+          TurisClick · versión {APP_VERSION} · servidor {API_TARGET_LABEL[API_CONFIG.target]}
+        </Text>
       </ScrollView>
     </Screen>
   )

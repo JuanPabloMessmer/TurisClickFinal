@@ -37,8 +37,8 @@ libre ni ordenamientos, porque el backend no los expone.
 ## Requisitos
 
 - Node 20+
-- El backend corriendo (por defecto en `http://localhost:5288`)
 - Expo Go en el teléfono, o un emulador de Android / simulador de iOS
+- Backend: por defecto el desplegado en Azure (no hace falta correr nada local)
 
 ## Puesta en marcha
 
@@ -48,26 +48,42 @@ cd apps/tourist-mobile
 npx expo start
 ```
 
-### Variable de entorno
+### Backend: Azure o local
 
-`EXPO_PUBLIC_API_BASE_URL` apunta al backend. Copiá `.env.example` a `.env` y elegí la URL según **dónde
-corre la app**, no dónde corre el backend — `localhost` significa cosas distintas en cada caso:
+La URL de la API sale de un único lugar, `src/lib/env.ts`, y se elige con variables públicas en `.env`
+(ver `.env.example`):
 
-| Dónde corre la app | URL |
+| Variable | Backend |
+|---|---|
+| sin `.env`, o `EXPO_PUBLIC_API_TARGET=azure` | `https://app-turisclick-v2-api.azurewebsites.net` (por defecto) |
+| `EXPO_PUBLIC_API_TARGET=local` | tu PC, puerto 5288 (la URL se deduce según dónde corre la app) |
+| `EXPO_PUBLIC_API_BASE_URL=...` | una URL puntual; pisa a las anteriores |
+
+Con Azure el teléfono sólo necesita internet: no tiene que estar en la misma red que la PC (la PC sigue
+sirviendo el bundle de Metro, así que ambos necesitan conexión). Perfil muestra al pie contra qué servidor
+está trabajando la app. Después de cambiar `.env`, reiniciá con `npx expo start --clear`.
+
+Para el backend local, `localhost` significa cosas distintas según dónde corre la app:
+
+| Dónde corre la app | URL deducida |
 |---|---|
 | iOS Simulator | `http://localhost:5288` |
 | Android Emulator | `http://10.0.2.2:5288` |
-| Teléfono físico (Expo Go) | `http://<IP-LAN-de-tu-PC>:5288` |
+| Teléfono físico (Expo Go) | `http://<IP-de-Metro>:5288` |
 
-Si no la definís, `src/lib/env.ts` deduce una: en teléfono físico toma la IP de la máquina que sirve
-Metro, que es justamente la que el teléfono ya puede alcanzar. Para que el teléfono llegue al backend,
-este tiene que escuchar en la LAN y no solo en loopback:
+y el backend tiene que escuchar en la LAN, no sólo en loopback:
 
 ```bash
 dotnet run --project src/TurisClick.Api --urls http://0.0.0.0:5288
 ```
 
 `EXPO_PUBLIC_*` queda embebido en el bundle: no pongas secretos ahí.
+
+### Plan gratuito de Azure
+
+El backend corre en App Service F1, que se duerme sin uso: el primer request después de un rato puede
+tardar varios segundos. La app espera hasta 60 s por request antes de mostrar el error de conexión, y
+TanStack Query reintenta. Antes de una demo conviene abrir la app una vez para despertarlo.
 
 ## Comandos
 

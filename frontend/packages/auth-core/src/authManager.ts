@@ -1,10 +1,21 @@
 import { authApi, type AuthResultResponse, type LoginRequest } from '@turisclick/api-client'
-import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import { isAxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios'
 import { AuthStore } from './store'
 import type { TokenStorage } from './tokenStorage'
 
 interface RetryableConfig extends InternalAxiosRequestConfig {
   _retry?: boolean
+}
+
+/**
+ * Un 401 en estos endpoints es la respuesta final (credenciales o refresh token inválidos), nunca un
+ * access token vencido. Intentar renovar acá además colgaría la app: el 401 del propio refresh
+ * esperaría a la promesa de refresh que está esperando esa misma respuesta.
+ */
+const AUTH_ENDPOINTS = ['/api/auth/login', '/api/auth/refresh', '/api/auth/register', '/api/auth/logout']
+
+function isAuthEndpoint(url: string | undefined): boolean {
+  return !!url && AUTH_ENDPOINTS.some((endpoint) => url.includes(endpoint))
 }
 
 /**
@@ -35,7 +46,7 @@ export class AuthManager {
       (response) => response,
       async (error) => {
         const original = error.config as RetryableConfig | undefined
-        if (error.response?.status === 401 && original && !original._retry) {
+        if (error.response?.status === 401 && original && !original._retry && !isAuthEndpoint(original.url)) {
           original._retry = true
           const newToken = await this.tryRefresh()
           if (newToken) {
@@ -58,7 +69,13 @@ export class AuthManager {
         const result = await authApi.refresh(this.http, { refreshToken })
         this.applySession(result)
         return result.accessToken ?? null
-      } catch {
+      } catch (error) {
+        // El servidor lo rechazó (vencido, revocado o de otro backend): no sirve más y reintentarlo en
+        // cada arranque sólo demoraría la app. Sin respuesta (sin red, timeout) se conserva, porque
+        // puede seguir siendo válido cuando vuelva la conexión.
+        if (isAxiosError(error) && error.response && error.response.status < 500) {
+          await this.storage.clearRefreshToken()
+        }
         return null
       } finally {
         this.refreshPromise = null
