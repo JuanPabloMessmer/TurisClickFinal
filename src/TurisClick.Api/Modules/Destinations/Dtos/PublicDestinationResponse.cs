@@ -9,6 +9,9 @@ public class PublicDestinationResponse
     public Guid? ParentId { get; set; }
     public string? ParentName { get; set; }
 
+    /// <summary>Imagen representativa; null si todavía no tiene (el cliente muestra un fallback).</summary>
+    public string? ImageUrl { get; set; }
+
     /// <summary>
     /// Conteo directo (no agregado por jerarquía): experiencias PUBLISHED cuyo DestinationId es
     /// exactamente este nodo. Por la Regla 10 del dominio, siempre es 0 para COUNTRY/REGION, ya que

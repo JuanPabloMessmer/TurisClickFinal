@@ -9,6 +9,8 @@ using TurisClick.Api.Modules.Categories.Entities;
 using TurisClick.Api.Modules.Categories.Repositories;
 using TurisClick.Api.Modules.Destinations.Entities;
 using TurisClick.Api.Modules.Destinations.Repositories;
+using TurisClick.Api.Modules.Preferences.Entities;
+using TurisClick.Api.Modules.Preferences.Services;
 using TurisClick.Api.Modules.Reservations.Entities;
 using TurisClick.Api.Shared.Exceptions;
 using TurisClick.Api.Shared.Responses;
@@ -31,7 +33,8 @@ public class AiConversationService(
     IItineraryRevalidationService revalidationService,
     ICurrentUserContext currentUser,
     ILogger<AiConversationService> logger,
-    TurisClickDbContext db) : IAiConversationService
+    TurisClickDbContext db,
+    ITouristPreferenceService? preferenceService = null) : IAiConversationService
 {
     /// <summary>Cuántos turnos previos de la conversación se le mandan al modelo como contexto — evita prompts descontrolados en conversaciones largas.</summary>
     private const int MaxHistoryTurns = 20;
@@ -124,6 +127,11 @@ public class AiConversationService(
         MergePreferences(conversation, extraction, destinationByName, categoryByName);
         conversation.UpdatedAt = now;
 
+        // Perfil del onboarding: solo completa lo que la conversación NO dice. Lo pedido en la
+        // conversación (este mensaje o anteriores) siempre gana.
+        var profile = preferenceService is null ? null : await preferenceService.FindForUserAsync(conversation.TouristId, ct);
+        var context = BuildProfileContext(conversation, profile);
+
         var missingFields = ComputeMissingFields(conversation);
 
         if (missingFields.Count > 0)
@@ -147,7 +155,8 @@ public class AiConversationService(
                 AssistantMessage = reply,
                 ParsedPreferences = ToPreferencesResponse(conversation),
                 ClarificationNeeded = true,
-                MissingInformation = missingFields
+                MissingInformation = missingFields,
+                ProfileHints = context.Hints
             };
         }
 
@@ -159,8 +168,81 @@ public class AiConversationService(
             ? null
             : await BuildIterationPlanAsync(conversation, currentItinerary, history, userMessage, knownCategories, categoryByName, ct);
 
-        return await GenerateItineraryAsync(conversation, history, userMessage, now, plan, ct);
+        var response = await GenerateItineraryAsync(conversation, history, userMessage, now, plan, context, ct);
+        response.ProfileHints = context.Hints;
+        return response;
     }
+
+    /// <summary>
+    /// Lo que el asistente usa efectivamente para buscar: la conversación primero y, solo donde está vacía,
+    /// el perfil persistido del turista. La cantidad de viajeros solo se infiere (y persiste) cuando el
+    /// perfil es inequívoco (solo → 1, en pareja → 2); con amigos o familia se sigue preguntando.
+    /// </summary>
+    private static ProfileContext BuildProfileContext(AiConversation conversation, TouristPreference? profile)
+    {
+        var hints = new List<string>();
+
+        IReadOnlyList<Category> interests = [.. conversation.Categories];
+        if (interests.Count == 0 && profile is { Categories.Count: > 0 })
+        {
+            interests = [.. profile.Categories];
+            hints.Add($"Tus intereses: {string.Join(", ", profile.Categories.Select(c => c.Name).Order())}");
+        }
+
+        if (conversation.TravelersCount is null && profile?.TravelParty is { } party)
+        {
+            int? inferred = party switch { TravelParty.SOLO => 1, TravelParty.COUPLE => 2, _ => null };
+            if (inferred is { } travelers)
+            {
+                conversation.TravelersCount = travelers;
+                hints.Add(travelers == 1 ? "Viajás solo/a" : "Viajás en pareja");
+            }
+        }
+
+        var pace = conversation.TravelPace;
+        if (pace is null && profile?.TravelPace is { } profilePace)
+        {
+            pace = profilePace;
+            hints.Add($"Ritmo {PaceLabel(profilePace)}");
+        }
+
+        var travelersCount = conversation.TravelersCount ?? 1;
+        decimal? budgetPerPerson = conversation.BudgetTotal.HasValue ? conversation.BudgetTotal.Value / travelersCount : null;
+        var budgetCurrency = conversation.BudgetCurrency;
+        if (budgetPerPerson is null && profile?.BudgetLevel is { } level)
+        {
+            if (TouristPreferenceHints.MaxPricePerActivity(level) is { } ceiling)
+            {
+                budgetPerPerson = ceiling;
+                budgetCurrency = TouristPreferenceHints.BudgetCurrency;
+            }
+            hints.Add($"Presupuesto {BudgetLabel(level)}");
+        }
+
+        return new ProfileContext(interests, pace, budgetPerPerson, budgetCurrency, hints);
+    }
+
+    private static string PaceLabel(TravelPace pace) => pace switch
+    {
+        TravelPace.RELAXED => "tranquilo",
+        TravelPace.INTENSE => "intenso",
+        _ => "equilibrado"
+    };
+
+    private static string BudgetLabel(BudgetLevel level) => level switch
+    {
+        BudgetLevel.ECONOMY => "económico",
+        BudgetLevel.MODERATE => "moderado",
+        _ => "premium"
+    };
+
+    /// <summary>Preferencias efectivas de este mensaje (conversación + perfil) y qué se tomó del perfil.</summary>
+    private sealed record ProfileContext(
+        IReadOnlyList<Category> Interests,
+        TravelPace? Pace,
+        decimal? BudgetPerPerson,
+        string? BudgetCurrency,
+        List<string> Hints);
 
     /// <summary>
     /// Traduce la intención del modelo a un plan concreto: qué ítems se conservan, cuáles salen y qué
@@ -302,7 +384,7 @@ public class AiConversationService(
 
     private async Task<SendMessageResponse> GenerateItineraryAsync(
         AiConversation conversation, List<ConversationTurn> history, string userMessage, DateTimeOffset now,
-        IterationPlan? plan, CancellationToken ct)
+        IterationPlan? plan, ProfileContext context, CancellationToken ct)
     {
         var tripDurationDays = conversation.DurationDays
             ?? (conversation.StartDate.HasValue && conversation.EndDate.HasValue
@@ -311,7 +393,6 @@ public class AiConversationService(
         tripDurationDays = Math.Max(tripDurationDays, 1);
 
         var travelers = conversation.TravelersCount ?? 1;
-        var budgetPerPerson = conversation.BudgetTotal.HasValue ? conversation.BudgetTotal.Value / travelers : (decimal?)null;
 
         var warnings = new List<string>();
 
@@ -339,9 +420,9 @@ public class AiConversationService(
                 conversation.StartDate,
                 conversation.EndDate,
                 tripDurationDays,
-                budgetPerPerson,
-                conversation.BudgetCurrency,
-                conversation.Categories.Select(c => c.Id).ToList(),
+                context.BudgetPerPerson,
+                context.BudgetCurrency,
+                context.Interests.Select(c => c.Id).ToList(),
                 plan?.ExcludedProductIds ?? []),
             ct);
 
@@ -391,9 +472,10 @@ public class AiConversationService(
         {
             composition = await aiModelClient.ComposeItineraryAsync(
                 new ItineraryCompositionRequest(
-                    BuildSnapshot(conversation), tripDurationDays, retrieval.Experiences, retrieval.Packages,
+                    BuildSnapshot(conversation, context.Interests), tripDurationDays, retrieval.Experiences, retrieval.Packages,
                     preserved.Select(ToPreservedItem).ToList(),
-                    plan is null ? null : userMessage),
+                    plan is null ? null : userMessage,
+                    context.Pace?.ToString()),
                 ct);
         }
         catch (Exception ex) when (ex is AiModelUnavailableException or AiModelResponseException)
@@ -722,6 +804,9 @@ public class AiConversationService(
 
         if (!string.IsNullOrWhiteSpace(extraction.RestrictionsNotes))
             conversation.RestrictionsNotes = extraction.RestrictionsNotes;
+
+        if (Enum.TryParse<TravelPace>(extraction.TravelPaceMention, ignoreCase: true, out var pace) && Enum.IsDefined(pace))
+            conversation.TravelPace = pace;
     }
 
     /// <summary>
@@ -745,7 +830,7 @@ public class AiConversationService(
         return missing;
     }
 
-    private static ExtractedPreferencesSnapshot BuildSnapshot(AiConversation conversation) => new(
+    private static ExtractedPreferencesSnapshot BuildSnapshot(AiConversation conversation, IEnumerable<Category>? interests = null) => new(
         conversation.PreferredDestination?.Name,
         conversation.StartDate,
         conversation.EndDate,
@@ -753,7 +838,7 @@ public class AiConversationService(
         conversation.TravelersCount,
         conversation.BudgetTotal,
         conversation.BudgetCurrency,
-        conversation.Categories.Select(c => c.Name).ToList(),
+        (interests ?? conversation.Categories).Select(c => c.Name).ToList(),
         conversation.RestrictionsNotes);
 
     /// <summary>
@@ -807,6 +892,7 @@ public class AiConversationService(
         BudgetTotal = conversation.BudgetTotal,
         BudgetCurrency = conversation.BudgetCurrency,
         RestrictionsNotes = conversation.RestrictionsNotes,
+        TravelPace = conversation.TravelPace?.ToString(),
         Categories = conversation.Categories.Select(c => new CategoryResponse { Id = c.Id, Name = c.Name, Description = c.Description }).ToList()
     };
 

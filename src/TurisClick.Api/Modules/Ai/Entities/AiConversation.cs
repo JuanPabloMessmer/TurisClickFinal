@@ -34,6 +34,9 @@ public class AiConversation
 
     public string? RestrictionsNotes { get; set; }
 
+    /// <summary>Ritmo pedido EN ESTA conversación. Nulo = se usa el del perfil del turista (onboarding).</summary>
+    public Preferences.Entities.TravelPace? TravelPace { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 

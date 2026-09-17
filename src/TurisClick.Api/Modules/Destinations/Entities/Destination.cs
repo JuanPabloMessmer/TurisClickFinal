@@ -13,5 +13,11 @@ public class Destination
     public Destination? Parent { get; set; }
     public ICollection<Destination> Children { get; set; } = new List<Destination>();
 
+    /// <summary>
+    /// Imagen representativa (URL absoluta, p. ej. Wikimedia Commons). Solo la URL: nunca blobs/base64 en
+    /// Postgres. La atribución (autor/licencia/fuente) vive versionada en tools/demo-catalog.
+    /// </summary>
+    public string? ImageUrl { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 }

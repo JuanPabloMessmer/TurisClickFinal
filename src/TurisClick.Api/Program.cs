@@ -9,6 +9,7 @@ using TurisClick.Api.Infrastructure.Database.Seed;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Admin;
 using TurisClick.Api.Modules.Ai;
+using TurisClick.Api.Modules.Preferences;
 using TurisClick.Api.Modules.Auth;
 using TurisClick.Api.Modules.Categories;
 using TurisClick.Api.Modules.Companies;
@@ -111,6 +112,7 @@ try
     builder.Services.AddPackagesModule();
     builder.Services.AddReservationsModule(builder.Configuration);
 builder.Services.AddAdminModule();
+    builder.Services.AddPreferencesModule();
     builder.Services.AddAiModule(builder.Configuration);
 
     // ---- Manejo global de errores ----

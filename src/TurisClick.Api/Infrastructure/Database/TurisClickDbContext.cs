@@ -6,6 +6,7 @@ using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Destinations.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
+using TurisClick.Api.Modules.Preferences.Entities;
 using TurisClick.Api.Modules.Reservations.Entities;
 
 namespace TurisClick.Api.Infrastructure.Database;
@@ -34,6 +35,7 @@ public class TurisClickDbContext(DbContextOptions<TurisClickDbContext> options) 
     public DbSet<AiMessage> AiMessages => Set<AiMessage>();
     public DbSet<AiItinerary> AiItineraries => Set<AiItinerary>();
     public DbSet<AiItineraryItem> AiItineraryItems => Set<AiItineraryItem>();
+    public DbSet<TouristPreference> TouristPreferences => Set<TouristPreference>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

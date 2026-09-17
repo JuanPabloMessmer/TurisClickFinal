@@ -38,6 +38,10 @@ public class DestinationConfiguration : IEntityTypeConfiguration<Destination>
         builder.Property(d => d.ParentId)
             .HasColumnName("parent_id");
 
+        builder.Property(d => d.ImageUrl)
+            .HasColumnName("image_url")
+            .HasMaxLength(500);
+
         builder.Property(d => d.CreatedAt)
             .HasColumnName("created_at")
             .HasDefaultValueSql("now()");

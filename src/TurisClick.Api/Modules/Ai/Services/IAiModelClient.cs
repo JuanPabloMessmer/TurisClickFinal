@@ -74,7 +74,9 @@ public record PreferenceExtractionResult(
     decimal? BudgetAmount,
     string? BudgetCurrency,
     bool BudgetIsPerPerson,
-    string? RestrictionsNotes);
+    string? RestrictionsNotes,
+    /// <summary>RELAXED/BALANCED/INTENSE solo si el ÚLTIMO mensaje expresa un ritmo ("esta vez tranquilo"). Pisa el perfil del turista.</summary>
+    string? TravelPaceMention = null);
 
 public record ClarificationRequest(
     IReadOnlyList<ConversationTurn> History,
@@ -121,7 +123,9 @@ public record ItineraryCompositionRequest(
     /// <summary>Vacío en la primera generación (UC-AI-04); poblado al iterar (UC-AI-05).</summary>
     IReadOnlyList<PreservedItem> PreservedItems,
     /// <summary>Null en la primera generación; el pedido textual del turista al iterar ("quitá el rafting").</summary>
-    string? ModificationInstruction);
+    string? ModificationInstruction,
+    /// <summary>Ritmo efectivo (conversación o, si no lo dijo, perfil): RELAXED, BALANCED o INTENSE. Regula actividades por día.</summary>
+    string? TravelPace = null);
 
 public record ComposedItem(int DayNumber, string ProductType, Guid ProductId, Guid? AvailabilityId);
 

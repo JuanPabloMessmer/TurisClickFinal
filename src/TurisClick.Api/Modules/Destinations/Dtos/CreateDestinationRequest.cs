@@ -15,4 +15,8 @@ public class CreateDestinationRequest
 
     /// <summary>Requerido salvo para Type = COUNTRY.</summary>
     public Guid? ParentId { get; set; }
+
+    /// <summary>Opcional. URL http(s) absoluta; nunca contenido embebido.</summary>
+    [Url, MaxLength(500)]
+    public string? ImageUrl { get; set; }
 }

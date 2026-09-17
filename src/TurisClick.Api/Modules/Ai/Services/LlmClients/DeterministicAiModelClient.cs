@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
+using TurisClick.Api.Modules.Preferences.Services;
 
 namespace TurisClick.Api.Modules.Ai.Services.LlmClients;
 
@@ -15,12 +17,17 @@ public partial class DeterministicAiModelClient : IAiModelClient
     public Task<PreferenceExtractionResult> ExtractPreferencesAsync(PreferenceExtractionRequest request, CancellationToken ct)
     {
         var message = request.LatestMessage;
+        var folded = Fold(message);
 
+        // Sin tildes ni mayúsculas: "potosi", "gastronomia" y "Potosí" valen lo mismo. Gana el nombre más
+        // largo para que "Santa Cruz de la Sierra" no quede tapado por un nombre más corto contenido en él.
         var destination = request.KnownDestinationNames
-            .FirstOrDefault(name => message.Contains(name, StringComparison.OrdinalIgnoreCase));
+            .Where(name => ContainsWord(folded, Fold(name)))
+            .OrderByDescending(name => name.Length)
+            .FirstOrDefault();
 
         var categories = request.KnownCategoryNames
-            .Where(name => message.Contains(name, StringComparison.OrdinalIgnoreCase))
+            .Where(name => folded.Contains(Fold(name)) || CategoryStemMatches(folded, Fold(name)))
             .ToList();
 
         var isoDates = IsoDateRegex().Matches(message)
@@ -35,12 +42,25 @@ public partial class DeterministicAiModelClient : IAiModelClient
         if (durationMatch.Success)
             durationDays = int.Parse(durationMatch.Groups[1].Value, CultureInfo.InvariantCulture);
 
+        // "este fin de semana" / "el fin de semana": sábado y domingo próximos (o el actual si hoy es sábado/domingo).
+        if (startDate is null && WeekendRegex().IsMatch(folded))
+        {
+            var saturday = request.Today;
+            while (saturday.DayOfWeek != DayOfWeek.Saturday && saturday.DayOfWeek != DayOfWeek.Sunday)
+                saturday = saturday.AddDays(1);
+            startDate = saturday;
+            endDate = saturday.DayOfWeek == DayOfWeek.Saturday ? saturday.AddDays(1) : saturday;
+            durationDays ??= endDate.Value.DayNumber - startDate.Value.DayNumber + 1;
+        }
+
         int? travelers = null;
         var travelersMatch = TravelersRegex().Match(message);
         if (travelersMatch.Success)
             travelers = int.Parse(travelersMatch.Groups[1].Value, CultureInfo.InvariantCulture);
         else if (CoupleRegex().IsMatch(message))
             travelers = 2;
+        else if (SoloRegex().IsMatch(folded))
+            travelers = 1;
 
         decimal? budgetAmount = null;
         string? budgetCurrency = null;
@@ -65,7 +85,8 @@ public partial class DeterministicAiModelClient : IAiModelClient
             budgetAmount,
             budgetCurrency,
             isPerPerson,
-            RestrictionsNotes: null));
+            RestrictionsNotes: null,
+            TravelPaceMention: DetectPace(folded)));
     }
 
     public Task<string> GenerateClarificationReplyAsync(ClarificationRequest request, CancellationToken ct)
@@ -82,6 +103,7 @@ public partial class DeterministicAiModelClient : IAiModelClient
         // re-inserta él mismo, acá solo se completa lo que quedó libre (sección 2: "no regenerar lo que
         // el usuario no pidió cambiar").
         var occupiedDays = request.PreservedItems.Select(p => p.DayNumber).ToHashSet();
+        var perDay = TouristPreferenceHints.ActivitiesPerDay(request.TravelPace);
 
         var strongPackage = request.CandidatePackages.FirstOrDefault(p => p.IsStrongFit);
         var day = 1;
@@ -95,6 +117,8 @@ public partial class DeterministicAiModelClient : IAiModelClient
             day += strongPackage.DurationDays;
         }
 
+        // Ritmo: tranquilo/equilibrado = una actividad por día; intenso = hasta dos.
+        var usedToday = 0;
         foreach (var experience in request.CandidateExperiences)
         {
             while (occupiedDays.Contains(day)) day++;
@@ -102,7 +126,11 @@ public partial class DeterministicAiModelClient : IAiModelClient
 
             var availability = experience.Availabilities.OrderBy(a => a.Date).FirstOrDefault();
             items.Add(new ComposedItem(day, "EXPERIENCE", experience.Id, availability?.Id));
-            day++;
+            if (++usedToday >= perDay)
+            {
+                day++;
+                usedToday = 0;
+            }
         }
 
         var title = request.Preferences.PreferredDestinationName is { } destinationName
@@ -138,8 +166,10 @@ public partial class DeterministicAiModelClient : IAiModelClient
         if (request.CurrentItems.Count == 0)
             return Task.FromResult(new ModificationIntentResult(ModificationAction.NONE, [], [], []));
 
+        var folded = Fold(message);
         var targetDays = DayRegex().Matches(message)
             .Select(m => int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+            .Concat(OrdinalDayRegex().Matches(folded).Select(m => OrdinalToNumber(m.Groups[1].Value)))
             .Distinct()
             .ToList();
 
@@ -151,14 +181,14 @@ public partial class DeterministicAiModelClient : IAiModelClient
         }
 
         var mentionedCategories = request.KnownCategoryNames
-            .Where(name => message.Contains(name, StringComparison.OrdinalIgnoreCase))
+            .Where(name => folded.Contains(Fold(name)) || CategoryStemMatches(folded, Fold(name)))
             .ToList();
 
         // Ítems mencionados: por categoría real, por título real o por el día que ocupan.
         var matchedByText = request.CurrentItems
             .Where(item =>
-                message.Contains(item.Title, StringComparison.OrdinalIgnoreCase)
-                || item.CategoryNames.Any(c => message.Contains(c, StringComparison.OrdinalIgnoreCase)))
+                folded.Contains(Fold(item.Title))
+                || item.CategoryNames.Any(c => folded.Contains(Fold(c)) || CategoryStemMatches(folded, Fold(c))))
             .Select(i => i.ItemId)
             .ToList();
 
@@ -175,7 +205,7 @@ public partial class DeterministicAiModelClient : IAiModelClient
         if (ReduceBudgetRegex().IsMatch(message))
             return Task.FromResult(new ModificationIntentResult(ModificationAction.REDUCE_BUDGET, [], [], []));
 
-        if (RemoveRegex().IsMatch(message) && targetItemIds.Count > 0)
+        if ((RemoveRegex().IsMatch(message) || LessOfRegex().IsMatch(folded)) && targetItemIds.Count > 0)
             return Task.FromResult(new ModificationIntentResult(ModificationAction.REMOVE, targetItemIds, targetDays, []));
 
         if (AddRegex().IsMatch(message))
@@ -197,6 +227,71 @@ public partial class DeterministicAiModelClient : IAiModelClient
         var intro = $"Te propuse \"{request.Item.Title}\" para el día {request.Item.DayNumber}.";
         return Task.FromResult(string.IsNullOrWhiteSpace(facts) ? intro : $"{intro} {facts}");
     }
+
+    /// <summary>Minúsculas y sin diacríticos: la NLU por reglas no debe depender de que el turista escriba tildes.</summary>
+    internal static string Fold(string text)
+    {
+        var decomposed = text.ToLowerInvariant().Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(decomposed.Length);
+        foreach (var c in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                builder.Append(c);
+        }
+        return builder.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+    private static bool ContainsWord(string foldedText, string foldedWord) =>
+        Regex.IsMatch(foldedText, $@"(?<![\p{{L}}]){Regex.Escape(foldedWord)}(?![\p{{L}}])");
+
+    /// <summary>"cultural" → Cultura, "historico" → Historia, "aventurero" → Aventura: raíz de al menos 5 letras.</summary>
+    private static bool CategoryStemMatches(string foldedText, string foldedCategory)
+    {
+        var firstWord = foldedCategory.Split(' ')[0];
+        if (firstWord.Length < 6) return false;
+        var stem = firstWord[..^1];
+        return Regex.IsMatch(foldedText, $@"(?<![\p{{L}}]){Regex.Escape(stem)}");
+    }
+
+    private static string? DetectPace(string folded)
+    {
+        if (RelaxedPaceRegex().IsMatch(folded)) return "RELAXED";
+        if (IntensePaceRegex().IsMatch(folded)) return "INTENSE";
+        if (BalancedPaceRegex().IsMatch(folded)) return "BALANCED";
+        return null;
+    }
+
+    private static int OrdinalToNumber(string ordinal) => ordinal switch
+    {
+        "primer" or "primero" => 1,
+        "segundo" => 2,
+        "tercer" or "tercero" => 3,
+        "cuarto" => 4,
+        "quinto" => 5,
+        "sexto" => 6,
+        _ => 7
+    };
+
+    [GeneratedRegex(@"\b(este|el|un|para el|finde de) fin de semana\b|\bfinde\b")]
+    private static partial Regex WeekendRegex();
+
+    [GeneratedRegex(@"\b(viajo|voy|viajare|ire|viajar|estoy) sol[oa]\b")]
+    private static partial Regex SoloRegex();
+
+    [GeneratedRegex(@"\b(tranquil[oa]s?|relajad[oa]s?|descansar|descanso|sin apuro|sin prisa)\b")]
+    private static partial Regex RelaxedPaceRegex();
+
+    [GeneratedRegex(@"\b(intens[oa]s?|a full|aprovechar el dia|aprovechar al maximo|muchas actividades)\b")]
+    private static partial Regex IntensePaceRegex();
+
+    [GeneratedRegex(@"\b(equilibrad[oa]|balancead[oa])\b")]
+    private static partial Regex BalancedPaceRegex();
+
+    [GeneratedRegex(@"\b(primer|primero|segundo|tercer|tercero|cuarto|quinto|sexto|septimo) dia\b")]
+    private static partial Regex OrdinalDayRegex();
+
+    [GeneratedRegex(@"\bmenos\b")]
+    private static partial Regex LessOfRegex();
 
     [GeneratedRegex(@"\d{4}-\d{2}-\d{2}")]
     private static partial Regex IsoDateRegex();

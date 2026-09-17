@@ -43,6 +43,7 @@ public class DestinationService(
             Name = name,
             Type = type,
             ParentId = request.ParentId,
+            ImageUrl = NullIfBlank(request.ImageUrl),
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -63,6 +64,7 @@ public class DestinationService(
             throw new ConflictAppException("Ya existe un destino con ese nombre en el mismo nivel.");
 
         destination.Name = name;
+        destination.ImageUrl = NullIfBlank(request.ImageUrl);
         await db.SaveChangesAsync(ct);
 
         return ToResponse(destination, destination.Parent);
@@ -121,6 +123,9 @@ public class DestinationService(
         Name = destination.Name,
         Type = destination.Type.ToString(),
         ParentId = destination.ParentId,
-        ParentName = parent?.Name
+        ParentName = parent?.Name,
+        ImageUrl = destination.ImageUrl
     };
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

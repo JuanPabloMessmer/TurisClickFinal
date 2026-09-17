@@ -51,5 +51,9 @@ public class PreferencesResponse
     public decimal? BudgetTotal { get; set; }
     public string? BudgetCurrency { get; set; }
     public string? RestrictionsNotes { get; set; }
+
+    /// <summary>Ritmo pedido en la conversación (RELAXED/BALANCED/INTENSE) o null.</summary>
+    public string? TravelPace { get; set; }
+
     public List<CategoryResponse> Categories { get; set; } = [];
 }

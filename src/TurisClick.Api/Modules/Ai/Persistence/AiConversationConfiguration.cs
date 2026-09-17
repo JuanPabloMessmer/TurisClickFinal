@@ -64,6 +64,11 @@ public class AiConversationConfiguration : IEntityTypeConfiguration<AiConversati
             .HasForeignKey(i => i.AiConversationId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.Property(c => c.TravelPace)
+            .HasColumnName("travel_pace")
+            .HasConversion<string>()
+            .HasMaxLength(20);
+
         // N—N con Category, sin navegación inversa (mismo patrón que Experience/Package).
         builder.HasMany(c => c.Categories)
             .WithMany()

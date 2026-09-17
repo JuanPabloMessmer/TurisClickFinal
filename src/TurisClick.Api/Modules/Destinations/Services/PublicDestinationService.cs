@@ -51,6 +51,7 @@ public class PublicDestinationService(IDestinationRepository destinationReposito
         Type = destination.Type.ToString(),
         ParentId = destination.ParentId,
         ParentName = destination.Parent?.Name,
+        ImageUrl = destination.ImageUrl,
         PublishedExperienceCount = publishedExperienceCount
     };
 }
