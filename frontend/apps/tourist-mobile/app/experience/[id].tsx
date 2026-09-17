@@ -5,6 +5,7 @@ import {
   AvailabilitySection,
   BackButton,
   BookingBar,
+  DETAIL_DATES_PREVIEW,
   DetailBlock,
   DetailSkeleton,
 } from '@/features/catalog/detail'
@@ -63,8 +64,12 @@ export default function ExperienceDetailScreen() {
               <DetailBlock title="Qué no incluye" body={experience.data.excludesText} />
             ) : null}
 
-            <AvailabilitySection isLoading={availability.isPending} slots={availability.data ?? []}>
-              {availability.data?.map((slot) => (
+            <AvailabilitySection
+              isLoading={availability.isPending}
+              slots={availability.data ?? []}
+              total={availability.data?.length}
+            >
+              {availability.data?.slice(0, DETAIL_DATES_PREVIEW).map((slot) => (
                 <AvailabilityRow
                   key={slot.id}
                   date={slot.date}

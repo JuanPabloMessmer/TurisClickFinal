@@ -1,5 +1,8 @@
 import type { AxiosInstance } from 'axios'
 import type {
+  BulkCreateExperienceAvailabilityRequest,
+  BulkExperienceAvailabilityResponse,
+  UpdateAvailabilityRequest,
   CreateExperienceAvailabilityRequest,
   CreateExperienceRequest,
   ExperienceAvailabilityResponse,
@@ -37,3 +40,11 @@ export const createAvailability = (http: AxiosInstance, experienceId: string, bo
 /** Vista de gestión del PROVIDER dueño — todos los slots, cualquier fecha/estado. */
 export const listOwnedAvailability = (http: AxiosInstance, experienceId: string) =>
   http.get<ExperienceAvailabilityResponse[]>(`/api/experiences/mine/${experienceId}/availability`).then((r) => r.data)
+
+/** Calendario: genera fechas concretas de un rango según un patrón semanal. `dryRun` = vista previa sin escribir. */
+export const bulkCreateAvailability = (http: AxiosInstance, experienceId: string, body: BulkCreateExperienceAvailabilityRequest) =>
+  http.post<BulkExperienceAvailabilityResponse>(`/api/experiences/${experienceId}/availability/bulk`, body).then((r) => r.data)
+
+/** Cambiar cupo (nunca bajo lo reservado) o abrir/cerrar una fecha puntual. */
+export const updateAvailability = (http: AxiosInstance, experienceId: string, availabilityId: string, body: UpdateAvailabilityRequest) =>
+  http.patch<ExperienceAvailabilityResponse>(`/api/experiences/${experienceId}/availability/${availabilityId}`, body).then((r) => r.data)

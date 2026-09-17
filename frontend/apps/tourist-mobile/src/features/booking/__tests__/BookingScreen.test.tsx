@@ -56,11 +56,16 @@ function ui(props: Partial<React.ComponentProps<typeof BookingScreen>> = {}) {
         productQuery={ready}
         slots={experienceSlots}
         availabilityQuery={ready}
+        today="2026-09-16"
         {...props}
       />
     </Wrapper>
   )
 }
+
+/** Toca el día del calendario de un slot del fixture (cada fecha del fixture tiene un único horario). */
+const DAY_LABELS: Record<string, RegExp> = { s1: /, 10 de octubre/, s2: /, 11 de octubre/, d1: /, 1 de noviembre/ }
+const choose = (slotId: 's1' | 's2' | 'd1') => fireEvent.press(screen.getByLabelText(DAY_LABELS[slotId]))
 
 const continueButton = () => screen.getByRole('button', { name: 'Continuar' })
 const isDisabled = (element: { props: { accessibilityState?: { disabled?: boolean } } }) =>
@@ -81,7 +86,7 @@ describe('selección de una experiencia', () => {
 
     expect(isDisabled(continueButton())).toBe(true)
 
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
 
     expect(isDisabled(continueButton())).toBe(false)
     expect(screen.getAllByRole('radio')[0].props.accessibilityState).toMatchObject({ selected: true })
@@ -90,12 +95,14 @@ describe('selección de una experiencia', () => {
   it('muestra el horario de la experiencia en cada fecha', () => {
     render(ui())
 
+    choose('s1')
+
     expect(screen.getAllByText(/09:00/).length).toBeGreaterThan(0)
   })
 
   it('viajeros: mínimo 1 y máximo el cupo de la fecha', () => {
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0]) // 3 lugares
+    choose('s1') // 3 lugares
 
     expect(isDisabled(screen.getByLabelText('Quitar un viajero'))).toBe(true)
 
@@ -108,24 +115,24 @@ describe('selección de una experiencia', () => {
 
   it('viajeros: el máximo nunca supera 100 aunque haya más cupo', () => {
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[1]) // 250 lugares
+    choose('s2') // 250 lugares
 
     expect(screen.getByText('Máximo 100 para esta fecha.')).toBeTruthy()
   })
 
   it('al cambiar a una fecha con menos cupo, ajusta los viajeros sin perder la elección', () => {
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[1])
+    choose('s2')
     for (let i = 0; i < 4; i++) fireEvent.press(screen.getByLabelText('Agregar un viajero')) // 5
 
-    fireEvent.press(screen.getAllByRole('radio')[0]) // 3 lugares
+    choose('s1') // 3 lugares
 
     expect(screen.getByLabelText('3 viajeros')).toBeTruthy()
   })
 
   it('muestra el precio estimado como estimado, en la moneda del producto', () => {
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
     fireEvent.press(screen.getByLabelText('Agregar un viajero'))
 
     expect(screen.getByText(/USD\s+80\.00/)).toBeTruthy()
@@ -135,7 +142,7 @@ describe('selección de una experiencia', () => {
   it('crea la reserva con experienceAvailabilityId y reemplaza la pantalla por el checkout', async () => {
     mockPost.mockReturnValue(ok(reservationFixture({ id: 'r-new' })))
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
     fireEvent.press(screen.getByLabelText('Agregar un viajero'))
 
     fireEvent.press(continueButton())
@@ -163,9 +170,9 @@ describe('selección de un paquete', () => {
     )
 
     expect(screen.getByText('Elegir salida')).toBeTruthy()
-    expect(screen.getByText('Salidas disponibles')).toBeTruthy()
+    expect(screen.getByText('Elegí la salida')).toBeTruthy()
 
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('d1')
     expect(screen.getByText('Máximo 6 para esta salida.')).toBeTruthy()
     expect(screen.getByText(/USD\s+480\.00/)).toBeTruthy()
 
@@ -179,7 +186,7 @@ describe('invitado', () => {
   it('Continuar lleva a login y NO crea ninguna reserva', () => {
     mockedUseSession.mockReturnValue(guestSession())
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
 
     fireEvent.press(continueButton())
 
@@ -192,7 +199,7 @@ describe('invitado', () => {
     mockedUseSession.mockReturnValue(guestSession())
     mockPost.mockReturnValue(ok(reservationFixture({ id: 'r-after-login' })))
     const { rerender } = render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
     fireEvent.press(screen.getByLabelText('Agregar un viajero'))
     fireEvent.press(continueButton())
     expect(mockRouter.push).toHaveBeenCalledWith('/(auth)/login')
@@ -216,7 +223,7 @@ describe('invitado', () => {
     mockedUseSession.mockReturnValue(guestSession())
     mockedUseSession.mockReturnValue({ ...guestSession(), status: 'idle' })
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
 
     expect(isDisabled(continueButton())).toBe(true)
   })
@@ -227,7 +234,7 @@ describe('protección contra reservas duplicadas', () => {
     const pending = deferred<{ data: unknown }>()
     mockPost.mockReturnValue(pending.promise)
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
 
     const button = continueButton()
     fireEvent.press(button)
@@ -244,7 +251,7 @@ describe('protección contra reservas duplicadas', () => {
   it('una caída de red NO reintenta el POST y manda a revisar Mis viajes', async () => {
     mockPost.mockRejectedValue(networkError())
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
 
     fireEvent.press(continueButton())
 
@@ -261,7 +268,7 @@ describe('errores reales al crear', () => {
   it('409: sin cupo suficiente, se queda en la pantalla con la selección', async () => {
     mockPost.mockRejectedValue(httpError(409, { detail: 'No hay cupo suficiente para la cantidad de viajeros solicitada.' }))
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
 
     fireEvent.press(continueButton())
 
@@ -272,7 +279,7 @@ describe('errores reales al crear', () => {
   it('410: la fecha ya no está disponible y se descarta la selección', async () => {
     mockPost.mockRejectedValue(httpError(410, { detail: 'El slot de disponibilidad ya no está disponible.' }))
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
 
     fireEvent.press(continueButton())
 
@@ -283,10 +290,69 @@ describe('errores reales al crear', () => {
   it('404: el producto dejó de estar disponible', async () => {
     mockPost.mockRejectedValue(httpError(404, { detail: 'Experiencia no encontrada.' }))
     render(ui())
-    fireEvent.press(screen.getAllByRole('radio')[0])
+    choose('s1')
 
     fireEvent.press(continueButton())
 
     await waitFor(() => expect(screen.getByText('Este producto ya no está disponible')).toBeTruthy())
+  })
+})
+
+describe('calendario', () => {
+  const calendarSlots: BookableSlot[] = [
+    { id: 'a', date: '2026-09-20', time: '15:00:00', availableSlots: 2 },
+    { id: 'b', date: '2026-09-20', time: '09:00:00', availableSlots: 8 },
+    { id: 'c', date: '2026-09-25', time: '09:00:00', availableSlots: 0 },
+    { id: 'd', date: '2026-10-03', time: null, availableSlots: 12 },
+  ]
+
+  it('abre en el mes de la primera fecha y distingue disponible, sin cupo y pasado', () => {
+    render(ui({ slots: calendarSlots }))
+
+    expect(screen.getByText('Septiembre 2026')).toBeTruthy()
+    const available = screen.getByLabelText(/20 de septiembre, 2 horarios disponibles/)
+    expect(available.props.accessibilityState).toMatchObject({ disabled: false })
+    // Fecha con 0 cupos: existe pero no se puede elegir.
+    expect(screen.getByLabelText(/25 de septiembre, sin disponibilidad/).props.accessibilityState).toMatchObject({ disabled: true })
+    expect(screen.getByLabelText(/10 de septiembre, fecha pasada/).props.accessibilityState).toMatchObject({ disabled: true })
+    expect(screen.queryAllByRole('radio')).toHaveLength(0)
+  })
+
+  it('un día con varios horarios pide elegir horario, ordenados, con cupos restantes', () => {
+    render(ui({ slots: calendarSlots }))
+
+    fireEvent.press(screen.getByLabelText(/20 de septiembre/))
+
+    expect(screen.getByText('Elegí un horario')).toBeTruthy()
+    const radios = screen.getAllByRole('radio')
+    expect(radios).toHaveLength(2)
+    expect(radios[0].props.accessibilityLabel).toMatch(/09:00.*8 lugares/)
+    expect(radios[1].props.accessibilityLabel).toMatch(/15:00.*2 lugares/)
+    expect(isDisabled(continueButton())).toBe(true)
+
+    fireEvent.press(radios[1])
+
+    expect(isDisabled(continueButton())).toBe(false)
+    expect(screen.getByText('Máximo 2 para esta fecha.')).toBeTruthy()
+  })
+
+  it('navega entre meses sin pasar el mes actual ni el último con disponibilidad', () => {
+    render(ui({ slots: calendarSlots }))
+
+    expect(isDisabled(screen.getByLabelText('Mes anterior'))).toBe(true)
+    fireEvent.press(screen.getByLabelText('Mes siguiente'))
+
+    expect(screen.getByText('Octubre 2026')).toBeTruthy()
+    expect(isDisabled(screen.getByLabelText('Mes siguiente'))).toBe(true)
+
+    fireEvent.press(screen.getByLabelText(/3 de octubre, disponible/))
+    expect(screen.getAllByRole('radio')[0].props.accessibilityLabel).toMatch(/Día completo/)
+    expect(isDisabled(continueButton())).toBe(false)
+  })
+
+  it('sin ninguna fecha con cupo lo dice en vez de mostrar un calendario vacío', () => {
+    render(ui({ slots: [{ id: 'x', date: '2026-10-01', availableSlots: 0 }] }))
+
+    expect(screen.getByText('No hay fechas con cupo por el momento. Consultá más adelante.')).toBeTruthy()
   })
 })

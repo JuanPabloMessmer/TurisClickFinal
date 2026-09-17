@@ -28,3 +28,5 @@ export function formatDateTime(value: string | Date): string {
   const date = typeof value === 'string' ? new Date(value) : value
   return new Intl.DateTimeFormat('es-BO', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
 }
+
+export * from './calendar'

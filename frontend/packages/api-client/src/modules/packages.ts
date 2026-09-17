@@ -1,5 +1,8 @@
 import type { AxiosInstance } from 'axios'
 import type {
+  BulkCreatePackageAvailabilityRequest,
+  BulkPackageAvailabilityResponse,
+  UpdateAvailabilityRequest,
   CreatePackageAvailabilityRequest,
   CreatePackageRequest,
   PackageAvailabilityResponse,
@@ -37,3 +40,11 @@ export const createPackageAvailability = (http: AxiosInstance, packageId: string
 /** Vista de gestión del PROVIDER dueño — todas las salidas, cualquier fecha/estado. */
 export const listOwnedPackageAvailability = (http: AxiosInstance, packageId: string) =>
   http.get<PackageAvailabilityResponse[]>(`/api/packages/mine/${packageId}/availability`).then((r) => r.data)
+
+/** Calendario: genera salidas concretas de un rango según un patrón semanal. */
+export const bulkCreatePackageAvailability = (http: AxiosInstance, packageId: string, body: BulkCreatePackageAvailabilityRequest) =>
+  http.post<BulkPackageAvailabilityResponse>(`/api/packages/${packageId}/availability/bulk`, body).then((r) => r.data)
+
+/** Cambiar cupo o abrir/cerrar una salida puntual. */
+export const updatePackageAvailability = (http: AxiosInstance, packageId: string, availabilityId: string, body: UpdateAvailabilityRequest) =>
+  http.patch<PackageAvailabilityResponse>(`/api/packages/${packageId}/availability/${availabilityId}`, body).then((r) => r.data)

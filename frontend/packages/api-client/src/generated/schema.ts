@@ -1700,6 +1700,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/experiences/{experienceId}/availability/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    experienceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["BulkCreateExperienceAvailabilityRequest"];
+                    "text/json": components["schemas"]["BulkCreateExperienceAvailabilityRequest"];
+                    "application/*+json": components["schemas"]["BulkCreateExperienceAvailabilityRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BulkExperienceAvailabilityResponse"];
+                        "application/json": components["schemas"]["BulkExperienceAvailabilityResponse"];
+                        "text/json": components["schemas"]["BulkExperienceAvailabilityResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/experiences/{experienceId}/availability/{availabilityId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    experienceId: string;
+                    availabilityId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateAvailabilityRequest"];
+                    "text/json": components["schemas"]["UpdateAvailabilityRequest"];
+                    "application/*+json": components["schemas"]["UpdateAvailabilityRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ExperienceAvailabilityResponse"];
+                        "application/json": components["schemas"]["ExperienceAvailabilityResponse"];
+                        "text/json": components["schemas"]["ExperienceAvailabilityResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/experiences/mine/{experienceId}/availability": {
         parameters: {
             query?: never;
@@ -2102,6 +2193,97 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/packages/{packageId}/availability/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    packageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["BulkCreatePackageAvailabilityRequest"];
+                    "text/json": components["schemas"]["BulkCreatePackageAvailabilityRequest"];
+                    "application/*+json": components["schemas"]["BulkCreatePackageAvailabilityRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BulkPackageAvailabilityResponse"];
+                        "application/json": components["schemas"]["BulkPackageAvailabilityResponse"];
+                        "text/json": components["schemas"]["BulkPackageAvailabilityResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/packages/{packageId}/availability/{availabilityId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    packageId: string;
+                    availabilityId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateAvailabilityRequest"];
+                    "text/json": components["schemas"]["UpdateAvailabilityRequest"];
+                    "application/*+json": components["schemas"]["UpdateAvailabilityRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageAvailabilityResponse"];
+                        "application/json": components["schemas"]["PackageAvailabilityResponse"];
+                        "text/json": components["schemas"]["PackageAvailabilityResponse"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/packages/mine/{packageId}/availability": {
@@ -2871,6 +3053,51 @@ export interface components {
             requiresPriceAcceptance?: boolean;
             changes?: components["schemas"]["ItineraryPriceChangeResponse"][] | null;
         };
+        BulkCreateExperienceAvailabilityRequest: {
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            preset?: string | null;
+            weekdays?: number[] | null;
+            startTimes?: string[] | null;
+            /** Format: int32 */
+            totalSlots?: number;
+            dryRun?: boolean;
+        };
+        BulkCreatePackageAvailabilityRequest: {
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            preset?: string | null;
+            weekdays?: number[] | null;
+            /** Format: int32 */
+            totalSlots?: number;
+            dryRun?: boolean;
+        };
+        BulkExperienceAvailabilityResponse: {
+            /** Format: int32 */
+            requestedCount?: number;
+            /** Format: int32 */
+            createdCount?: number;
+            /** Format: int32 */
+            skippedCount?: number;
+            dryRun?: boolean;
+            created?: components["schemas"]["ExperienceAvailabilityResponse"][] | null;
+            skipped?: components["schemas"]["SkippedAvailabilityResponse"][] | null;
+        };
+        BulkPackageAvailabilityResponse: {
+            /** Format: int32 */
+            requestedCount?: number;
+            /** Format: int32 */
+            createdCount?: number;
+            /** Format: int32 */
+            skippedCount?: number;
+            dryRun?: boolean;
+            created?: components["schemas"]["PackageAvailabilityResponse"][] | null;
+            skipped?: components["schemas"]["SkippedDepartureResponse"][] | null;
+        };
         CancelReservationItemRequest: {
             reason: string;
         };
@@ -3510,6 +3737,23 @@ export interface components {
             missingInformation?: string[] | null;
             itinerary?: components["schemas"]["ItineraryResponse"];
             warnings?: string[] | null;
+        };
+        SkippedAvailabilityResponse: {
+            /** Format: date */
+            date?: string;
+            /** Format: time */
+            startTime?: string | null;
+            reason?: string | null;
+        };
+        SkippedDepartureResponse: {
+            /** Format: date */
+            departureDate?: string;
+            reason?: string | null;
+        };
+        UpdateAvailabilityRequest: {
+            /** Format: int32 */
+            totalSlots?: number | null;
+            status?: string | null;
         };
         UpdateCategoryRequest: {
             name: string;

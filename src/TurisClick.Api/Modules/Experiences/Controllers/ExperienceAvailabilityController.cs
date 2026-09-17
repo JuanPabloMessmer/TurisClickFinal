@@ -20,6 +20,26 @@ public class ExperienceAvailabilityController(IExperienceAvailabilityService ava
         return StatusCode(StatusCodes.Status201Created, result);
     }
 
+    /// <summary>Calendario del proveedor: genera las fechas concretas de un rango según un patrón semanal.</summary>
+    [HttpPost("{experienceId:guid}/availability/bulk")]
+    [Authorize(Policy = "RequireProvider")]
+    public async Task<ActionResult<BulkExperienceAvailabilityResponse>> BulkCreate(
+        Guid experienceId, [FromBody] BulkCreateExperienceAvailabilityRequest request, CancellationToken ct)
+    {
+        var result = await availabilityService.BulkCreateAsync(experienceId, request, ct);
+        return request.DryRun ? Ok(result) : StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    /// <summary>Cambiar cupo o abrir/cerrar una fecha puntual.</summary>
+    [HttpPatch("{experienceId:guid}/availability/{availabilityId:guid}")]
+    [Authorize(Policy = "RequireProvider")]
+    public async Task<ActionResult<ExperienceAvailabilityResponse>> Update(
+        Guid experienceId, Guid availabilityId, [FromBody] UpdateAvailabilityRequest request, CancellationToken ct)
+    {
+        var result = await availabilityService.UpdateAsync(experienceId, availabilityId, request, ct);
+        return Ok(result);
+    }
+
     /// <summary>Vista de gestión del PROVIDER dueño — todos los slots, cualquier fecha/estado.</summary>
     [HttpGet("mine/{experienceId:guid}/availability")]
     [Authorize(Policy = "RequireProvider")]

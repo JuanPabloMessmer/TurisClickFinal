@@ -38,6 +38,10 @@ export type ExperienceImageRequest = Schemas['ExperienceImageRequest']
 
 export type ExperienceAvailabilityResponse = Schemas['ExperienceAvailabilityResponse']
 export type CreateExperienceAvailabilityRequest = Schemas['CreateExperienceAvailabilityRequest']
+export type BulkCreateExperienceAvailabilityRequest = Schemas['BulkCreateExperienceAvailabilityRequest']
+export type BulkExperienceAvailabilityResponse = Schemas['BulkExperienceAvailabilityResponse']
+export type SkippedAvailabilityResponse = Schemas['SkippedAvailabilityResponse']
+export type UpdateAvailabilityRequest = Schemas['UpdateAvailabilityRequest']
 
 export type PackageResponse = Schemas['PackageResponse']
 export type PackageSummaryResponse = Schemas['PackageSummaryResponse']
@@ -51,6 +55,13 @@ export type PackageImageResponse = Schemas['PackageImageResponse']
 
 export type PackageAvailabilityResponse = Schemas['PackageAvailabilityResponse']
 export type CreatePackageAvailabilityRequest = Schemas['CreatePackageAvailabilityRequest']
+export type BulkCreatePackageAvailabilityRequest = Schemas['BulkCreatePackageAvailabilityRequest']
+export type BulkPackageAvailabilityResponse = Schemas['BulkPackageAvailabilityResponse']
+export type SkippedDepartureResponse = Schemas['SkippedDepartureResponse']
+
+/** Presets del calendario del proveedor (Shared/Scheduling/AvailabilitySchedule en el backend). */
+export const AvailabilityPresets = ['EVERY_DAY', 'WEEKDAYS', 'WEEKENDS', 'CUSTOM'] as const
+export type AvailabilityPresetValue = (typeof AvailabilityPresets)[number]
 
 export type ReservationItemResponse = Schemas['ReservationItemResponse']
 export type ReservationItemResponsePagedResult = Schemas['ReservationItemResponsePagedResult']

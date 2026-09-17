@@ -17,5 +17,10 @@ public interface IPackageAvailabilityRepository
     /// <summary>Vista pública para reservar (UC-T-09) — solo OPEN, futuros y con cupo.</summary>
     Task<List<PackageAvailability>> ListBookableAsync(Guid packageId, CancellationToken ct);
 
+    /// <summary>Salidas del paquete dentro del rango (ambos extremos incluidos) — duplicados de un alta masiva en una sola consulta.</summary>
+    Task<List<PackageAvailability>> ListInRangeAsync(Guid packageId, DateOnly startDate, DateOnly endDate, CancellationToken ct);
+
     Task AddAsync(PackageAvailability availability, CancellationToken ct);
+
+    Task AddRangeAsync(IEnumerable<PackageAvailability> availabilities, CancellationToken ct);
 }

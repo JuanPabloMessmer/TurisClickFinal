@@ -64,19 +64,31 @@ export function AvailabilityRow({
   )
 }
 
-/** Lista de fechas con sus tres estados. Sin fechas no se inventa nada: se dice que no hay. */
+/** Cuántas fechas se muestran en el detalle: el resto se elige en el calendario de reserva. */
+export const DETAIL_DATES_PREVIEW = 3
+
+/**
+ * Vista previa de las próximas fechas con sus tres estados. Con meses de disponibilidad no se listan todas:
+ * se muestran las primeras y cuántas más hay, y la elección completa ocurre en el calendario de reserva.
+ * Sin fechas no se inventa nada: se dice que no hay.
+ */
 export function AvailabilitySection({
   isLoading,
   slots,
+  total,
   children,
 }: {
   isLoading: boolean
   slots: unknown[]
+  /** Total de fechas disponibles cuando `children` es solo una vista previa. */
+  total?: number
   children: React.ReactNode
 }) {
+  const remaining = total != null ? total - Math.min(total, DETAIL_DATES_PREVIEW) : 0
+
   return (
     <View>
-      <Text className="mb-3 mt-8 text-lg font-bold text-ink">Fechas disponibles</Text>
+      <Text className="mb-3 mt-8 text-lg font-bold text-ink">Próximas fechas</Text>
       {isLoading ? (
         <View className="gap-2">
           <Skeleton className="h-12 w-full" />
@@ -87,7 +99,14 @@ export function AvailabilitySection({
           No hay fechas con cupo por el momento. Consultá más adelante.
         </Text>
       ) : (
-        <View className="gap-2">{children}</View>
+        <View className="gap-2">
+          {children}
+          {remaining > 0 ? (
+            <Text className="mt-1 text-sm text-[#5B7285]">
+              {`y ${remaining} ${remaining === 1 ? 'fecha más' : 'fechas más'} — elegí la tuya en el calendario.`}
+            </Text>
+          ) : null}
+        </View>
       )}
     </View>
   )

@@ -40,6 +40,15 @@ public class ExperienceAvailabilityRepository(TurisClickDbContext db) : IExperie
             .ToListAsync(ct);
     }
 
+    public Task<List<ExperienceAvailability>> ListInRangeAsync(Guid experienceId, DateOnly startDate, DateOnly endDate, CancellationToken ct) =>
+        db.ExperienceAvailabilities
+            .AsNoTracking()
+            .Where(a => a.ExperienceId == experienceId && a.Date >= startDate && a.Date <= endDate)
+            .ToListAsync(ct);
+
     public async Task AddAsync(ExperienceAvailability availability, CancellationToken ct) =>
         await db.ExperienceAvailabilities.AddAsync(availability, ct);
+
+    public Task AddRangeAsync(IEnumerable<ExperienceAvailability> availabilities, CancellationToken ct) =>
+        db.ExperienceAvailabilities.AddRangeAsync(availabilities, ct);
 }

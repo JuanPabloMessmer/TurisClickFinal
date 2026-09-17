@@ -1,9 +1,11 @@
-import { formatDate } from '@turisclick/utils'
+import { parseIsoDate, type IsoDate } from '@turisclick/utils'
 import { useRouter, type Href } from 'expo-router'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSession } from '@/auth/session'
+import { AvailabilityCalendar } from '@/features/booking/AvailabilityCalendar'
+import { slotsByDate } from '@/features/booking/calendarModel'
 import { estimatedTotal, type BookableSlot } from '@/features/booking/selection'
 import { useBookingSelection } from '@/features/booking/useBookingSelection'
 import { slotsLabel } from '@/features/catalog/detail'
@@ -39,6 +41,7 @@ export function BookingScreen({
   productQuery,
   slots,
   availabilityQuery,
+  today,
 }: {
   productType: 'EXPERIENCE' | 'PACKAGE'
   productHref: Href
@@ -46,12 +49,26 @@ export function BookingScreen({
   productQuery: QueryState
   slots: BookableSlot[]
   availabilityQuery: QueryState
+  /** Solo tests: fija "hoy" para que el calendario sea determinístico. */
+  today?: IsoDate
 }) {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { status: sessionStatus, isAuthenticated } = useSession()
   const selection = useBookingSelection(slots, !availabilityQuery.isPending)
   const create = useCreateReservation()
+  const byDate = useMemo(() => slotsByDate(slots), [slots])
+  const [selectedDate, setSelectedDate] = useState<IsoDate | null>(null)
+  const daySlots = selectedDate ? byDate.get(selectedDate) ?? [] : []
+
+  const onSelectDate = (date: IsoDate) => {
+    setFailure(null)
+    setSelectedDate(date)
+    const options = byDate.get(date) ?? []
+    // Un solo horario (o una salida de paquete): se elige directo, sin un paso extra.
+    if (options.length === 1) selection.select(options[0].id)
+    else selection.clearSelection()
+  }
 
   // Un toque que llega antes de que React re-renderice con `isPending` no debe disparar una segunda
   // reserva: sin idempotencia en el backend, cada POST exitoso retiene cupo.
@@ -139,31 +156,42 @@ export function BookingScreen({
           </View>
         )}
 
-        <Text className="mb-3 mt-8 text-lg font-bold text-ink">{isPackage ? 'Salidas disponibles' : 'Fechas disponibles'}</Text>
+        <Text className="mb-3 mt-8 text-lg font-bold text-ink">{isPackage ? 'Elegí la salida' : 'Elegí el día'}</Text>
         {availabilityQuery.isPending ? (
-          <View className="gap-2">
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-          </View>
+          <Skeleton className="h-80 w-full rounded-2xl" />
         ) : availabilityQuery.isError ? (
           <ErrorState message={toApiError(availabilityQuery.error).message} onRetry={availabilityQuery.refetch} />
-        ) : slots.length === 0 ? (
+        ) : byDate.size === 0 ? (
           <Text className="text-sm text-[#5B7285]">No hay fechas con cupo por el momento. Consultá más adelante.</Text>
         ) : (
-          <View className="gap-2" accessibilityRole="radiogroup">
-            {slots.map((slot) => (
-              <SelectableSlot
-                key={slot.id}
-                slot={slot}
-                selected={slot.id === selection.selectedId}
-                onPress={() => {
-                  setFailure(null)
-                  selection.select(slot.id)
-                }}
-              />
-            ))}
-          </View>
+          <AvailabilityCalendar slots={slots} selectedDate={selectedDate} onSelectDate={onSelectDate} today={today} />
         )}
+
+        {selectedDate && daySlots.length > 0 ? (
+          <View className="mt-6">
+            <Text className="mb-3 text-base font-semibold text-ink">{capitalize(longDate.format(parseIsoDate(selectedDate)))}</Text>
+            {daySlots.length > 1 ? (
+              <>
+                <Text className="mb-2 text-sm text-[#5B7285]">Elegí un horario</Text>
+                <View className="gap-2" accessibilityRole="radiogroup">
+                  {daySlots.map((slot) => (
+                    <SelectableSlot
+                      key={slot.id}
+                      slot={slot}
+                      selected={slot.id === selection.selectedId}
+                      onPress={() => {
+                        setFailure(null)
+                        selection.select(slot.id)
+                      }}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : (
+              <SelectableSlot slot={daySlots[0]} selected={daySlots[0].id === selection.selectedId} onPress={() => selection.select(daySlots[0].id)} />
+            )}
+          </View>
+        ) : null}
 
         <Text className="mb-3 mt-8 text-lg font-bold text-ink">Viajeros</Text>
         <TravelersStepper
@@ -214,8 +242,11 @@ export function BookingScreen({
   )
 }
 
+const longDate = new Intl.DateTimeFormat('es-BO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+const capitalize = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
+
 function SelectableSlot({ slot, selected, onPress }: { slot: BookableSlot; selected: boolean; onPress: () => void }) {
-  const when = `${slot.date ? formatDate(slot.date) : '—'}${slot.time ? ` · ${slot.time.slice(0, 5)}` : ''}`
+  const when = slot.time ? `Horario ${slot.time.slice(0, 5)}` : 'Día completo'
 
   return (
     <Pressable

@@ -40,6 +40,15 @@ public class PackageAvailabilityRepository(TurisClickDbContext db) : IPackageAva
             .ToListAsync(ct);
     }
 
+    public Task<List<PackageAvailability>> ListInRangeAsync(Guid packageId, DateOnly startDate, DateOnly endDate, CancellationToken ct) =>
+        db.PackageAvailabilities
+            .AsNoTracking()
+            .Where(a => a.PackageId == packageId && a.DepartureDate >= startDate && a.DepartureDate <= endDate)
+            .ToListAsync(ct);
+
     public async Task AddAsync(PackageAvailability availability, CancellationToken ct) =>
         await db.PackageAvailabilities.AddAsync(availability, ct);
+
+    public Task AddRangeAsync(IEnumerable<PackageAvailability> availabilities, CancellationToken ct) =>
+        db.PackageAvailabilities.AddRangeAsync(availabilities, ct);
 }

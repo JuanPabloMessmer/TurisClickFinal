@@ -6,6 +6,7 @@ import {
   AvailabilitySection,
   BackButton,
   BookingBar,
+  DETAIL_DATES_PREVIEW,
   DetailBlock,
   DetailSkeleton,
   Gallery,
@@ -66,8 +67,12 @@ export default function PackageDetailScreen() {
 
             <Gallery images={pkg.data.images} />
 
-            <AvailabilitySection isLoading={availability.isPending} slots={availability.data ?? []}>
-              {availability.data?.map((slot) => (
+            <AvailabilitySection
+              isLoading={availability.isPending}
+              slots={availability.data ?? []}
+              total={availability.data?.length}
+            >
+              {availability.data?.slice(0, DETAIL_DATES_PREVIEW).map((slot) => (
                 <AvailabilityRow key={slot.id} date={slot.departureDate} availableSlots={slot.availableSlots} />
               ))}
             </AvailabilitySection>

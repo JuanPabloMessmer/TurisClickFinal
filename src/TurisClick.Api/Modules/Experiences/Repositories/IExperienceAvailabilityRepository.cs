@@ -16,5 +16,10 @@ public interface IExperienceAvailabilityRepository
     /// <summary>Vista pública para reservar (UC-T-08) — solo OPEN, futuros y con cupo.</summary>
     Task<List<ExperienceAvailability>> ListBookableAsync(Guid experienceId, CancellationToken ct);
 
+    /// <summary>Slots de la experiencia dentro del rango (ambos extremos incluidos) — para detectar duplicados de un alta masiva en una sola consulta.</summary>
+    Task<List<ExperienceAvailability>> ListInRangeAsync(Guid experienceId, DateOnly startDate, DateOnly endDate, CancellationToken ct);
+
     Task AddAsync(ExperienceAvailability availability, CancellationToken ct);
+
+    Task AddRangeAsync(IEnumerable<ExperienceAvailability> availabilities, CancellationToken ct);
 }

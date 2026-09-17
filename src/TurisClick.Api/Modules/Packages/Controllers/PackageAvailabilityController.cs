@@ -20,6 +20,26 @@ public class PackageAvailabilityController(IPackageAvailabilityService availabil
         return StatusCode(StatusCodes.Status201Created, result);
     }
 
+    /// <summary>Calendario del proveedor: genera las salidas concretas de un rango según un patrón semanal.</summary>
+    [HttpPost("{packageId:guid}/availability/bulk")]
+    [Authorize(Policy = "RequireProvider")]
+    public async Task<ActionResult<BulkPackageAvailabilityResponse>> BulkCreate(
+        Guid packageId, [FromBody] BulkCreatePackageAvailabilityRequest request, CancellationToken ct)
+    {
+        var result = await availabilityService.BulkCreateAsync(packageId, request, ct);
+        return request.DryRun ? Ok(result) : StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    /// <summary>Cambiar cupo o abrir/cerrar una salida puntual.</summary>
+    [HttpPatch("{packageId:guid}/availability/{availabilityId:guid}")]
+    [Authorize(Policy = "RequireProvider")]
+    public async Task<ActionResult<PackageAvailabilityResponse>> Update(
+        Guid packageId, Guid availabilityId, [FromBody] Modules.Experiences.Dtos.UpdateAvailabilityRequest request, CancellationToken ct)
+    {
+        var result = await availabilityService.UpdateAsync(packageId, availabilityId, request, ct);
+        return Ok(result);
+    }
+
     /// <summary>Vista de gestión del PROVIDER dueño — todas las salidas, cualquier fecha/estado.</summary>
     [HttpGet("mine/{packageId:guid}/availability")]
     [Authorize(Policy = "RequireProvider")]
