@@ -13,7 +13,10 @@ migraciones, sin `DevelopmentSeeder` y sin tocar V1.
 | `ATTRIBUTIONS.md` | Créditos legibles, generados desde el manifiesto. |
 | `load-catalog.mjs` | Carga idempotente contra la API. `--check` valida el catálogo sin llamar a la API. |
 | `validate-catalog.mjs` | Validación automatizada, sólo lecturas, contra la API real. |
-| `run-catalog.ps1` | Ejecuta el loader o el validador con las contraseñas (Key Vault + DPAPI) sin exponerlas. |
+| `run-catalog.ps1` | Ejecuta el loader o los validadores con las contraseñas (Key Vault + DPAPI) sin exponerlas. |
+| `commons.mjs` | Acceso compartido a Wikimedia Commons (filtro de licencias libres). |
+| `destinations.mjs` / `resolve-destination-images.mjs` | Imagen representativa por destino → `destination-images.manifest.json` y `ATTRIBUTIONS-DESTINOS.md`. |
+| `validate-product-wave.mjs` | Validación real de calendario, imágenes de destinos, onboarding, reserva y asistente IA. |
 
 ## Uso
 
@@ -73,6 +76,13 @@ autor, licencia y enlace a la página de cada archivo. Si más adelante se quier
 la opción natural es agregar `author`/`license`/`sourceUrl` a esas entidades; eso sí requiere migración y
 queda a decisión del equipo.
 
+## Imágenes de destinos
+
+41 de las 47 ciudades tienen imagen (todas las que tienen experiencias). Las 6 restantes (Caranavi, Viacha,
+Colcapirhua, Ivirgarzama, San Lucas y Cabezas) no tienen en Commons una foto representativa con licencia
+libre: quedan sin imagen y la app muestra un fondo neutro. El loader aplica las imágenes con el `PUT` de
+admin (que reemplaza nombre + imagen, conservando el nombre).
+
 ## Datos demo previos
 
 La API no tiene `DELETE` para experiencias, paquetes, usuarios ni reservas, así que nada se borró:
@@ -86,6 +96,9 @@ La API no tiene `DELETE` para experiencias, paquetes, usuarios ni reservas, así
 - Las fechas creadas antes para las experiencias reutilizadas se conservan: en esos días la hora puede ser
   la anterior (la API no permite borrar disponibilidad).
 - `turista.demo@turisclick.dev` queda ACTIVE y **sin reservas**, lista para la demo.
+- `qa.asistente@turisclick.dev` es la cuenta QA de `validate-product-wave.mjs`: guarda preferencias, conversa con
+  el asistente y reserva/cancela (sus reservas quedan CANCELLED). La experiencia "La Paz desde el Teleférico"
+  suma los fines de semana de abril 2027, generados por el calendario durante esa validación.
 
 ## Fuentes de la investigación
 

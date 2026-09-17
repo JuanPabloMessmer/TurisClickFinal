@@ -7,22 +7,24 @@ El Backoffice (`apps/backoffice`) es otra app, para PROVIDER y ADMIN. Comparten 
 `packages/auth-core` y `packages/utils`; **no** comparten componentes: acá todo son primitivas de React
 Native y allá es DOM. Lo único visual en común es la paleta.
 
-## Alcance (Fase 1 + Fase 2)
+## Alcance (Fases 1, 2 y 3)
 
 | Pantalla | Sesión | Casos de uso |
 |---|---|---|
 | Inicio | pública | UC-T-03 (destinos), UC-T-04, UC-T-06 |
 | Explorar (filtros + scroll infinito) | pública | UC-T-04, UC-T-06 |
 | Detalle de experiencia / paquete | pública | UC-T-05, UC-T-07 |
-| Elegir fecha o salida + viajeros (`book/…`) | pública para elegir; crear exige sesión | UC-T-08, UC-T-09 |
+| Elegir fecha o salida en un calendario mensual + viajeros (`book/…`) | pública para elegir; crear exige sesión | UC-T-08, UC-T-09 |
 | Checkout (`checkout/[id]`) | TOURIST | UC-T-19, UC-SYS-02, UC-T-11 |
 | Mis viajes (tab `trips`) | contenido TOURIST; la tab es pública | UC-T-10 |
 | Detalle de reserva (`reservation/[id]`) | TOURIST | UC-T-10, UC-T-11 |
 | Login / Crear cuenta | — | UC-AUTH-01, UC-AUTH-02 |
+| Onboarding de preferencias (`onboarding`) y edición desde Perfil | TOURIST | perfil de viaje |
 | Perfil | con CTA si no hay sesión | — |
+| Asistente (tab `assistant`), chat (`assistant/[id]`), itinerario guardado (`assistant/itinerary/[id]`) | TOURIST | UC-T-12..18, UC-AI-01..06 |
 
-**Fuera de alcance:** chat e itinerarios con IA, mapas, notificaciones, reseñas, favoritos, pasarela de
-pago real, reembolsos, app de proveedor/admin, subida de imágenes y development build.
+**Fuera de alcance:** mapas, notificaciones, reseñas, favoritos, pasarela de pago real, reembolsos, app de
+proveedor/admin, subida de imágenes y development build.
 
 Inicio solo muestra lo que los datos sostienen: destinos, experiencias nuevas y paquetes nuevos (ambas
 búsquedas ordenan por fecha de creación descendente). No hay "populares", "trending" ni "recomendados"
@@ -211,3 +213,32 @@ sesión, login en modal y vuelta a la misma pantalla con la selección intacta �
 se calcula en UTC (en Bolivia, desde las 20:00 locales los slots del día desaparecen); dos formas de 410 al
 pagar; `PAYMENT_FAILED` nunca se escribe; `totals` incluye líneas canceladas. Detalle en
 `docs/backend-architecture.md` → "Deuda técnica conocida".
+
+## Fase 3: calendario, destinos, onboarding y asistente IA
+
+**Calendario.** Reservar ya no lista cientos de fechas: `features/booking/AvailabilityCalendar` muestra un mes
+(lunes a domingo) con cuatro estados distinguibles por color y forma — disponible, seleccionado, sin cupo y
+pasado —, navegación limitada entre el mes actual y el último con fechas, y horarios solo si el día tiene
+varios. La lógica pura vive en `calendarModel.ts` y en `@turisclick/utils` (`calendar.ts`), compartida con
+el calendario del proveedor en el Backoffice. Los detalles muestran solo las próximas 3 fechas.
+
+**Destinos con imagen.** `Destination.imageUrl` (Wikimedia Commons, atribución en
+`tools/demo-catalog/ATTRIBUTIONS-DESTINOS.md`). `DestinationCard` y `DestinationBanner` caen al placeholder
+si no hay imagen o no carga, sin cambiar el layout.
+
+**Onboarding.** Después de crear la cuenta: intereses (categorías reales), ritmo, con quién viaja y gasto,
+más un resumen editable. Todo opcional y salteable; nada se guarda hasta confirmar. Se persiste en
+`PUT /api/tourists/me/preferences` y se edita desde Perfil.
+
+**Asistente.** Usa el agente del backend tal cual (en Azure, el proveedor determinístico; en desarrollo puede
+ser Ollama). La app nunca arma itinerarios ni precios: muestra lo que devuelve la API.
+
+- El perfil de viaje es el punto de partida; lo que el turista pide en la conversación siempre gana. La
+  respuesta informa qué se tomó del perfil (`profileHints`).
+- Datos faltantes → respuestas rápidas; con propuesta → refinamientos de un toque con las frases que el
+  backend interpreta ("Quiero algo más barato", "Menos aventura", "Cambiá el segundo día"…).
+- Cada ítem muestra foto (del detalle público, cacheado), fecha, precio vigente, estado de disponibilidad y
+  "¿Por qué?" con los hechos verificados.
+- Guardar no retiene cupos. Reservar es atómico (todo o nada); si cambió algún precio, se piden aceptar los
+  nuevos antes de reservar, y después se sigue al checkout de siempre.
+- Las keys `['preferences', userId]` y `['ai', userId]` son privadas y se borran al salir.
