@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react-native'
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react-native'
 import ProfileScreen from '@/../app/(tabs)/profile'
 import { useSession } from '@/auth/session'
+import { createTestQueryClient, ok, withClient } from '@/test-utils'
 
 /**
  * Perfil es la única puerta a lo privado en Fase 1, y la regla es que NO bloquea la app: sin sesión
@@ -9,6 +10,14 @@ import { useSession } from '@/auth/session'
 
 const mockPush = jest.fn()
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, back: jest.fn() }) }))
+const mockGet = jest.fn()
+jest.mock('@/lib/httpClient', () => ({ httpClient: { get: (...args: unknown[]) => mockGet(...args) } }))
+
+/** Perfil consulta las preferencias del turista: cada render lleva su propio QueryClient. */
+const render = (ui: React.ReactElement) => {
+  const Wrapper = withClient(createTestQueryClient())
+  return rtlRender(<Wrapper>{ui}</Wrapper>)
+}
 jest.mock('@/auth/session', () => ({ useSession: jest.fn() }))
 
 const mockedUseSession = useSession as jest.MockedFunction<typeof useSession>
@@ -26,7 +35,10 @@ function givenSession(overrides: Partial<ReturnType<typeof useSession>>) {
   })
 }
 
-beforeEach(() => jest.clearAllMocks())
+beforeEach(() => {
+  jest.clearAllMocks()
+  mockGet.mockReturnValue(ok({ categories: [], onboardingCompleted: false }))
+})
 
 describe('invitado', () => {
   beforeEach(() => givenSession({ status: 'unauthenticated' }))
@@ -93,10 +105,37 @@ describe('turista autenticado', () => {
     expect(mockLogout).toHaveBeenCalled()
   })
 
-  it('no ofrece editar el perfil, porque no existe endpoint para eso', () => {
+  it('no ofrece editar los datos de la cuenta, porque no existe endpoint para eso', () => {
     render(<ProfileScreen />)
 
     expect(screen.queryByText(/editar/i)).toBeNull()
+  })
+
+  it('sin preferencias invita a completarlas y lleva al onboarding en modo edición', async () => {
+    render(<ProfileScreen />)
+
+    fireEvent.press(await screen.findByText('Completar mis preferencias'))
+
+    expect(mockGet).toHaveBeenCalledWith('/api/tourists/me/preferences')
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/onboarding', params: { mode: 'edit' } })
+  })
+
+  it('con preferencias muestra el resumen guardado', async () => {
+    mockGet.mockReturnValue(
+      ok({
+        categories: [{ id: 'c1', name: 'Naturaleza' }, { id: 'c2', name: 'Gastronomía' }],
+        travelPace: 'RELAXED',
+        travelParty: 'COUPLE',
+        budgetLevel: 'MODERATE',
+        onboardingCompleted: true,
+      }),
+    )
+    render(<ProfileScreen />)
+
+    await waitFor(() => expect(screen.getByText('Naturaleza')).toBeTruthy())
+    expect(screen.getByText('Gastronomía')).toBeTruthy()
+    expect(screen.getByText('Ritmo tranquilo · En pareja · Presupuesto moderado')).toBeTruthy()
+    expect(screen.getByText('Ajustar preferencias')).toBeTruthy()
   })
 })
 

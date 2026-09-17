@@ -176,7 +176,9 @@ export function useCancelReservation(id: string) {
  * se toca.
  */
 export async function clearPrivateQueries(queryClient: QueryClient, userId: string) {
-  const queryKey = reservationKeys.scope(userId)
-  await queryClient.cancelQueries({ queryKey })
-  queryClient.removeQueries({ queryKey })
+  // Todo lo privado del turista: reservas, perfil de viaje y conversaciones con el asistente.
+  for (const queryKey of [reservationKeys.scope(userId), ['preferences', userId], ['ai', userId]]) {
+    await queryClient.cancelQueries({ queryKey })
+    queryClient.removeQueries({ queryKey })
+  }
 }

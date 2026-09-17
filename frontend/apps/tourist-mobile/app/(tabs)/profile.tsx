@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router'
-import { ScrollView, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useSession } from '@/auth/session'
+import { useMyPreferences } from '@/features/preferences/api'
+import { isEmptyProfile, preferenceSummary } from '@/features/preferences/model'
 import { API_CONFIG, API_TARGET_LABEL, APP_VERSION } from '@/lib/env'
 import { Button, Screen } from '@/ui'
 
@@ -53,6 +55,8 @@ function SignedIn() {
         Los datos de la cuenta son de solo lectura: el backend todavía no expone un endpoint de edición de
         perfil, así que ofrecer un formulario sería prometer algo que no existe.
       */}
+      <TravelProfileCard />
+
       <Button label="Ver mis viajes" onPress={() => router.push('/trips')} />
 
       <Button label="Cerrar sesión" variant="outline" onPress={() => void logout()} />
@@ -76,6 +80,60 @@ function SignedOut() {
       <View className="gap-3">
         <Button label="Iniciar sesión" onPress={() => router.push('/(auth)/login')} />
         <Button label="Crear cuenta" variant="outline" onPress={() => router.push('/(auth)/register')} />
+      </View>
+    </View>
+  )
+}
+
+/**
+ * Perfil de viaje (onboarding). Es lo único editable del perfil: los datos de la cuenta siguen siendo de
+ * solo lectura porque no hay endpoint para cambiarlos.
+ */
+function TravelProfileCard() {
+  const router = useRouter()
+  const { data, isPending, isError, refetch } = useMyPreferences()
+
+  if (isPending) return <View className="h-32 rounded-2xl bg-[#E2E8F0]" accessibilityLabel="Cargando preferencias" />
+
+  if (isError) {
+    return (
+      <Pressable accessibilityRole="button" onPress={() => void refetch()} className="rounded-2xl bg-surface p-5 active:opacity-80">
+        <Text className="text-base text-[#5B7285]">No pudimos cargar tus preferencias. Tocá para reintentar.</Text>
+      </Pressable>
+    )
+  }
+
+  const summary = preferenceSummary(data)
+  const empty = isEmptyProfile(data)
+  const goEdit = () => router.push({ pathname: '/onboarding', params: { mode: 'edit' } })
+
+  return (
+    <View className="rounded-2xl bg-surface p-5" style={{ elevation: 2 }}>
+      <Text className="text-lg font-bold text-ink">Tu perfil de viaje</Text>
+      {empty ? (
+        <Text className="mt-2 text-base leading-6 text-[#5B7285]">
+          Contanos qué te gusta y el asistente te recomienda mejor, sin que tengas que repetirlo en cada viaje.
+        </Text>
+      ) : (
+        <View className="mt-3 gap-2">
+          {summary.interests.length > 0 ? (
+            <View className="flex-row flex-wrap gap-2">
+              {summary.interests.map((name) => (
+                <View key={name} className="rounded-full bg-primary/10 px-3 py-1">
+                  <Text className="text-sm font-medium text-primary">{name}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          <Text className="text-sm text-[#5B7285]">
+            {[summary.pace && `Ritmo ${summary.pace.toLowerCase()}`, summary.party, summary.budget && `Presupuesto ${summary.budget.toLowerCase()}`]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
+        </View>
+      )}
+      <View className="mt-4">
+        <Button label={empty ? 'Completar mis preferencias' : 'Ajustar preferencias'} variant="outline" onPress={goEdit} />
       </View>
     </View>
   )

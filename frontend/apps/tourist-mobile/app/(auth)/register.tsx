@@ -6,7 +6,6 @@ import { z } from 'zod'
 import { AuthScreenShell, AuthSwitchLink } from '@/auth/AuthScreenShell'
 import { NotATouristAccountError, useSession } from '@/auth/session'
 import { toApiError } from '@/lib/errors'
-import { useCloseModal } from '@/lib/navigation'
 import { Button, FormError, TextField } from '@/ui'
 
 /** Los límites replican exactamente los de RegisterTouristRequest en el backend. */
@@ -21,7 +20,6 @@ type RegisterForm = z.infer<typeof schema>
 
 export default function RegisterScreen() {
   const router = useRouter()
-  const closeModal = useCloseModal()
   const { register } = useSession()
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -34,7 +32,9 @@ export default function RegisterScreen() {
     setSubmitError(null)
     try {
       await register(values)
-      closeModal()
+      // Cuenta nueva: onboarding de preferencias en lugar de cerrar el modal. Se reemplaza la pantalla
+      // de registro para que "atrás" no vuelva al formulario.
+      router.replace('/onboarding')
     } catch (error) {
       setSubmitError(
         error instanceof NotATouristAccountError ? error.message : toApiError(error).message,

@@ -72,6 +72,34 @@ export type ReservationResponse = Schemas['ReservationResponse']
 export type ReservationResponsePagedResult = Schemas['ReservationResponsePagedResult']
 export type ReservationTotalResponse = Schemas['ReservationTotalResponse']
 
+export type TouristPreferencesResponse = Schemas['TouristPreferencesResponse']
+export type UpdateTouristPreferencesRequest = Schemas['UpdateTouristPreferencesRequest']
+
+/** Valores válidos del perfil de viaje (Modules/Preferences en el backend). */
+export const TravelPaces = ['RELAXED', 'BALANCED', 'INTENSE'] as const
+export type TravelPaceValue = (typeof TravelPaces)[number]
+export const TravelParties = ['SOLO', 'COUPLE', 'FRIENDS', 'FAMILY'] as const
+export type TravelPartyValue = (typeof TravelParties)[number]
+export const BudgetLevels = ['ECONOMY', 'MODERATE', 'PREMIUM'] as const
+export type BudgetLevelValue = (typeof BudgetLevels)[number]
+
+export type ConversationResponse = Schemas['ConversationResponse']
+export type ConversationSummaryResponse = Schemas['ConversationSummaryResponse']
+export type ConversationSummaryResponsePagedResult = Schemas['ConversationSummaryResponsePagedResult']
+export type MessageResponse = Schemas['MessageResponse']
+export type AiPreferencesResponse = Schemas['PreferencesResponse']
+export type SendMessageRequest = Schemas['SendMessageRequest']
+export type SendMessageResponse = Schemas['SendMessageResponse']
+export type ItineraryResponse = Schemas['ItineraryResponse']
+export type ItineraryItemResponse = Schemas['ItineraryItemResponse']
+export type ItineraryTotalResponse = Schemas['ItineraryTotalResponse']
+export type SavedItinerarySummaryResponse = Schemas['SavedItinerarySummaryResponse']
+export type SavedItinerarySummaryResponsePagedResult = Schemas['SavedItinerarySummaryResponsePagedResult']
+export type ItemExplanationResponse = Schemas['ItemExplanationResponse']
+export type BookItineraryRequest = Schemas['BookItineraryRequest']
+export type BookItineraryResponse = Schemas['BookItineraryResponse']
+export type ItineraryPriceChangeResponse = Schemas['ItineraryPriceChangeResponse']
+
 /**
  * Valores reales de `ReservationResponse.status`. `PAYMENT_FAILED` existe en el enum del backend pero hoy
  * ningún código lo escribe: un pago rechazado deja la reserva en `PENDING_PAYMENT`.

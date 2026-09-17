@@ -22,6 +22,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F6F9FA' } }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(auth)" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
           </Stack>
         </SessionProvider>
       </QueryClientProvider>
