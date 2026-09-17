@@ -5,61 +5,15 @@
 // Uso: node resolve-images.mjs [--refresh key1,key2]   (sin --refresh sólo resuelve las que faltan)
 import { readFile, writeFile } from 'node:fs/promises'
 import { EXPERIENCES } from './catalog.mjs'
+import { commons, IIPROPS, toEntry } from './commons.mjs'
 
 const MANIFEST = new URL('./images.manifest.json', import.meta.url)
 const ATTRIBUTIONS = new URL('./ATTRIBUTIONS.md', import.meta.url)
-const COMMONS = 'https://commons.wikimedia.org/w/api.php'
-const UA = 'TurisClickDemoCatalog/1.0 (thesis demo; https://github.com/JuanPabloMessmer/TurisClickFinal)'
-const WIDTH = 1280
 const PER_EXPERIENCE = 3
-const PAUSE_MS = 1500
 
 const refresh = new Set((process.argv.find((a, i) => process.argv[i - 1] === '--refresh') ?? '').split(',').filter(Boolean))
 let manifest = { source: 'Wikimedia Commons', items: {} }
 try { manifest = JSON.parse(await readFile(MANIFEST, 'utf8')) } catch { /* primera ejecución */ }
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-async function commons(params) {
-  const url = `${COMMONS}?${new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', ...params })}`
-  for (let attempt = 1; ; attempt++) {
-    await sleep(PAUSE_MS)
-    const res = await fetch(url, { headers: { 'User-Agent': UA } })
-    if (res.status === 429 || res.status >= 500) {
-      if (attempt >= 5) throw new Error(`Commons ${res.status}`)
-      await sleep(10_000 * attempt)
-      continue
-    }
-    return res.json()
-  }
-}
-
-const IIPROPS = { prop: 'imageinfo', iiprop: 'url|size|mime|extmetadata', iiurlwidth: String(WIDTH), iiextmetadatafilter: 'LicenseShortName|LicenseUrl|Artist|Categories|Restrictions' }
-const FREE_LICENSE = /^(cc[ -]by(-sa)?([ -]\d(\.\d)?)?( [a-z]{2,})?|cc0( 1\.0)?|public domain|pd\b.*)$/i
-const UNWANTED = /watermark|logo|\bmaps?\b|mapa|plano|coat of arms|escudo|flag|bandera|diagram|drawing|scan|stamp|sello|poster|afiche|screenshot|montage|collage/i
-
-const strip = (html) => (html ?? '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
-function toEntry(page, { strict }) {
-  const info = page.imageinfo?.[0]
-  if (!info || info.mime !== 'image/jpeg') return null
-  const meta = info.extmetadata ?? {}
-  const license = strip(meta.LicenseShortName?.value)
-  if (!FREE_LICENSE.test(license)) return null
-  if (UNWANTED.test(page.title) || UNWANTED.test(meta.Categories?.value ?? '')) return null
-  if (strip(meta.Restrictions?.value)) return null // p. ej. trademarked / personality rights
-  const ratio = info.width / info.height
-  if (strict && (info.width < 1000 || ratio < 1.2 || ratio > 2.2)) return null
-  if (!strict && (info.width < 800 || ratio < 1)) return null
-  const url = info.thumburl ?? info.url
-  if (url.length > 500) return null
-  return {
-    file: page.title,
-    url,
-    pageUrl: info.descriptionurl,
-    author: strip(meta.Artist?.value) || 'Desconocido',
-    license,
-    licenseUrl: meta.LicenseUrl?.value ?? null,
-  }
-}
 
 for (const key of Object.keys(manifest.items)) if (!EXPERIENCES.some((e) => e.key === key)) delete manifest.items[key]
 const used = new Set(Object.values(manifest.items).flat().map((i) => i.file))

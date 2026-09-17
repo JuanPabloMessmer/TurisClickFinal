@@ -3000,6 +3000,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tourists/me/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TouristPreferencesResponse"];
+                        "application/json": components["schemas"]["TouristPreferencesResponse"];
+                        "text/json": components["schemas"]["TouristPreferencesResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateTouristPreferencesRequest"];
+                    "text/json": components["schemas"]["UpdateTouristPreferencesRequest"];
+                    "application/*+json": components["schemas"]["UpdateTouristPreferencesRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TouristPreferencesResponse"];
+                        "application/json": components["schemas"]["TouristPreferencesResponse"];
+                        "text/json": components["schemas"]["TouristPreferencesResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3190,6 +3254,8 @@ export interface components {
             type: string;
             /** Format: uuid */
             parentId?: string | null;
+            /** Format: uri */
+            imageUrl?: string | null;
         };
         CreateExperienceAvailabilityRequest: {
             /** Format: date */
@@ -3252,6 +3318,7 @@ export interface components {
             /** Format: uuid */
             parentId?: string | null;
             parentName?: string | null;
+            imageUrl?: string | null;
         };
         /**
          * Format: int32
@@ -3556,6 +3623,7 @@ export interface components {
             budgetTotal?: number | null;
             budgetCurrency?: string | null;
             restrictionsNotes?: string | null;
+            travelPace?: string | null;
             categories?: components["schemas"]["CategoryResponse"][] | null;
         };
         ProblemDetails: {
@@ -3576,6 +3644,7 @@ export interface components {
             /** Format: uuid */
             parentId?: string | null;
             parentName?: string | null;
+            imageUrl?: string | null;
             /** Format: int32 */
             publishedExperienceCount?: number;
         };
@@ -3737,6 +3806,7 @@ export interface components {
             missingInformation?: string[] | null;
             itinerary?: components["schemas"]["ItineraryResponse"];
             warnings?: string[] | null;
+            profileHints?: string[] | null;
         };
         SkippedAvailabilityResponse: {
             /** Format: date */
@@ -3749,6 +3819,17 @@ export interface components {
             /** Format: date */
             departureDate?: string;
             reason?: string | null;
+        };
+        TouristPreferencesResponse: {
+            categories?: components["schemas"]["CategoryResponse"][] | null;
+            travelPace?: string | null;
+            travelParty?: string | null;
+            budgetLevel?: string | null;
+            onboardingCompleted?: boolean;
+            /** Format: date-time */
+            onboardingCompletedAt?: string | null;
+            /** Format: date-time */
+            updatedAt?: string | null;
         };
         UpdateAvailabilityRequest: {
             /** Format: int32 */
@@ -3768,6 +3849,8 @@ export interface components {
         };
         UpdateDestinationRequest: {
             name: string;
+            /** Format: uri */
+            imageUrl?: string | null;
         };
         UpdateExperienceRequest: {
             title: string;
@@ -3799,6 +3882,13 @@ export interface components {
             currency: string;
             items?: components["schemas"]["PackageItemRequest"][] | null;
             images?: components["schemas"]["PackageImageRequest"][] | null;
+        };
+        UpdateTouristPreferencesRequest: {
+            categoryIds?: string[] | null;
+            travelPace?: string | null;
+            travelParty?: string | null;
+            budgetLevel?: string | null;
+            completeOnboarding?: boolean;
         };
         /**
          * Format: int32

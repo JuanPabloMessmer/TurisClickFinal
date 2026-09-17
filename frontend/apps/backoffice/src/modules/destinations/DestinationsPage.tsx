@@ -21,6 +21,7 @@ const createSchema = z.object({
   name: z.string().min(2).max(150),
   type: z.enum(['COUNTRY', 'REGION', 'CITY']),
   parentId: z.string().optional(),
+  imageUrl: z.union([z.literal(''), z.url({ protocol: /^https?$/ }).max(500)]).optional(),
 })
 type CreateFormValues = z.infer<typeof createSchema>
 
@@ -71,6 +72,7 @@ export function DestinationsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-20">Imagen</TableHead>
               <TableHead>Nombre</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Padre</TableHead>
@@ -78,12 +80,19 @@ export function DestinationsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableLoadingRow colSpan={4} />}
+            {isLoading && <TableLoadingRow colSpan={5} />}
             {!isLoading && destinations.length === 0 && (
-              <TableEmptyRow colSpan={4} icon={MapPinned} title="No hay destinos todavía" description="Usá 'Crear destino' para dar de alta el primero." />
+              <TableEmptyRow colSpan={5} icon={MapPinned} title="No hay destinos todavía" description="Usá 'Crear destino' para dar de alta el primero." />
             )}
             {destinations.map((destination) => (
               <TableRow key={destination.id}>
+                <TableCell>
+                  {destination.imageUrl ? (
+                    <img src={destination.imageUrl} alt="" loading="lazy" className="h-10 w-16 rounded object-cover" />
+                  ) : (
+                    <div className="h-10 w-16 rounded bg-muted" aria-label="Sin imagen" />
+                  )}
+                </TableCell>
                 <TableCell className="font-medium">{destination.name}</TableCell>
                 <TableCell>
                   <Badge variant="neutral">{typeLabel[destination.type ?? ''] ?? destination.type}</Badge>
@@ -139,7 +148,7 @@ function CreateDialogContent({
 
   const form = useForm<CreateFormValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: '', type: 'COUNTRY', parentId: undefined },
+    defaultValues: { name: '', type: 'COUNTRY', parentId: undefined, imageUrl: '' },
   })
   const selectedType = form.watch('type')
   const requiredParentType = parentTypeFor[selectedType]
@@ -152,6 +161,7 @@ function CreateDialogContent({
         name: values.name,
         type: values.type,
         parentId: requiredParentType ? values.parentId : undefined,
+        imageUrl: values.imageUrl || undefined,
       })
       onClose()
     } catch (error) {
@@ -188,6 +198,11 @@ function CreateDialogContent({
               <SelectItem value="CITY">Ciudad</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Imagen representativa (URL, opcional)</Label>
+          <Input placeholder="https://upload.wikimedia.org/…" {...form.register('imageUrl')} />
+          {form.formState.errors.imageUrl && <p className="text-xs text-destructive">Ingresá una URL http(s) válida.</p>}
         </div>
         {requiredParentType && (
           <div className="flex flex-col gap-1.5">
@@ -237,12 +252,14 @@ function RenameDialog({ destination, onClose }: { destination: DestinationRespon
 function RenameDialogContent({ destination, onClose }: { destination: DestinationResponse; onClose: () => void }) {
   const updateMutation = useUpdateDestination()
   const [name, setName] = useState(destination.name ?? '')
+  // El PUT reemplaza nombre e imagen juntos: se precarga la actual para no borrarla al renombrar.
+  const [imageUrl, setImageUrl] = useState(destination.imageUrl ?? '')
   const [error, setError] = useState<string | null>(null)
 
   const onSave = async () => {
     setError(null)
     try {
-      await updateMutation.mutateAsync({ id: destination.id!, body: { name } })
+      await updateMutation.mutateAsync({ id: destination.id!, body: { name, imageUrl: imageUrl.trim() || null } })
       onClose()
     } catch (err) {
       setError(getErrorMessage(err))
@@ -257,7 +274,16 @@ function RenameDialogContent({ destination, onClose }: { destination: Destinatio
       <div className="flex flex-col gap-1.5">
         <Label>Nombre</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-        <p className="text-xs text-muted-foreground">Solo se puede editar el nombre — tipo y padre son estructurales.</p>
+        <p className="text-xs text-muted-foreground">Tipo y padre son estructurales y no se editan.</p>
+      </div>
+      <div className="mt-3 flex flex-col gap-1.5">
+        <Label>Imagen representativa (URL)</Label>
+        <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" />
+        {imageUrl.trim() ? (
+          <img src={imageUrl.trim()} alt="Vista previa" className="mt-1 h-32 w-full rounded-md object-cover" />
+        ) : (
+          <p className="text-xs text-muted-foreground">Sin imagen: la app muestra un fondo neutro.</p>
+        )}
       </div>
       {error && (
         <Alert variant="destructive" className="mt-2">

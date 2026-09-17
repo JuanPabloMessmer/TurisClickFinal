@@ -68,6 +68,12 @@ for (const c of NEW_CITIES) {
 }
 const cityByName = Object.fromEntries(cities.map((c) => [c.name, c]))
 
+const destinationImages = JSON.parse(await readFile(new URL('./destination-images.manifest.json', import.meta.url), 'utf8')).items
+const wrongImages = Object.entries(destinationImages).filter(([name, image]) => cityByName[name]?.imageUrl !== image.url).map(([name]) => name)
+ok(wrongImages.length === 0, `imágenes de destinos aplicadas (${Object.keys(destinationImages).length})`, wrongImages.join(', '))
+const catalogCitiesWithoutImage = [...new Set(EXPERIENCES.map((e) => e.city))].filter((name) => !cityByName[name]?.imageUrl)
+ok(catalogCitiesWithoutImage.length === 0, 'toda ciudad con experiencias tiene imagen', catalogCitiesWithoutImage.join(', '))
+
 // ───────────────────────── experiencias públicas ─────────────────────────
 console.log('\n===== EXPERIENCIAS PÚBLICAS =====')
 const publicExps = await allPublic('/api/experiences')
@@ -100,7 +106,7 @@ ok(comboRes.length === combo.length, 'filtro combinado La Paz + Aventura', `${co
 console.log('\n===== DETALLE, IMÁGENES Y DISPONIBILIDAD =====')
 const providerByKey = Object.fromEntries(PROVIDERS.map((p) => [p.key, p]))
 const details = {}
-const imageUrls = new Set()
+const imageUrls = new Set(Object.values(destinationImages).map((i) => i.url))
 let totalDates = 0
 let minDates = Infinity
 let lastDate = ''

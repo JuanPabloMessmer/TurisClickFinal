@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native'
 import { useOnTouristLeave } from '@/auth/useOnTouristLeave'
 import { ExperienceCard, PackageCard } from '@/features/catalog/cards'
 import { CatalogList } from '@/features/catalog/CatalogList'
+import { DestinationBanner } from '@/features/catalog/DestinationCard'
 import { FilterSheet } from '@/features/catalog/FilterSheet'
 import {
   EMPTY_FILTERS,
@@ -13,7 +14,7 @@ import {
   type CatalogFilters,
   type CatalogTab,
 } from '@/features/catalog/filters'
-import { useInfiniteExperiences, useInfinitePackages } from '@/features/catalog/queries'
+import { useCities, useInfiniteExperiences, useInfinitePackages } from '@/features/catalog/queries'
 import { Badge, Screen, SegmentedControl } from '@/ui'
 
 /**
@@ -61,6 +62,9 @@ export default function ExploreScreen() {
   const experiences = useInfiniteExperiences(useMemo(() => toExperienceParams(filters), [filters]))
   const packages = useInfinitePackages(useMemo(() => toPackageParams(filters), [filters]))
 
+  const cities = useCities()
+  const selectedCity = filters.destinationId ? cities.data?.find((city) => city.id === filters.destinationId) : undefined
+
   const activeFilterCount = countActiveFilters(filters, tab)
   const totalCount = (tab === 'experiences' ? experiences : packages).data?.pages[0]?.totalCount
   const emptyMessage =
@@ -72,6 +76,12 @@ export default function ExploreScreen() {
     <Screen>
       <View className="px-5 pb-4 pt-2">
         <Text className="text-2xl font-bold text-ink">Explorar</Text>
+
+        {selectedCity ? (
+          <View className="mt-4">
+            <DestinationBanner destination={selectedCity} onClear={() => setFilters({ ...filters, destinationId: undefined })} />
+          </View>
+        ) : null}
 
         <View className="mt-4">
           <SegmentedControl

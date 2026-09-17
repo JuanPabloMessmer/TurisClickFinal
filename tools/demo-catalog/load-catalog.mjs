@@ -141,6 +141,19 @@ for (const city of NEW_CITIES) {
   console.log(`destino ${city.name}: creado en ${city.region}`)
 }
 destinations = items(must(await call('GET', '/api/destinations'), 'destinos'))
+
+// Imagen representativa por destino (PUT de admin: reemplazo de nombre + imagen, el nombre se conserva).
+const destinationImages = JSON.parse(await readFile(new URL('./destination-images.manifest.json', import.meta.url), 'utf8')).items
+let imagesApplied = 0
+for (const [name, image] of Object.entries(destinationImages)) {
+  const d = destinations.find((x) => x.type === 'CITY' && x.name === name)
+  if (!d) { console.log(`imagen de destino: ${name} no existe, se omite`); continue }
+  if (d.imageUrl === image.url) continue
+  must(await admin.call('PUT', `/api/admin/destinations/${d.id}`, { name: d.name, imageUrl: image.url }), `imagen de ${name}`)
+  imagesApplied++
+}
+console.log(`imágenes de destinos: ${imagesApplied} actualizadas, ${Object.keys(destinationImages).length} en el manifiesto`)
+
 const cityId = (name) => {
   const d = destinations.find((x) => x.type === 'CITY' && x.name === name)
   if (!d) throw new Error(`no existe la ciudad ${name}`)

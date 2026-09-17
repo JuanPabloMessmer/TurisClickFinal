@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router'
 import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
 import { CardSkeleton, ExperienceCard, PackageCard } from '@/features/catalog/cards'
-import { byPublishedContent, experienceCountLabel } from '@/features/catalog/destinations'
+import { DestinationCard, DestinationCardSkeleton } from '@/features/catalog/DestinationCard'
+import { byPublishedContent } from '@/features/catalog/destinations'
 import { useCities, useExperiences, usePackages } from '@/features/catalog/queries'
 import { toApiError } from '@/lib/errors'
 import { colors } from '@/theme/colors'
@@ -112,36 +113,26 @@ function DestinationsRow() {
 
   return (
     <View className="mt-2">
-      <SectionHeader title="Explorá destinos" />
+      <SectionHeader title="Explorá destinos" subtitle="Ciudades con experiencias reales para reservar" />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
       >
         {isPending
-          ? [0, 1, 2].map((key) => <View key={key} className="h-24 w-36 rounded-2xl bg-[#E2E8F0]" />)
-          : byPublishedContent(data).map((city) => {
-              const count = experienceCountLabel(city.publishedExperienceCount)
-              return (
-                <Pressable
-                  key={city.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Explorar ${city.name}`}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/explore',
-                      params: { destinationId: city.id, shortcutAt: nextShortcutToken() },
-                    })
-                  }
-                  className="h-24 w-36 justify-end rounded-2xl bg-primary p-3 active:opacity-80"
-                >
-                  <Text className="text-sm font-semibold text-white" numberOfLines={2}>
-                    {city.name}
-                  </Text>
-                  {count ? <Text className="mt-0.5 text-xs text-white/75">{count}</Text> : null}
-                </Pressable>
-              )
-            })}
+          ? [0, 1, 2].map((key) => <DestinationCardSkeleton key={key} />)
+          : byPublishedContent(data).map((city) => (
+              <DestinationCard
+                key={city.id}
+                destination={city}
+                onPress={() =>
+                  router.push({
+                    pathname: '/explore',
+                    params: { destinationId: city.id, shortcutAt: nextShortcutToken() },
+                  })
+                }
+              />
+            ))}
       </ScrollView>
     </View>
   )

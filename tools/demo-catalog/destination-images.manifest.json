@@ -1,0 +1,356 @@
+{
+  "rejected": {
+    "Riberalta": [
+      "File:Riberalta Airport Hall.jpg"
+    ],
+    "Caranavi": [
+      "File:Manduca sexta MHNT CUT 2010 0 104 Caranavi, La Paz Bolivia male dorsal.jpg"
+    ],
+    "Viacha": [
+      "File:Grupo de música autóctono llamado \"Centro Viacha Aymara\" creado en 1996, dentro de la iglesia San Agustín de Viacha.jpg"
+    ],
+    "Colcapirhua": [
+      "File:Cementerio de la ciudad colcapirhua 02.jpg"
+    ],
+    "Ivirgarzama": [
+      "File:ISS-46 Bolivia, confluence of Chimoré, Ichilo and Mamoré River.jpg"
+    ],
+    "San Lucas": [
+      "File:Petaca banderita (Abudefduf troschelii), Cabo San Lucas, Baja California, México, 2024-12-18, DD 101.jpg"
+    ],
+    "Cabezas": [
+      "File:Dos Cabezas-Dos Cabezas Pioneer Cemetery-1.jpg"
+    ]
+  },
+  "source": "Wikimedia Commons",
+  "items": {
+    "Santa Cruz de la Sierra": {
+      "file": "File:Catedral de Santa Cruz de la Sierra - Bolivia.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/Catedral_de_Santa_Cruz_de_la_Sierra_-_Bolivia.jpg/1280px-Catedral_de_Santa_Cruz_de_la_Sierra_-_Bolivia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Catedral_de_Santa_Cruz_de_la_Sierra_-_Bolivia.jpg",
+      "author": "AriomPardo",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "La Paz": {
+      "file": "File:Ciudad de La Paz y Nevado Illimani (Bolivia).jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d1/Ciudad_de_La_Paz_y_Nevado_Illimani_%28Bolivia%29.jpg/1280px-Ciudad_de_La_Paz_y_Nevado_Illimani_%28Bolivia%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Ciudad_de_La_Paz_y_Nevado_Illimani_(Bolivia).jpg",
+      "author": "Valdiney Pimenta from Campinas - SP, Brazil",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+    },
+    "Cochabamba": {
+      "file": "File:Cristo de la Concordia 1.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/Cristo_de_la_Concordia_1.jpg/1280px-Cristo_de_la_Concordia_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Cristo_de_la_Concordia_1.jpg",
+      "author": "Jose Breidy Gonzales Claros",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Sucre": {
+      "file": "File:Plaza 25 de Mayo (Sucre) 1.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/Plaza_25_de_Mayo_%28Sucre%29_1.jpg/1280px-Plaza_25_de_Mayo_%28Sucre%29_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Plaza_25_de_Mayo_(Sucre)_1.jpg",
+      "author": "Mx._Granger",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+    },
+    "Tarija": {
+      "file": "File:Los parrales de uva en el valle de Concepción en tarija.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Los_parrales_de_uva_en_el_valle_de_Concepci%C3%B3n_en_tarija.jpg/1280px-Los_parrales_de_uva_en_el_valle_de_Concepci%C3%B3n_en_tarija.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Los_parrales_de_uva_en_el_valle_de_Concepci%C3%B3n_en_tarija.jpg",
+      "author": "Franz Tamayo Daza",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Uyuni": {
+      "file": "File:Reflection on the Salar de Uyuni, bolivia.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Reflection_on_the_Salar_de_Uyuni%2C_bolivia.jpg/1280px-Reflection_on_the_Salar_de_Uyuni%2C_bolivia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Reflection_on_the_Salar_de_Uyuni,_bolivia.jpg",
+      "author": "Christopher Crouzet",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Potosí": {
+      "file": "File:Cerro Rico over Potosí, Bolivia.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Cerro_Rico_over_Potos%C3%AD%2C_Bolivia.jpg/1280px-Cerro_Rico_over_Potos%C3%AD%2C_Bolivia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Cerro_Rico_over_Potos%C3%AD,_Bolivia.jpg",
+      "author": "Jbmurray",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Oruro": {
+      "file": "File:Ciudad de Oruro, Bolivia.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/Ciudad_de_Oruro%2C_Bolivia.jpg/1280px-Ciudad_de_Oruro%2C_Bolivia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Ciudad_de_Oruro,_Bolivia.jpg",
+      "author": "Parallelepiped09",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Copacabana": {
+      "file": "File:Bolivia - View of Copacabana and Lake Titicaca.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/Bolivia_-_View_of_Copacabana_and_Lake_Titicaca.jpg/1280px-Bolivia_-_View_of_Copacabana_and_Lake_Titicaca.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Bolivia_-_View_of_Copacabana_and_Lake_Titicaca.jpg",
+      "author": "P. Hughes",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0"
+    },
+    "Coroico": {
+      "file": "File:Coroico nubes y montañas.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ee/Coroico_nubes_y_monta%C3%B1as.jpg/1280px-Coroico_nubes_y_monta%C3%B1as.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Coroico_nubes_y_monta%C3%B1as.jpg",
+      "author": "Alhen",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Rurrenabaque": {
+      "file": "File:Vista del río que divide Rurrenabaque de San Buenaventura, Bolivia.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/38/Vista_del_r%C3%ADo_que_divide_Rurrenabaque_de_San_Buenaventura%2C_Bolivia.jpg/1280px-Vista_del_r%C3%ADo_que_divide_Rurrenabaque_de_San_Buenaventura%2C_Bolivia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Vista_del_r%C3%ADo_que_divide_Rurrenabaque_de_San_Buenaventura,_Bolivia.jpg",
+      "author": "Carlillasa",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Samaipata": {
+      "file": "File:Samaipata, Bolivia, March 2016.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Samaipata%2C_Bolivia%2C_March_2016.jpg/1280px-Samaipata%2C_Bolivia%2C_March_2016.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Samaipata,_Bolivia,_March_2016.jpg",
+      "author": "Madereugeneandrew",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Torotoro": {
+      "file": "File:ToroToro canyon 2017.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/ToroToro_canyon_2017.jpg/1280px-ToroToro_canyon_2017.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:ToroToro_canyon_2017.jpg",
+      "author": "Vaido Otsar",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Villa Tunari": {
+      "file": "File:Una bella vista de villa tunari.JPG",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/Una_bella_vista_de_villa_tunari.JPG/1280px-Una_bella_vista_de_villa_tunari.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Una_bella_vista_de_villa_tunari.JPG",
+      "author": "Gaby condori contreras",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    },
+    "Tupiza": {
+      "file": "File:Tupiza desde el cerro Corazon de Jesus.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Tupiza_desde_el_cerro_Corazon_de_Jesus.jpg/1280px-Tupiza_desde_el_cerro_Corazon_de_Jesus.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Tupiza_desde_el_cerro_Corazon_de_Jesus.jpg",
+      "author": "Xxunil",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "El Alto": {
+      "file": "File:Plaza Libertad en la Estación Teleférico Línea Azul ciudad de El Alto , Monumento a Túpac Amaru.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/Plaza_Libertad_en_la_Estaci%C3%B3n_Telef%C3%A9rico_L%C3%ADnea_Azul_ciudad_de_El_Alto_%2C_Monumento_a_T%C3%BApac_Amaru.jpg/1280px-Plaza_Libertad_en_la_Estaci%C3%B3n_Telef%C3%A9rico_L%C3%ADnea_Azul_ciudad_de_El_Alto_%2C_Monumento_a_T%C3%BApac_Amaru.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Plaza_Libertad_en_la_Estaci%C3%B3n_Telef%C3%A9rico_L%C3%ADnea_Azul_ciudad_de_El_Alto_,_Monumento_a_T%C3%BApac_Amaru.jpg",
+      "author": "Norkiña",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Quillacollo": {
+      "file": "File:Quillacollo, Plaza Bolivar.JPG",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Quillacollo%2C_Plaza_Bolivar.JPG/1280px-Quillacollo%2C_Plaza_Bolivar.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Quillacollo,_Plaza_Bolivar.JPG",
+      "author": "Willaq",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Sipe Sipe": {
+      "file": "File:Amanecer de Sipe Sipe.JPG",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4d/Amanecer_de_Sipe_Sipe.JPG/1280px-Amanecer_de_Sipe_Sipe.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Amanecer_de_Sipe_Sipe.JPG",
+      "author": "Kevinleañoumss.practica I-B",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    },
+    "Tiquipaya": {
+      "file": "File:Iglesia san miguel tiquipaya 29.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/Iglesia_san_miguel_tiquipaya_29.jpg/1280px-Iglesia_san_miguel_tiquipaya_29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Iglesia_san_miguel_tiquipaya_29.jpg",
+      "author": "AldoNuñezC.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Bermejo": {
+      "file": "File:Kirche in Bermejo.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/Kirche_in_Bermejo.jpg/1280px-Kirche_in_Bermejo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Kirche_in_Bermejo.jpg",
+      "author": "Dieter Jungblut",
+      "license": "Public domain",
+      "licenseUrl": null
+    },
+    "Villamontes": {
+      "file": "File:Rio pilcomayo villamontes.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/Rio_pilcomayo_villamontes.jpg/1280px-Rio_pilcomayo_villamontes.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Rio_pilcomayo_villamontes.jpg",
+      "author": "Carlosfiengo",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Cotoca": {
+      "file": "File:Santuario de la Virgen de Cotoca.JPG",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Santuario_de_la_Virgen_de_Cotoca.JPG/1280px-Santuario_de_la_Virgen_de_Cotoca.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Santuario_de_la_Virgen_de_Cotoca.JPG",
+      "author": "Wilmer",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Santiago del Torno": {
+      "file": "File:Cañón cerca a la cascada del Jardín de las Delicias - El Torno, Bolivia.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Ca%C3%B1%C3%B3n_cerca_a_la_cascada_del_Jard%C3%ADn_de_las_Delicias_-_El_Torno%2C_Bolivia.jpg/1280px-Ca%C3%B1%C3%B3n_cerca_a_la_cascada_del_Jard%C3%ADn_de_las_Delicias_-_El_Torno%2C_Bolivia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Ca%C3%B1%C3%B3n_cerca_a_la_cascada_del_Jard%C3%ADn_de_las_Delicias_-_El_Torno,_Bolivia.jpg",
+      "author": "Ruditaly",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "San Ignacio de Velasco": {
+      "file": "File:San Ignacio de Velasco 001.JPG",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4a/San_Ignacio_de_Velasco_001.JPG/1280px-San_Ignacio_de_Velasco_001.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:San_Ignacio_de_Velasco_001.JPG",
+      "author": "Geoffrey Groesbeck",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    },
+    "Trinidad": {
+      "file": "File:Plazuela Silvio Tanaka, Trinidad, Beni, Bolivia sur.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Plazuela_Silvio_Tanaka%2C_Trinidad%2C_Beni%2C_Bolivia_sur.jpg/1280px-Plazuela_Silvio_Tanaka%2C_Trinidad%2C_Beni%2C_Bolivia_sur.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Plazuela_Silvio_Tanaka,_Trinidad,_Beni,_Bolivia_sur.jpg",
+      "author": "Noé",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Cobija": {
+      "file": "File:Square in Cobija, Bolivia1.JPG",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Square_in_Cobija%2C_Bolivia1.JPG/1280px-Square_in_Cobija%2C_Bolivia1.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Square_in_Cobija,_Bolivia1.JPG",
+      "author": "Grullab",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    },
+    "Guayaramerín": {
+      "file": "File:462 - Guayaramerin.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/462_-_Guayaramerin.jpg/1280px-462_-_Guayaramerin.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:462_-_Guayaramerin.jpg",
+      "author": "Aurimaz",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Camiri": {
+      "file": "File:Camiri mirador YPFB.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Camiri_mirador_YPFB.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Camiri_mirador_YPFB.jpg",
+      "author": "Ariela2020",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Montero": {
+      "file": "File:Plaza de Montero - panoramio.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/Plaza_de_Montero_-_panoramio.jpg/1280px-Plaza_de_Montero_-_panoramio.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Plaza_de_Montero_-_panoramio.jpg",
+      "author": "nivardo61",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0"
+    },
+    "Warnes": {
+      "file": "File:Puente peatonal en Warnes Santa Cruz Bolivia - panoramio.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6c/Puente_peatonal_en_Warnes_Santa_Cruz_Bolivia_-_panoramio.jpg/1280px-Puente_peatonal_en_Warnes_Santa_Cruz_Bolivia_-_panoramio.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Puente_peatonal_en_Warnes_Santa_Cruz_Bolivia_-_panoramio.jpg",
+      "author": "nivardo61",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0"
+    },
+    "Yacuiba": {
+      "file": "File:P7260383 Yacuiba estación.JPG",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/P7260383_Yacuiba_estaci%C3%B3n.JPG/1280px-P7260383_Yacuiba_estaci%C3%B3n.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:P7260383_Yacuiba_estaci%C3%B3n.JPG",
+      "author": "self",
+      "license": "Public domain",
+      "licenseUrl": null
+    },
+    "Villazón": {
+      "file": "File:Villazon (18).JPG",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Villazon_%2818%29.JPG/1280px-Villazon_%2818%29.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Villazon_(18).JPG",
+      "author": "Elemaki",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0"
+    },
+    "Mizque": {
+      "file": "File:Plaza de Mizque.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Plaza_de_Mizque.jpg/1280px-Plaza_de_Mizque.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Plaza_de_Mizque.jpg",
+      "author": "Deborahwinarski",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Sacaba": {
+      "file": "File:Sacaba Cochabamba.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/9a/Sacaba_Cochabamba.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Sacaba_Cochabamba.jpg",
+      "author": "Marisol Sole Cáceres",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Vinto": {
+      "file": "File:Vinto Station Green Line Mi Tren - Oct. 29, 2023.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Vinto_Station_Green_Line_Mi_Tren_-_Oct._29%2C_2023.jpg/1280px-Vinto_Station_Green_Line_Mi_Tren_-_Oct._29%2C_2023.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Vinto_Station_Green_Line_Mi_Tren_-_Oct._29,_2023.jpg",
+      "author": "Ande Vega",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    },
+    "Puerto Villarroel": {
+      "file": "File:Ivirgarzama, Bolívia´s Puerto Villarroel county.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Ivirgarzama%2C_Bol%C3%ADvia%C2%B4s_Puerto_Villarroel_county.jpg/1280px-Ivirgarzama%2C_Bol%C3%ADvia%C2%B4s_Puerto_Villarroel_county.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Ivirgarzama,_Bol%C3%ADvia%C2%B4s_Puerto_Villarroel_county.jpg",
+      "author": "Coordenação-Geral de Observação da Terra/INPE",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
+    },
+    "Pocoata": {
+      "file": "File:Plaza de Pocoata.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Plaza_de_Pocoata.jpg/1280px-Plaza_de_Pocoata.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Plaza_de_Pocoata.jpg",
+      "author": "Carlillasa",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "San Joaquín": {
+      "file": "File:Iglesia de San Joaquín (Bolivia).jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/8/85/Iglesia_de_San_Joaqu%C3%ADn_%28Bolivia%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Iglesia_de_San_Joaqu%C3%ADn_(Bolivia).jpg",
+      "author": "Guajojó",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "Villa Yapacaní": {
+      "file": "File:Santa Fe de Yapacaní y Río Yapacaní - panoramio.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/f1/Santa_Fe_de_Yapacan%C3%AD_y_R%C3%ADo_Yapacan%C3%AD_-_panoramio.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Santa_Fe_de_Yapacan%C3%AD_y_R%C3%ADo_Yapacan%C3%AD_-_panoramio.jpg",
+      "author": "Sam Beebe/Ecotrust",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    },
+    "Yapacani": {
+      "file": "File:San Juan de Yapacani - panoramio.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/e/e3/San_Juan_de_Yapacani_-_panoramio.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:San_Juan_de_Yapacani_-_panoramio.jpg",
+      "author": "Sam Beebe/Ecotrust",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    },
+    "Riberalta": {
+      "file": "File:Río Beni. En las afueras de la ciudad de Riberalta.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b4/R%C3%ADo_Beni._En_las_afueras_de_la_ciudad_de_Riberalta.jpg/1280px-R%C3%ADo_Beni._En_las_afueras_de_la_ciudad_de_Riberalta.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:R%C3%ADo_Beni._En_las_afueras_de_la_ciudad_de_Riberalta.jpg",
+      "author": "Huangercito41",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+    }
+  }
+}
