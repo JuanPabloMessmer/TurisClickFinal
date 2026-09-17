@@ -13,7 +13,7 @@
   .\run-catalog.ps1 validate-catalog.mjs
 #>
 param(
-    [Parameter(Mandatory)] [ValidateSet('load-catalog.mjs', 'validate-catalog.mjs')] [string] $Script,
+    [Parameter(Mandatory)] [ValidateSet('load-catalog.mjs', 'validate-catalog.mjs', 'validate-product-wave.mjs')] [string] $Script,
     [string[]] $ScriptArgs = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -36,6 +36,7 @@ $vars = [ordered]@{
     PROVIDER_PASSWORD         = { Get-OrCreateDemoPassword 'demo-provider-password.dpapi' }
     CATALOG_PROVIDER_PASSWORD = { Get-OrCreateDemoPassword 'demo-catalog-provider-password.dpapi' }
     DEMO_TOURIST_PASSWORD     = { Get-OrCreateDemoPassword 'demo-tourist-password.dpapi' }
+    QA_AI_TOURIST_PASSWORD    = { Get-OrCreateDemoPassword 'qa-ai-tourist-password.dpapi' }
 }
 try {
     foreach ($name in $vars.Keys) { Set-Item -Path "Env:$name" -Value (& $vars[$name]) }
