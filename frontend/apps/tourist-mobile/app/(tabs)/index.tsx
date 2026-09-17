@@ -60,6 +60,23 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Planificá tu viaje con el asistente"
+          onPress={() => router.push('/assistant')}
+          className="mx-5 mb-7 flex-row items-center gap-4 rounded-3xl bg-primary p-5 active:opacity-90"
+          style={{ elevation: 3 }}
+        >
+          <View className="h-12 w-12 items-center justify-center rounded-full bg-white/15">
+            <Text className="text-2xl">✨</Text>
+          </View>
+          <View className="flex-1">
+            <Text className="text-lg font-bold text-white">Planificá con el asistente</Text>
+            <Text className="mt-0.5 text-sm text-white/85">Contale tu viaje y lo arma con experiencias reales.</Text>
+          </View>
+          <Text className="text-2xl text-white">›</Text>
+        </Pressable>
+
         <DestinationsRow />
 
         <View className="mt-9">
