@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
@@ -8,8 +8,16 @@ namespace TurisClick.Api.Modules.Ai.Repositories;
 
 public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
 {
+    /// <summary>
+    /// Una disponibilidad de ayer ya no es reservable: el booking la rechaza (UC-T-18). Si el retrieval la
+    /// ofreciera, el asistente propondría un itinerario que después no se puede reservar, así que el piso
+    /// de fechas es siempre hoy, exista o no un rango pedido por el turista.
+    /// </summary>
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.UtcNow);
+
     public async Task<List<Experience>> SearchCandidateExperiencesAsync(AiCatalogFilter filter, CancellationToken ct)
     {
+        var today = Today;
         // UC-A-08: suspender una empresa oculta su catálogo también para la IA — sin esto el retrieval
         // seguiría proponiendo productos de una empresa sancionada (UC-SYS-09 no necesita reindexar
         // nada porque la consulta ES el índice).
@@ -26,6 +34,7 @@ public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
         query = query.Where(e => e.Availabilities.Any(a =>
             a.Status == AvailabilitySlotStatus.OPEN
             && a.ReservedSlots < a.TotalSlots
+            && a.Date >= today
             && (filter.DateFrom == null || a.Date >= filter.DateFrom)
             && (filter.DateTo == null || a.Date <= filter.DateTo)));
 
@@ -36,6 +45,7 @@ public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
             .Include(e => e.Availabilities.Where(a =>
                 a.Status == AvailabilitySlotStatus.OPEN
                 && a.ReservedSlots < a.TotalSlots
+                && a.Date >= today
                 && (filter.DateFrom == null || a.Date >= filter.DateFrom)
                 && (filter.DateTo == null || a.Date <= filter.DateTo)))
             .OrderByDescending(e => e.CreatedAt)
@@ -45,6 +55,7 @@ public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
 
     public async Task<List<Package>> SearchCandidatePackagesAsync(AiCatalogFilter filter, CancellationToken ct)
     {
+        var today = Today;
         var query = db.Packages.AsNoTracking()
             .Where(p => p.Status == PublicationStatus.PUBLISHED
                 && p.Company!.Status != CompanyStatus.SUSPENDED);
@@ -58,6 +69,7 @@ public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
         query = query.Where(p => p.Availabilities.Any(a =>
             a.Status == AvailabilitySlotStatus.OPEN
             && a.ReservedSlots < a.TotalSlots
+            && a.DepartureDate >= today
             && (filter.DateFrom == null || a.DepartureDate >= filter.DateFrom)
             && (filter.DateTo == null || a.DepartureDate <= filter.DateTo)));
 
@@ -68,6 +80,7 @@ public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
             .Include(p => p.Availabilities.Where(a =>
                 a.Status == AvailabilitySlotStatus.OPEN
                 && a.ReservedSlots < a.TotalSlots
+                && a.DepartureDate >= today
                 && (filter.DateFrom == null || a.DepartureDate >= filter.DateFrom)
                 && (filter.DateTo == null || a.DepartureDate <= filter.DateTo)))
             .OrderByDescending(p => p.CreatedAt)

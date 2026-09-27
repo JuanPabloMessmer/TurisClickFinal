@@ -1,4 +1,4 @@
-using TurisClick.Api.Modules.Ai.Entities;
+﻿using TurisClick.Api.Modules.Ai.Entities;
 using TurisClick.Api.Modules.Ai.Repositories;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
@@ -12,6 +12,13 @@ namespace TurisClick.Api.Modules.Ai.Services;
 /// </summary>
 public class ItineraryRevalidationService(IAiCatalogRepository catalogRepository) : IItineraryRevalidationService
 {
+    /// <summary>
+    /// Mismo criterio que el booking (UC-T-18) y que el calendario público: una fecha de ayer no se puede
+    /// reservar. Sin esto, un itinerario guardado hace días se leía como "disponible" y recién fallaba al
+    /// reservarlo.
+    /// </summary>
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.UtcNow);
+
     public async Task<ItineraryRevalidationResult> RevalidateAsync(AiItinerary itinerary, CancellationToken ct)
     {
         if (itinerary.Items.Count == 0)
@@ -52,15 +59,19 @@ public class ItineraryRevalidationService(IAiCatalogRepository catalogRepository
             warnings.Add($"\"{title}\" ya no está publicada por el proveedor.");
 
         // El slot concreto propuesto; si la propuesta nunca fijó uno, sirve cualquiera abierto con cupo.
+        var today = Today;
         var slot = item.ExperienceAvailabilityId is { } slotId
             ? experience.Availabilities.FirstOrDefault(a => a.Id == slotId)
-            : experience.Availabilities.FirstOrDefault(a => a.Status == AvailabilitySlotStatus.OPEN && a.AvailableSlots > 0);
+            : experience.Availabilities.FirstOrDefault(a => a.Status == AvailabilitySlotStatus.OPEN && a.AvailableSlots > 0 && a.Date >= today);
 
-        var availabilityExists = slot is not null && slot.Status == AvailabilitySlotStatus.OPEN;
+        var isPast = slot is not null && slot.Date < today;
+        var availabilityExists = slot is not null && slot.Status == AvailabilitySlotStatus.OPEN && !isPast;
         var hasCapacity = slot is not null && slot.AvailableSlots > 0;
 
         if (slot is null)
             warnings.Add($"\"{title}\" ya no tiene la fecha que te habíamos propuesto.");
+        else if (isPast)
+            warnings.Add($"La fecha que te habíamos propuesto para \"{title}\" ({slot.Date:yyyy-MM-dd}) ya pasó.");
         else if (!availabilityExists)
             warnings.Add($"\"{title}\" cerró la disponibilidad del {slot.Date:yyyy-MM-dd}.");
         else if (!hasCapacity)
@@ -85,15 +96,19 @@ public class ItineraryRevalidationService(IAiCatalogRepository catalogRepository
         if (!isPublished)
             warnings.Add($"El paquete \"{title}\" ya no está publicado por el proveedor.");
 
+        var today = Today;
         var slot = item.PackageAvailabilityId is { } slotId
             ? package.Availabilities.FirstOrDefault(a => a.Id == slotId)
-            : package.Availabilities.FirstOrDefault(a => a.Status == AvailabilitySlotStatus.OPEN && a.AvailableSlots > 0);
+            : package.Availabilities.FirstOrDefault(a => a.Status == AvailabilitySlotStatus.OPEN && a.AvailableSlots > 0 && a.DepartureDate >= today);
 
-        var availabilityExists = slot is not null && slot.Status == AvailabilitySlotStatus.OPEN;
+        var isPast = slot is not null && slot.DepartureDate < today;
+        var availabilityExists = slot is not null && slot.Status == AvailabilitySlotStatus.OPEN && !isPast;
         var hasCapacity = slot is not null && slot.AvailableSlots > 0;
 
         if (slot is null)
             warnings.Add($"El paquete \"{title}\" ya no tiene la salida que te habíamos propuesto.");
+        else if (isPast)
+            warnings.Add($"La salida que te habíamos propuesto para el paquete \"{title}\" ({slot.DepartureDate:yyyy-MM-dd}) ya pasó.");
         else if (!availabilityExists)
             warnings.Add($"El paquete \"{title}\" cerró la salida del {slot.DepartureDate:yyyy-MM-dd}.");
         else if (!hasCapacity)

@@ -1,4 +1,4 @@
-using Moq;
+﻿using Moq;
 using TurisClick.Api.Modules.Ai.Entities;
 using TurisClick.Api.Modules.Ai.Repositories;
 using TurisClick.Api.Modules.Ai.Services;
@@ -21,6 +21,10 @@ public class ItineraryRevalidationServiceTests
     private readonly Guid _experienceId = Guid.NewGuid();
     private readonly Guid _availabilityId = Guid.NewGuid();
 
+    /// <summary>Fecha relativa: una fecha fija haría que estos tests se pudran al pasar ese día (una fecha pasada ya no es reservable).</summary>
+    private static DateOnly FutureDate => DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30));
+    private static DateOnly PastDate => DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+
     public ItineraryRevalidationServiceTests()
     {
         _catalogRepository.Setup(r => r.GetExperiencesByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
@@ -32,7 +36,8 @@ public class ItineraryRevalidationServiceTests
         decimal price = 80, string currency = "USD",
         PublicationStatus status = PublicationStatus.PUBLISHED,
         int totalSlots = 10, int reservedSlots = 0,
-        AvailabilitySlotStatus slotStatus = AvailabilitySlotStatus.OPEN) => new()
+        AvailabilitySlotStatus slotStatus = AvailabilitySlotStatus.OPEN,
+        DateOnly? date = null) => new()
     {
         Id = _experienceId,
         Title = "Salar de Uyuni",
@@ -45,7 +50,7 @@ public class ItineraryRevalidationServiceTests
             {
                 Id = _availabilityId,
                 ExperienceId = _experienceId,
-                Date = new DateOnly(2026, 10, 5),
+                Date = date ?? FutureDate,
                 TotalSlots = totalSlots,
                 ReservedSlots = reservedSlots,
                 Status = slotStatus
@@ -145,6 +150,22 @@ public class ItineraryRevalidationServiceTests
     }
 
     [Fact]
+    public async Task Revalidate_PastDate_IsNotValidAndWarns()
+    {
+        // Mismo criterio que el booking (UC-T-18): una fecha de ayer no se puede reservar. Antes se leía
+        // como AVAILABLE y el turista recién se enteraba al tocar "Reservar".
+        _catalogRepository.Setup(r => r.GetExperiencesByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([MakeExperience(date: PastDate)]);
+
+        var result = await _sut.RevalidateAsync(MakeItinerary(), CancellationToken.None);
+
+        var item = Assert.Single(result.ByItemId.Values);
+        Assert.False(item.IsValid);
+        Assert.Equal(ItemAvailabilityState.SLOT_CLOSED, item.State);
+        Assert.Contains(result.Warnings, w => w.Contains("ya pasó", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task Revalidate_ProductDeleted_IsNotValid()
     {
         // El repositorio no devuelve el producto: ya no existe en el catálogo.
@@ -191,7 +212,7 @@ public class ItineraryRevalidationServiceTests
                     new PackageAvailability
                     {
                         Id = slotId, PackageId = packageId,
-                        DepartureDate = new DateOnly(2026, 10, 5),
+                        DepartureDate = FutureDate,
                         TotalSlots = 4, ReservedSlots = 4, Status = AvailabilitySlotStatus.OPEN
                     }
                 ]
@@ -213,6 +234,6 @@ public class ItineraryRevalidationServiceTests
         var result = await _sut.RevalidateAsync(itinerary, CancellationToken.None);
 
         Assert.False(Assert.Single(result.ByItemId.Values).HasCapacity);
-        Assert.Contains(result.Warnings, w => w.Contains("2026-10-05"));
+        Assert.Contains(result.Warnings, w => w.Contains(FutureDate.ToString("yyyy-MM-dd")));
     }
 }
