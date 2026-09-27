@@ -1,9 +1,5 @@
 import { createHttpClient } from '@turisclick/api-client'
+import { API_BASE_URL, API_TIMEOUT_MS } from '@/lib/env'
 
-const baseURL = import.meta.env.VITE_API_BASE_URL as string | undefined
-
-if (!baseURL) {
-  throw new Error('Falta VITE_API_BASE_URL — configurala en frontend/apps/backoffice/.env (ver .env.example).')
-}
-
-export const httpClient = createHttpClient(baseURL)
+/** Un solo AxiosInstance para toda la app; la URL sale de `lib/env.ts` (Azure V2 por defecto). */
+export const httpClient = createHttpClient(API_BASE_URL, { timeoutMs: API_TIMEOUT_MS })

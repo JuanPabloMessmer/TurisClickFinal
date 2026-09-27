@@ -13,7 +13,8 @@ rg-turisclick-dev (compartido con V1)
 ├── asp-turisclick-v2-dev .......... Terraform (F1 Linux)
 ├── app-turisclick-v2-api .......... Terraform (.NET 10, HTTPS)
 ├── id-turisclick-v2-app ........... Terraform (user-assigned)
-└── kv-turisclick-v2-dev ........... Terraform (RBAC, prevent_destroy, sin secretos)
+├── kv-turisclick-v2-dev ........... Terraform (RBAC, prevent_destroy, sin secretos)
+└── swa-turisclick-v2-backoffice ... az CLI, FUERA del state (Static Web Apps, Free, East US 2)
 
 rg-turisclick-tfstate
 └── stturisclicktfjpm / tfstate .... bootstrap (Entra ID, sin shared keys, lock)
@@ -30,6 +31,7 @@ rg-turisclick-tfstate
 | Valores de los secretos | `bootstrap/*.ps1` | Terraform sólo conoce los nombres; los valores nunca entran al state |
 | Lock del servidor PostgreSQL | `bootstrap/lock-postgres.ps1` | La identidad de Terraform no necesita permisos sobre locks |
 | Registro de resource providers | `bootstrap/register-providers.ps1` | azurerm 5.x no los registra solo; se hace una vez, a mano |
+| `swa-turisclick-v2-backoffice` (Backoffice) | `az staticwebapp create` + `bootstrap/deploy-backoffice.ps1` | Creado a mano para publicar el Backoffice; queda pendiente decidir si se incorpora al state (ver abajo) |
 
 ## Secretos
 
@@ -94,3 +96,28 @@ push a master (src/, tests/, TurisClick.slnx, el workflow) · workflow_dispatch
 ## Plan de servicio: F1
 
 Gratis, pero con límites a tener en cuenta para una demo: 60 minutos de CPU por día, sin Always On (la app se duerme y el primer request tarda), 1 GB de RAM y de disco. La expiración automática de reservas no corre mientras la app está dormida. Para la defensa se puede pasar a `B1` cambiando `app_service_sku` en `dev.tfvars`.
+
+## Static Web App del Backoffice (fuera del state)
+
+| Dato | Valor |
+|---|---|
+| Recurso | `swa-turisclick-v2-backoffice` |
+| Resource group | `rg-turisclick-dev` |
+| Región | East US 2 (Static Web Apps no está disponible en Brazil South) |
+| SKU | **Free** — sin costo: 100 GB de tráfico y certificado TLS incluidos |
+| URL | <https://ashy-rock-0dd3b480f.2.azurestaticapps.net> |
+| Creado con | `az staticwebapp create ... --sku Free` (no hay `terraform apply` de por medio) |
+| Deploy | `bootstrap/deploy-backoffice.ps1` (build + SWA CLI con el deployment token leído de Azure) |
+| Tags | `project=turisclick-v2`, `component=backoffice`, `managed-by=manual-az-cli` |
+
+**Por qué Static Web Apps y no otra cosa:** el Backoffice es un SPA estático (Vite), no necesita servidor.
+El plan Free ya trae HTTPS, CDN y fallback de rutas para SPA, y no agrega carga al App Service F1, que ya
+está al límite con la API. Servir el SPA desde el propio App Service habría gastado CPU/RAM del plan gratuito
+compartido con el backend, y una cuenta de Storage con static website sí tiene costo por almacenamiento y
+transferencia. No se creó ningún recurso pago.
+
+**Para incorporarlo a Terraform más adelante:** `azurerm_static_web_app` con `sku_tier = "Free"` en
+`rg-turisclick-dev` y luego `terraform import`. No se hizo ahora para no tocar el state en esta oleada.
+
+**CORS:** el dominio publicado está en el app setting `Cors__AllowedOrigins__2` de `app-turisclick-v2-api`
+(los otros dos son los orígenes de desarrollo). Es configuración de la Web App, no código.
