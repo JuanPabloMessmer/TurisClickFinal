@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.turisclick.tourist"
+      "bundleIdentifier": "com.turisclick.tourist",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.turisclick.tourist",
@@ -31,6 +34,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-router", "expo-secure-store"]
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d67cb9be-745c-4d5f-9e30-e7aa9321c69e"
+      }
+    },
+    "owner": "jpmessmer"
   }
 }
