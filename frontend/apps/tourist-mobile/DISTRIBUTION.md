@@ -23,6 +23,10 @@ EAS compila en la nube y devuelve un link de descarga (también queda en
 <https://expo.dev/accounts/jpmessmer/projects/turisclick-tourist/builds>). La firma la maneja EAS con un
 keystore generado en la nube: no hay credenciales en el repo ni en la PC.
 
+**Build actual (27/09/2026)** — perfil `preview`, versión 1.0.0 (versionCode 1), 95 MB:
+<https://expo.dev/artifacts/eas/Anon6ySQ87rMlseQK4H6sy4chX0KHybjgAJPat3p7Pw.apk>
+(también en <https://expo.dev/accounts/jpmessmer/projects/turisclick-tourist/builds/800291e5-d86b-4462-862c-f32b057c8093>)
+
 **Instalar en un teléfono Android:**
 
 1. Abrí el link de la build (o el QR que muestra EAS) desde el teléfono.
