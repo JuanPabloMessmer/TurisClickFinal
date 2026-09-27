@@ -25,11 +25,11 @@ Requisitos: Node 20+, Azure CLI con sesión iniciada (para leer `seed-admin-pass
 (las contraseñas demo se guardan con DPAPI en `%USERPROFILE%\.turisclick-secrets`).
 
 ```powershell
-.	ools\demo-catalogun-catalog.ps1 validate-e2e.mjs      # recorrido completo por rol contra Azure
 node tools/demo-catalog/load-catalog.mjs --check            # catálogo coherente (zonas, ownership, imágenes)
 node tools/demo-catalog/resolve-images.mjs                  # sólo si se agregan experiencias
 .\tools\demo-catalog\run-catalog.ps1 load-catalog.mjs       # carga / sincroniza (idempotente)
-.\tools\demo-catalog\run-catalog.ps1 validate-catalog.mjs   # validación
+.\tools\demo-catalog\run-catalog.ps1 validate-catalog.mjs   # validación del catálogo
+.\tools\demo-catalog\run-catalog.ps1 validate-e2e.mjs       # recorrido por rol contra Azure
 ```
 
 Volver a correr el loader no duplica nada: busca destinos por nombre y experiencias/paquetes por título
