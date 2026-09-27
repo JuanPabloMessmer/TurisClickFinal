@@ -1,4 +1,5 @@
 import type { ItineraryItemResponse, ItineraryResponse, MessageResponse } from '@turisclick/api-client'
+import { todayIso } from '@turisclick/utils'
 import { toApiError } from '@/lib/errors'
 
 /** Reglas de presentación del asistente. Nada de esto decide productos, precios ni cupos: eso es del backend. */
@@ -64,8 +65,16 @@ export function itineraryItemTitle(item: ItineraryItemResponse) {
 
 export type Tone = 'success' | 'warning' | 'danger' | 'neutral'
 
-/** `ItemAvailabilityState` del backend → texto y tono. */
-export function availabilityBadge(item: ItineraryItemResponse): { label: string; tone: Tone } {
+/**
+ * `ItemAvailabilityState` del backend → texto y tono. Una fecha vencida llega como SLOT_CLOSED (el backend
+ * no la considera reservable): se dice que ya pasó, que es lo que la persona necesita entender para pedir
+ * un cambio, en vez de "fecha cerrada", que suena a decisión del operador.
+ */
+export function availabilityBadge(item: ItineraryItemResponse, today: string = todayIso()): { label: string; tone: Tone } {
+  if (item.date && item.date.slice(0, 10) < today && item.availabilityState !== 'AVAILABLE') {
+    return { label: 'La fecha ya pasó', tone: 'danger' }
+  }
+
   switch (item.availabilityState) {
     case 'AVAILABLE': {
       const slots = item.currentAvailableSlots

@@ -28,6 +28,15 @@ describe('availabilityBadge', () => {
     expect(availabilityBadge({ availabilityState: 'SOLD_OUT' }).tone).toBe('danger')
     expect(availabilityBadge({ availabilityState: 'UNPUBLISHED' }).label).toBe('Ya no disponible')
   })
+
+  it('una fecha vencida se explica como tal, no como "cerrada"', () => {
+    expect(availabilityBadge({ availabilityState: 'SLOT_CLOSED', date: '2026-09-20' }, '2026-09-27')).toEqual({
+      label: 'La fecha ya pasó',
+      tone: 'danger',
+    })
+    // Si el backend la sigue dando por buena, se respeta lo que dice el backend.
+    expect(availabilityBadge({ availabilityState: 'AVAILABLE', date: '2026-09-20', currentAvailableSlots: 2 }, '2026-09-27').tone).toBe('success')
+  })
 })
 
 describe('quickRepliesFor', () => {
