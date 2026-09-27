@@ -17,6 +17,7 @@ migraciones, sin `DevelopmentSeeder` y sin tocar V1.
 | `commons.mjs` | Acceso compartido a Wikimedia Commons (filtro de licencias libres). |
 | `destinations.mjs` / `resolve-destination-images.mjs` | Imagen representativa por destino → `destination-images.manifest.json` y `ATTRIBUTIONS-DESTINOS.md`. |
 | `validate-product-wave.mjs` | Validación real de calendario, imágenes de destinos, onboarding, reserva y asistente IA. |
+| `validate-e2e.mjs` | E2E por rol (ADMIN, PROVIDER, turista y asistente) sobre los mismos endpoints que usan las apps; limpia lo que crea. |
 
 ## Uso
 
@@ -24,6 +25,7 @@ Requisitos: Node 20+, Azure CLI con sesión iniciada (para leer `seed-admin-pass
 (las contraseñas demo se guardan con DPAPI en `%USERPROFILE%\.turisclick-secrets`).
 
 ```powershell
+.	ools\demo-catalogun-catalog.ps1 validate-e2e.mjs      # recorrido completo por rol contra Azure
 node tools/demo-catalog/load-catalog.mjs --check            # catálogo coherente (zonas, ownership, imágenes)
 node tools/demo-catalog/resolve-images.mjs                  # sólo si se agregan experiencias
 .\tools\demo-catalog\run-catalog.ps1 load-catalog.mjs       # carga / sincroniza (idempotente)

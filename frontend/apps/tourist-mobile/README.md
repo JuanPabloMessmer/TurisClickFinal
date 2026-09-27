@@ -179,6 +179,12 @@ conclusiones de lo que se ve ahí:
 
 Expo Go sigue siendo el entorno de referencia de Fase 1.
 
+## Instalarla sin Expo Go
+
+Hay builds de EAS que corren contra Azure sin depender de Metro ni de la PC: APK de distribución interna
+para Android y TestFlight para iOS (esto último necesita una cuenta de Apple Developer). Ver
+[DISTRIBUTION.md](./DISTRIBUTION.md).
+
 ## Fase 2: reservas, pago y Mis viajes
 
 **Flujo.** Detalle → "Elegir fecha/salida" → `book/…` (fecha, viajeros, estimado) → "Continuar" → si no hay
