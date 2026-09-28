@@ -304,7 +304,9 @@ public static class Program
         """;
 
     private static readonly Dictionary<string, string> Messages = new();
-    private static string DatasetMessage(string caseId) => Messages.GetValueOrDefault(caseId, "").Replace("|", "/");
+    /// <summary>Una celda de tabla no tolera saltos de línea ni pipes: el mensaje se aplana.</summary>
+    private static string DatasetMessage(string caseId) => Messages.GetValueOrDefault(caseId, "")
+        .ReplaceLineEndings(" / ").Replace("|", "/");
 
     private static async Task<Dataset> LoadDatasetAsync(string path)
     {

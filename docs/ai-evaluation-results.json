@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T22:52:34.7967364-04:00",
+  "generatedAt": "2026-09-27T23:18:36.4642451-04:00",
   "caseCount": 33,
   "runs": [
     {
@@ -54,7 +54,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 51,
+          "elapsedMs": 78,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -108,7 +108,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 8,
+          "elapsedMs": 12,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -162,7 +162,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 5,
+          "elapsedMs": 11,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -324,7 +324,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 3,
+          "elapsedMs": 5,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -702,7 +702,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 0,
+          "elapsedMs": 2,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -756,7 +756,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 0,
+          "elapsedMs": 1,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1134,7 +1134,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 5,
+          "elapsedMs": 10,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1242,7 +1242,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 0,
+          "elapsedMs": 1,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1260,7 +1260,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 21,
+          "elapsedMs": 36,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1284,7 +1284,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 9,
+          "elapsedMs": 19,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1308,7 +1308,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 5,
+          "elapsedMs": 12,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1440,7 +1440,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 7,
+          "elapsedMs": 11,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
