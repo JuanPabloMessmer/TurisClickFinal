@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using TurisClick.Api.Modules.Preferences.Services;
@@ -41,6 +41,8 @@ public partial class DeterministicAiModelClient : IAiModelClient
         var durationMatch = DurationRegex().Match(message);
         if (durationMatch.Success)
             durationDays = int.Parse(durationMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+        else if (WordDurationRegex().Match(folded) is { Success: true } wordDuration)
+            durationDays = WordToNumber(wordDuration.Groups[1].Value);
 
         // "este fin de semana" / "el fin de semana": sábado y domingo próximos (o el actual si hoy es sábado/domingo).
         if (startDate is null && WeekendRegex().IsMatch(folded))
@@ -57,6 +59,8 @@ public partial class DeterministicAiModelClient : IAiModelClient
         var travelersMatch = TravelersRegex().Match(message);
         if (travelersMatch.Success)
             travelers = int.Parse(travelersMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+        else if (WordTravelersRegex().Match(folded) is { Success: true } wordTravelers)
+            travelers = WordToNumber(wordTravelers.Groups[1].Value);
         else if (CoupleRegex().IsMatch(message))
             travelers = 2;
         else if (SoloRegex().IsMatch(folded))
@@ -184,13 +188,23 @@ public partial class DeterministicAiModelClient : IAiModelClient
             .Where(name => folded.Contains(Fold(name)) || CategoryStemMatches(folded, Fold(name)))
             .ToList();
 
-        // Ítems mencionados: por categoría real, por título real o por el día que ocupan.
-        var matchedByText = request.CurrentItems
-            .Where(item =>
-                folded.Contains(Fold(item.Title))
-                || item.CategoryNames.Any(c => folded.Contains(Fold(c)) || CategoryStemMatches(folded, Fold(c))))
+        // Ítems mencionados: primero por título completo, porque nombrar un producto entero es lo más
+        // explícito que puede hacer una persona y no debe arrastrar a sus vecinos. Sólo si nadie coincide
+        // así se busca por una palabra significativa del título ("sacá el rafting") o por categoría.
+        // Nunca por un id: los ids no los escribe una persona.
+        var matchedByTitle = request.CurrentItems
+            .Where(item => folded.Contains(Fold(item.Title)))
             .Select(i => i.ItemId)
             .ToList();
+
+        var matchedByText = matchedByTitle.Count > 0
+            ? matchedByTitle
+            : request.CurrentItems
+                .Where(item =>
+                    TitleWordMentioned(folded, item.Title)
+                    || item.CategoryNames.Any(c => folded.Contains(Fold(c)) || CategoryStemMatches(folded, Fold(c))))
+                .Select(i => i.ItemId)
+                .ToList();
 
         var matchedByDay = request.CurrentItems
             .Where(i => targetDays.Contains(i.DayNumber))
@@ -199,19 +213,19 @@ public partial class DeterministicAiModelClient : IAiModelClient
 
         var targetItemIds = matchedByText.Concat(matchedByDay).Distinct().ToList();
 
-        if (PreferPackageRegex().IsMatch(message))
+        if (PreferPackageRegex().IsMatch(folded))
             return Task.FromResult(new ModificationIntentResult(ModificationAction.PREFER_PACKAGE, [], [], []));
 
-        if (ReduceBudgetRegex().IsMatch(message))
+        if (ReduceBudgetRegex().IsMatch(folded))
             return Task.FromResult(new ModificationIntentResult(ModificationAction.REDUCE_BUDGET, [], [], []));
 
-        if ((RemoveRegex().IsMatch(message) || LessOfRegex().IsMatch(folded)) && targetItemIds.Count > 0)
+        if ((RemoveRegex().IsMatch(folded) || LessOfRegex().IsMatch(folded)) && targetItemIds.Count > 0)
             return Task.FromResult(new ModificationIntentResult(ModificationAction.REMOVE, targetItemIds, targetDays, []));
 
-        if (AddRegex().IsMatch(message))
+        if (AddRegex().IsMatch(folded))
             return Task.FromResult(new ModificationIntentResult(ModificationAction.ADD, [], targetDays, mentionedCategories));
 
-        if (ChangeRegex().IsMatch(message) && targetItemIds.Count > 0)
+        if (ChangeRegex().IsMatch(folded) && targetItemIds.Count > 0)
             return Task.FromResult(new ModificationIntentResult(ModificationAction.REPLACE, targetItemIds, targetDays, mentionedCategories));
 
         return Task.FromResult(new ModificationIntentResult(ModificationAction.NONE, [], [], []));
@@ -253,6 +267,36 @@ public partial class DeterministicAiModelClient : IAiModelClient
         return Regex.IsMatch(foldedText, $@"(?<![\p{{L}}]){Regex.Escape(stem)}");
     }
 
+    /// <summary>"un", "dos", "tres"… hasta diez: más allá, la gente escribe el número.</summary>
+    private static int? WordToNumber(string word) => word switch
+    {
+        "un" or "una" or "uno" => 1,
+        "dos" => 2,
+        "tres" => 3,
+        "cuatro" => 4,
+        "cinco" => 5,
+        "seis" => 6,
+        "siete" => 7,
+        "ocho" => 8,
+        "nueve" => 9,
+        "diez" => 10,
+        _ => null,
+    };
+
+    /// <summary>
+    /// ¿El mensaje nombra alguna palabra significativa del título? Se ignoran las palabras cortas y las
+    /// de relleno para no marcar un ítem por un "de" o un "la".
+    /// </summary>
+    private static bool TitleWordMentioned(string foldedMessage, string title)
+    {
+        foreach (var word in Fold(title).Split([' ', ',', '.', ':', '(', ')', '\''], StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (word.Length < 5) continue;
+            if (Regex.IsMatch(foldedMessage, $@"(?<![\p{{L}}]){Regex.Escape(word)}(?![\p{{L}}])")) return true;
+        }
+        return false;
+    }
+
     private static string? DetectPace(string folded)
     {
         if (RelaxedPaceRegex().IsMatch(folded)) return "RELAXED";
@@ -274,6 +318,12 @@ public partial class DeterministicAiModelClient : IAiModelClient
 
     [GeneratedRegex(@"\b(este|el|un|para el|finde de) fin de semana\b|\bfinde\b")]
     private static partial Regex WeekendRegex();
+
+    [GeneratedRegex(@"\b(un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+d[ií]as?\b")]
+    private static partial Regex WordDurationRegex();
+
+    [GeneratedRegex(@"\b(un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(personas?|viajeros?|pax|adultos?)\b")]
+    private static partial Regex WordTravelersRegex();
 
     [GeneratedRegex(@"\b(viajo|voy|viajare|ire|viajar|estoy) sol[oa]\b")]
     private static partial Regex SoloRegex();
@@ -302,7 +352,7 @@ public partial class DeterministicAiModelClient : IAiModelClient
     [GeneratedRegex(@"(\d+)\s*(personas?|viajeros?|pax)")]
     private static partial Regex TravelersRegex();
 
-    [GeneratedRegex(@"\b(mi novia|mi novio|mi esposa|mi esposo|en pareja)\b")]
+    [GeneratedRegex(@"\b(mi novia|mi novio|mi esposa|mi esposo|mi pareja|en pareja)\b")]
     private static partial Regex CoupleRegex();
 
     [GeneratedRegex(@"d[ií]a\s*(\d+)", RegexOptions.IgnoreCase)]
@@ -311,19 +361,19 @@ public partial class DeterministicAiModelClient : IAiModelClient
     [GeneratedRegex(@"[uú]ltimo d[ií]a", RegexOptions.IgnoreCase)]
     private static partial Regex LastDayRegex();
 
-    [GeneratedRegex(@"\b(quit[aá]|saca|sacame|elimin[aá]|borr[aá]|no quiero|sin)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(quit|saca|saque|elimin|borr|no quiero|remove|drop|delete|take out)|\bsin\b", RegexOptions.IgnoreCase)]
     private static partial Regex RemoveRegex();
 
-    [GeneratedRegex(@"\b(agreg[aá]|añad[ií]|sum[aá]|met[eé]|quiero m[aá]s|algo m[aá]s)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(agreg|anad|sum[aá]|met[eé]|quiero mas|algo mas|add|include)", RegexOptions.IgnoreCase)]
     private static partial Regex AddRegex();
 
-    [GeneratedRegex(@"\b(cambi[aá]|reemplaz[aá]|otro|otra|prefiero)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(cambi|reemplaz|prefier|replace|swap|change)|\b(otro|otra)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ChangeRegex();
 
-    [GeneratedRegex(@"\b(gastar menos|m[aá]s barato|m[aá]s econ[oó]mico|reduc[ií] el (presupuesto|gasto)|baj[aá] el (precio|presupuesto))\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(gastar menos|mas barato|mas economico|reduc\w* el (presupuesto|gasto)|baj\w* el (precio|presupuesto)|cheaper|less expensive|lower the (price|budget))", RegexOptions.IgnoreCase)]
     private static partial Regex ReduceBudgetRegex();
 
-    [GeneratedRegex(@"\b(prefiero un (package|paquete)|mejor un (package|paquete)|un solo (package|paquete))\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(prefier\w* un (package|paquete)|mejor un (package|paquete)|un solo (package|paquete)|prefer a package)", RegexOptions.IgnoreCase)]
     private static partial Regex PreferPackageRegex();
 
     /// <summary>
@@ -331,13 +381,13 @@ public partial class DeterministicAiModelClient : IAiModelClient
     /// número de la frase (días, viajeros) — los dos grupos "amount" en ramas distintas de la
     /// alternancia son válidos en el motor de regex de .NET.
     /// </summary>
-    [GeneratedRegex(@"\$\s*(?<amount>\d+(?:\.\d+)?)|(?<amount>\d+(?:\.\d+)?)\s*(?<currency>USD|BOB|EUR|d[oó]lares|bolivianos)")]
+    [GeneratedRegex(@"\$\s*(?<amount>\d+(?:\.\d+)?)|(?<amount>\d+(?:\.\d+)?)\s*(?<currency>USD|BOB|EUR|Bs\.?|d[oó]lares|bolivianos)", RegexOptions.IgnoreCase)]
     private static partial Regex BudgetRegex();
 
-    private static string NormalizeCurrencyWord(string word) => word.ToUpperInvariant() switch
+    private static string NormalizeCurrencyWord(string word) => word.Trim().ToUpperInvariant().TrimEnd('.') switch
     {
         "DÓLARES" or "DOLARES" => "USD",
-        "BOLIVIANOS" => "BOB",
+        "BOLIVIANOS" or "BS" => "BOB",
         var code => code
     };
 }

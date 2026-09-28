@@ -1,4 +1,4 @@
-using TurisClick.Api.Modules.Ai.Repositories;
+﻿using TurisClick.Api.Modules.Ai.Repositories;
 using TurisClick.Api.Modules.Ai.Services;
 using TurisClick.Api.Modules.Ai.Services.LlmClients;
 
@@ -25,14 +25,34 @@ public static class AiModuleExtensions
         services.AddScoped<IAiItineraryService, AiItineraryService>();
         services.AddScoped<IAiItineraryBookingService, AiItineraryBookingService>();
 
-        var provider = configuration.GetSection(AiOptions.SectionName)["Provider"] ?? "Deterministic";
+        // El cliente determinístico SIEMPRE está registrado: con Ai:Provider=Deterministic es el agente
+        // completo, y con un proveedor LLM es la red de seguridad (FallbackAiModelClient).
+        services.AddScoped<DeterministicAiModelClient>();
+
+        var section = configuration.GetSection(AiOptions.SectionName);
+        var provider = section["Provider"] ?? "Deterministic";
+        var fallbackEnabled = !bool.TryParse(section["FallbackToDeterministic"], out var configured) || configured;
+
         if (string.Equals(provider, "Ollama", StringComparison.OrdinalIgnoreCase))
         {
-            services.AddHttpClient<IAiModelClient, OllamaAiModelClient>();
+            // HttpClient tipado para el adapter de Ollama; el timeout fino lo maneja el propio cliente.
+            services.AddHttpClient<OllamaAiModelClient>();
+
+            if (fallbackEnabled)
+            {
+                services.AddScoped<IAiModelClient>(sp => new FallbackAiModelClient(
+                    sp.GetRequiredService<OllamaAiModelClient>(),
+                    sp.GetRequiredService<DeterministicAiModelClient>(),
+                    sp.GetRequiredService<ILogger<FallbackAiModelClient>>()));
+            }
+            else
+            {
+                services.AddScoped<IAiModelClient>(sp => sp.GetRequiredService<OllamaAiModelClient>());
+            }
         }
         else
         {
-            services.AddScoped<IAiModelClient, DeterministicAiModelClient>();
+            services.AddScoped<IAiModelClient>(sp => sp.GetRequiredService<DeterministicAiModelClient>());
         }
 
         return services;

@@ -1,6 +1,8 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
+using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 
@@ -24,7 +26,7 @@ public class OllamaAiModelClient(HttpClient http, IOptions<AiOptions> options, I
     public async Task<PreferenceExtractionResult> ExtractPreferencesAsync(PreferenceExtractionRequest request, CancellationToken ct)
     {
         var prompt = BuildExtractionPrompt(request);
-        var dto = await GetStructuredResponseAsync<ExtractionResponseDto>(prompt, "ExtractPreferences", ct);
+        var dto = await GetStructuredResponseAsync<ExtractionResponseDto>(prompt, "ExtractPreferences", AiJsonSchemas.Extraction, ct);
 
         DateOnly? ParseDate(string? s) => DateOnly.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
 
@@ -57,14 +59,14 @@ public class OllamaAiModelClient(HttpClient http, IOptions<AiOptions> options, I
             {{request.LatestMessage}}
             """;
 
-        var dto = await GetStructuredResponseAsync<ClarificationResponseDto>(prompt, "GenerateClarification", ct);
+        var dto = await GetStructuredResponseAsync<ClarificationResponseDto>(prompt, "GenerateClarification", AiJsonSchemas.Clarification, ct);
         return dto.Reply;
     }
 
     public async Task<ItineraryCompositionResult> ComposeItineraryAsync(ItineraryCompositionRequest request, CancellationToken ct)
     {
         var prompt = BuildCompositionPrompt(request);
-        var dto = await GetStructuredResponseAsync<CompositionResponseDto>(prompt, "ComposeItinerary", ct);
+        var dto = await GetStructuredResponseAsync<CompositionResponseDto>(prompt, "ComposeItinerary", AiJsonSchemas.Composition, ct);
 
         var items = (dto.Items ?? [])
             .Where(i => Guid.TryParse(i.ProductId, out _))
@@ -84,7 +86,7 @@ public class OllamaAiModelClient(HttpClient http, IOptions<AiOptions> options, I
             return new ModificationIntentResult(ModificationAction.NONE, [], [], []);
 
         var prompt = BuildModificationPrompt(request);
-        var dto = await GetStructuredResponseAsync<ModificationResponseDto>(prompt, "InterpretModification", ct);
+        var dto = await GetStructuredResponseAsync<ModificationResponseDto>(prompt, "InterpretModification", AiJsonSchemas.Modification, ct);
 
         var action = Enum.TryParse<ModificationAction>(dto.Action, ignoreCase: true, out var parsed)
             ? parsed
@@ -124,13 +126,13 @@ public class OllamaAiModelClient(HttpClient http, IOptions<AiOptions> options, I
             {{JsonSerializer.Serialize(request.Preferences, JsonOptions)}}
             """;
 
-        var dto = await GetStructuredResponseAsync<ExplanationResponseDto>(prompt, "GenerateItemExplanation", ct);
+        var dto = await GetStructuredResponseAsync<ExplanationResponseDto>(prompt, "GenerateItemExplanation", AiJsonSchemas.Explanation, ct);
         return dto.Explanation;
     }
 
-    private async Task<T> GetStructuredResponseAsync<T>(string prompt, string operationName, CancellationToken ct)
+    private async Task<T> GetStructuredResponseAsync<T>(string prompt, string operationName, JsonNode schema, CancellationToken ct)
     {
-        var raw = await CallOllamaAsync(prompt, ct);
+        var raw = await CallOllamaAsync(prompt, schema, ct);
 
         if (TryParse<T>(raw, out var result))
             return result!;
@@ -138,7 +140,7 @@ public class OllamaAiModelClient(HttpClient http, IOptions<AiOptions> options, I
         logger.LogWarning("Ai {Operation}: JSON inválido en el primer intento, reintentando con recordatorio de formato.", operationName);
 
         var retryPrompt = prompt + "\n\nTu respuesta anterior no era JSON válido. Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional.";
-        var retryRaw = await CallOllamaAsync(retryPrompt, ct);
+        var retryRaw = await CallOllamaAsync(retryPrompt, schema, ct);
 
         if (TryParse<T>(retryRaw, out var retryResult))
             return retryResult!;
@@ -151,7 +153,7 @@ public class OllamaAiModelClient(HttpClient http, IOptions<AiOptions> options, I
     {
         try
         {
-            result = JsonSerializer.Deserialize<T>(raw, JsonOptions);
+            result = JsonSerializer.Deserialize<T>(ExtractJsonObject(raw), JsonOptions);
             return result is not null;
         }
         catch (JsonException)
@@ -161,11 +163,50 @@ public class OllamaAiModelClient(HttpClient http, IOptions<AiOptions> options, I
         }
     }
 
-    private async Task<string> CallOllamaAsync(string prompt, CancellationToken ct)
+    /// <summary>
+    /// Algunos modelos chicos envuelven el JSON en ```json ... ``` o lo acompañan de una frase. Con
+    /// `format` (esquema) casi nunca pasa, pero recortar el primer objeto balanceado sale más barato que
+    /// perder la respuesta y reintentar.
+    /// </summary>
+    private static string ExtractJsonObject(string raw)
+    {
+        var text = raw.Trim();
+        var start = text.IndexOf('{');
+        if (start < 0) return text;
+
+        var depth = 0;
+        var inString = false;
+        var escaped = false;
+        for (var i = start; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (inString)
+            {
+                if (escaped) escaped = false;
+                else if (c == '\\') escaped = true;
+                else if (c == '"') inString = false;
+                continue;
+            }
+
+            if (c == '"') inString = true;
+            else if (c == '{') depth++;
+            else if (c == '}' && --depth == 0) return text[start..(i + 1)];
+        }
+
+        return text[start..];
+    }
+
+    private async Task<string> CallOllamaAsync(string prompt, JsonNode schema, CancellationToken ct)
     {
         var ollamaOptions = options.Value.Ollama;
 
-        var body = new OllamaGenerateRequest(ollamaOptions.Model, prompt, false, "json");
+        // format = JSON Schema (Ollama ≥ 0.5): el modelo devuelve exactamente la forma que esperamos.
+        // temperature 0: misma pregunta, misma respuesta — imprescindible para poder testear y medir.
+        JsonNode format = ollamaOptions.UseJsonSchema ? schema.DeepClone() : JsonValue.Create("json")!;
+        var body = new OllamaGenerateRequest(
+            ollamaOptions.Model, prompt, false, format,
+            new OllamaGenerateOptions(ollamaOptions.Temperature),
+            ollamaOptions.KeepAlive);
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(ollamaOptions.TimeoutSeconds));
@@ -173,6 +214,19 @@ public class OllamaAiModelClient(HttpClient http, IOptions<AiOptions> options, I
         try
         {
             using var response = await http.PostAsJsonAsync($"{ollamaOptions.BaseUrl}/api/generate", body, JsonOptions, cts.Token);
+
+            // Un Ollama viejo no entiende un esquema en `format` y responde 400: se reintenta con "json",
+            // que es el modo estructurado que soportan todas las versiones.
+            if (response.StatusCode == HttpStatusCode.BadRequest && ollamaOptions.UseJsonSchema)
+            {
+                logger.LogWarning("Ollama rechazó el JSON Schema (¿versión anterior a 0.5?); se reintenta con format=json.");
+                var legacyBody = body with { Format = JsonValue.Create("json")! };
+                using var legacyResponse = await http.PostAsJsonAsync($"{ollamaOptions.BaseUrl}/api/generate", legacyBody, JsonOptions, cts.Token);
+                legacyResponse.EnsureSuccessStatusCode();
+                var legacyPayload = await legacyResponse.Content.ReadFromJsonAsync<OllamaGenerateResponse>(JsonOptions, cts.Token);
+                return legacyPayload?.Response ?? throw new AiModelResponseException("Ollama devolvió una respuesta vacía.");
+            }
+
             response.EnsureSuccessStatusCode();
 
             var payload = await response.Content.ReadFromJsonAsync<OllamaGenerateResponse>(JsonOptions, cts.Token);
@@ -317,7 +371,15 @@ public class OllamaAiModelClient(HttpClient http, IOptions<AiOptions> options, I
             """;
     }
 
-    private sealed record OllamaGenerateRequest(string Model, string Prompt, bool Stream, string Format);
+    private sealed record OllamaGenerateRequest(
+        string Model,
+        string Prompt,
+        bool Stream,
+        JsonNode Format,
+        OllamaGenerateOptions Options,
+        [property: JsonPropertyName("keep_alive")] string KeepAlive);
+
+    private sealed record OllamaGenerateOptions(double Temperature);
 
     private sealed record OllamaGenerateResponse([property: JsonPropertyName("response")] string? Response);
 
