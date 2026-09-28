@@ -16,7 +16,9 @@ public partial class DeterministicAiModelClient : IAiModelClient
 {
     public Task<PreferenceExtractionResult> ExtractPreferencesAsync(PreferenceExtractionRequest request, CancellationToken ct)
     {
-        var message = request.LatestMessage;
+        // Lo que parece una instrucción incrustada no se interpreta: sus números no pueden volverse
+        // presupuesto, viajeros ni destino (ver UntrustedUserText).
+        var message = UntrustedUserText.WithoutInjectedInstructions(request.LatestMessage);
         var folded = Fold(message);
 
         // Sin tildes ni mayúsculas: "potosi", "gastronomia" y "Potosí" valen lo mismo. Gana el nombre más
@@ -61,6 +63,8 @@ public partial class DeterministicAiModelClient : IAiModelClient
             travelers = int.Parse(travelersMatch.Groups[1].Value, CultureInfo.InvariantCulture);
         else if (WordTravelersRegex().Match(folded) is { Success: true } wordTravelers)
             travelers = WordToNumber(wordTravelers.Groups[1].Value);
+        else if (CompanionsRegex().Match(folded) is { Success: true } companions)
+            travelers = CompanionCount(companions.Groups[1].Value) + 1; // quien escribe también viaja
         else if (CoupleRegex().IsMatch(message))
             travelers = 2;
         else if (SoloRegex().IsMatch(folded))
@@ -165,7 +169,7 @@ public partial class DeterministicAiModelClient : IAiModelClient
     /// </summary>
     public Task<ModificationIntentResult> InterpretModificationAsync(ModificationInterpretationRequest request, CancellationToken ct)
     {
-        var message = request.LatestMessage;
+        var message = UntrustedUserText.WithoutInjectedInstructions(request.LatestMessage);
 
         if (request.CurrentItems.Count == 0)
             return Task.FromResult(new ModificationIntentResult(ModificationAction.NONE, [], [], []));
@@ -258,14 +262,29 @@ public partial class DeterministicAiModelClient : IAiModelClient
     private static bool ContainsWord(string foldedText, string foldedWord) =>
         Regex.IsMatch(foldedText, $@"(?<![\p{{L}}]){Regex.Escape(foldedWord)}(?![\p{{L}}])");
 
-    /// <summary>"cultural" → Cultura, "historico" → Historia, "aventurero" → Aventura: raíz de al menos 5 letras.</summary>
+    /// <summary>
+    /// "cultural" → Cultura, "historico" → Historia, "aventurero" → Aventura, "relax" → Relax y bienestar.
+    /// Se prueba cada palabra significativa del nombre de la categoría (no sólo la primera: "Relax y
+    /// bienestar" tiene dos) recortando la última letra para tolerar la derivación.
+    /// </summary>
     private static bool CategoryStemMatches(string foldedText, string foldedCategory)
     {
-        var firstWord = foldedCategory.Split(' ')[0];
-        if (firstWord.Length < 6) return false;
-        var stem = firstWord[..^1];
-        return Regex.IsMatch(foldedText, $@"(?<![\p{{L}}]){Regex.Escape(stem)}");
+        foreach (var word in foldedCategory.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (word.Length < 5) continue;
+            // Palabras largas toleran derivación ("cultural", "historico"); las cortas exigen coincidencia
+            // exacta, para que "relax" no se dispare con "relaxed" ni con cualquier palabra que la contenga.
+            var pattern = word.Length >= 6
+                ? $@"(?<![\p{{L}}]){Regex.Escape(word[..^1])}"
+                : $@"(?<![\p{{L}}]){Regex.Escape(word)}(?![\p{{L}}])";
+            if (Regex.IsMatch(foldedText, pattern)) return true;
+        }
+        return false;
     }
+
+    /// <summary>Acompañantes escritos en palabras o en cifras: "con dos amigos", "con 3 colegas".</summary>
+    private static int CompanionCount(string value) =>
+        WordToNumber(value) ?? int.Parse(value, CultureInfo.InvariantCulture);
 
     /// <summary>"un", "dos", "tres"… hasta diez: más allá, la gente escribe el número.</summary>
     private static int? WordToNumber(string word) => word switch
@@ -351,6 +370,10 @@ public partial class DeterministicAiModelClient : IAiModelClient
 
     [GeneratedRegex(@"(\d+)\s*(personas?|viajeros?|pax)")]
     private static partial Regex TravelersRegex();
+
+    /// <summary>"con dos amigos", "con 3 compañeros": los acompañantes no incluyen a quien escribe.</summary>
+    [GeneratedRegex(@"\bcon\s+(un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+)\s+(amig[oa]s?|companer[oa]s?|colegas?|hermanos?|hermanas?|primos?|primas?)\b")]
+    private static partial Regex CompanionsRegex();
 
     [GeneratedRegex(@"\b(mi novia|mi novio|mi esposa|mi esposo|mi pareja|en pareja)\b")]
     private static partial Regex CoupleRegex();

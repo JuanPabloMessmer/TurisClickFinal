@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-27T21:31:29.3607523-04:00",
-  "caseCount": 32,
+  "generatedAt": "2026-09-27T22:52:34.7967364-04:00",
+  "caseCount": 33,
   "runs": [
     {
       "label": "deterministic",
@@ -54,7 +54,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 39,
+          "elapsedMs": 51,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -108,7 +108,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 5,
+          "elapsedMs": 8,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -150,9 +150,9 @@
             },
             {
               "field": "fechas",
-              "expected": "(nada)",
+              "expected": "2026-09-26..2026-09-27",
               "actual": "2026-09-26..2026-09-27",
-              "ok": false
+              "ok": true
             },
             {
               "field": "ritmo",
@@ -162,7 +162,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 6,
+          "elapsedMs": 5,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -324,7 +324,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 2,
+          "elapsedMs": 3,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -565,8 +565,8 @@
             {
               "field": "viajeros",
               "expected": "3",
-              "actual": "(nada)",
-              "ok": false
+              "actual": "3",
+              "ok": true
             },
             {
               "field": "duraci\u00F3n",
@@ -582,9 +582,9 @@
             },
             {
               "field": "fechas",
-              "expected": "(nada)",
+              "expected": "2026-09-26..2026-09-27",
               "actual": "2026-09-26..2026-09-27",
-              "ok": false
+              "ok": true
             },
             {
               "field": "ritmo",
@@ -613,8 +613,8 @@
             {
               "field": "intereses",
               "expected": "Relax y bienestar",
-              "actual": "(nada)",
-              "ok": false
+              "actual": "Relax y bienestar",
+              "ok": true
             },
             {
               "field": "viajeros",
@@ -852,9 +852,9 @@
             },
             {
               "field": "fechas",
-              "expected": "(nada)",
+              "expected": "2026-09-26..2026-09-27",
               "actual": "(nada)",
-              "ok": true
+              "ok": false
             },
             {
               "field": "ritmo",
@@ -960,9 +960,9 @@
             },
             {
               "field": "fechas",
-              "expected": "(nada)",
+              "expected": "2026-09-26..2026-09-27",
               "actual": "2026-09-26..2026-09-27",
-              "ok": false
+              "ok": true
             },
             {
               "field": "ritmo",
@@ -1134,7 +1134,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 0,
+          "elapsedMs": 5,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1171,8 +1171,62 @@
             {
               "field": "presupuesto",
               "expected": "(nada)",
-              "actual": "1",
-              "ok": false
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 0,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-injection-3",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
             },
             {
               "field": "fechas",
@@ -1254,7 +1308,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 6,
+          "elapsedMs": 5,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1278,7 +1332,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 0,
+          "elapsedMs": 1,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1320,7 +1374,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 0,
+          "elapsedMs": 1,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1386,7 +1440,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 5,
+          "elapsedMs": 7,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0

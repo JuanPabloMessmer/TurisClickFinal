@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -225,6 +225,16 @@ public static class Program
         sb.AppendLine("El LLM se mide **sin** fallback determinístico: lo que falla cuenta como falla del modelo.");
         sb.AppendLine("En la app el fallback está activo, así que el usuario nunca ve esas fallas.");
         sb.AppendLine();
+        sb.AppendLine("## Estado de las mediciones");
+        sb.AppendLine();
+        var llmRun = report.Runs.FirstOrDefault(r => r.Label.StartsWith("llm:", StringComparison.Ordinal));
+        sb.AppendLine("| Proveedor | Estado |");
+        sb.AppendLine("|---|---|");
+        sb.AppendLine("| `deterministic` | **medido** — números reales de esta corrida |");
+        sb.AppendLine(llmRun is null
+            ? "| `llm + rag` | **PENDING LOCAL OLLAMA BENCHMARK** — Ollama no está instalado todavía; ningún número del LLM está medido ni estimado |"
+            : $"| `{llmRun.Label}` | **medido** — Ollama local, sin fallback |");
+        sb.AppendLine();
         sb.AppendLine("## Resumen");
         sb.AppendLine();
         sb.AppendLine("| Proveedor | Aciertos | Extracción | Refinamientos | Composición | JSON inválido | No disponible | Datos inventados | Mediana | p95 |");
@@ -266,8 +276,32 @@ public static class Program
             });
             sb.AppendLine($"| `{result.CaseId}` | {result.Language} | {DatasetMessage(result.CaseId)} | {string.Join(" | ", cells)} |");
         }
+        sb.AppendLine();
+        sb.Append(KnownLimits);
         return sb.ToString();
     }
+
+    /// <summary>
+    /// Texto fijo: explica qué NO cubre el baseline, para que la tabla no se lea como si los fallos
+    /// fueran ruido. Se documenta acá y no en el doc a mano porque el doc se regenera en cada corrida.
+    /// </summary>
+    private const string KnownLimits = """
+        ## Límites conocidos del baseline determinístico
+
+        Los fallos que quedan no son ruido del dataset: son el techo de una NLU por reglas.
+
+        - **Inglés.** El cliente determinístico es de reglas en español; reconoce los nombres propios del
+          catálogo (que no se traducen) pero no `for 4 days`, `two travelers`, `relaxed` ni el mapeo
+          `nature`/`food` → `Naturaleza`/`Gastronomía`. Traducir a mano ese vocabulario sería escribir un
+          diccionario para pasar el dataset, no entender el idioma: es exactamente el trabajo que se
+          delega al LLM. Se deja el hueco a la vista.
+        - **Lenguaje libre.** Reglas nuevas para frases que el dataset no contempla (ironía, pedidos
+          indirectos, varias intenciones en una oración) no generalizan; el LLM sí puede.
+        - **Lo que el baseline sí garantiza** y el LLM tiene que igualar: 0 JSON inválido, 0 productos,
+          destinos, categorías o ids inventados, latencia de milisegundos, y que un prompt adversarial
+          (`adversarial-*`) no altere presupuesto, viajeros, destino, precios ni ids.
+
+        """;
 
     private static readonly Dictionary<string, string> Messages = new();
     private static string DatasetMessage(string caseId) => Messages.GetValueOrDefault(caseId, "").Replace("|", "/");
