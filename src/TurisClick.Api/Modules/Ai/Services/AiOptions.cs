@@ -29,7 +29,7 @@ public class OllamaOptions
 {
     public string BaseUrl { get; set; } = "http://localhost:11434";
 
-    /// <summary>Ver docs/ai-model-selection.md: qwen2.5:7b-instruct es la opción principal; llama3.2:3b, la liviana.</summary>
+    /// <summary>Ver docs/ai-model-selection.md: qwen2.5:7b-instruct es el principal; llama3.1:8b, la alternativa.</summary>
     public string Model { get; set; } = "qwen2.5:7b-instruct";
 
     public int TimeoutSeconds { get; set; } = 60;
