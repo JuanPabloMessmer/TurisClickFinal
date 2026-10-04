@@ -3,24 +3,24 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * Los badges de estado usan el patrón "soft" (fondo al 10% del color + texto en el color sólido) en vez
- * de fondo sólido + texto blanco: mejor contraste con texto pequeño y es el estándar de facto en SaaS
- * moderno (Linear, Stripe, Vercel). "neutral" es para estados inactivos/informativos (no es "secondary":
- * ese nombre queda para cuando realmente se quiere mostrar la marca turquesa).
+ * DESIGN.md §12. Patrón "suave": texto 800 sobre fondo 100. Mide 6.37–7.15:1, contra el 4.38 que daba
+ * el patrón anterior (token sólido sobre su propio tinte al 10%) en texto de 12px.
+ *
+ * El color nunca viaja solo: un badge siempre lleva texto, jamás es un punto de color.
  */
 const badgeVariants = cva(
-  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors',
+  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold',
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-primary text-primary-foreground',
-        secondary: 'border-transparent bg-secondary/10 text-secondary',
-        neutral: 'border-transparent bg-muted text-muted-foreground',
-        success: 'border-transparent bg-success/10 text-success',
-        warning: 'border-transparent bg-warning/10 text-warning',
-        destructive: 'border-transparent bg-destructive/10 text-destructive',
-        info: 'border-transparent bg-info/10 text-info',
-        outline: 'border-border text-foreground',
+        default: 'bg-primary text-primary-foreground',
+        brand: 'bg-primary/10 text-primary',
+        neutral: 'bg-muted text-ink-muted',
+        success: 'bg-success-soft text-success-soft-foreground',
+        warning: 'bg-warning-soft text-warning-soft-foreground',
+        destructive: 'bg-destructive-soft text-destructive-soft-foreground',
+        info: 'bg-info-soft text-info-soft-foreground',
+        outline: 'border border-border-control text-foreground',
       },
     },
     defaultVariants: { variant: 'default' },

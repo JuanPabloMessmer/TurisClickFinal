@@ -5,6 +5,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom'
 import { z } from 'zod'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { BrandMark } from '@/components/BrandMark'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -47,22 +48,16 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-primary px-4 py-12">
-      <div className="mb-8 flex flex-col items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-xl font-bold text-secondary-foreground">
-          T
-        </div>
-        <div className="text-center">
-          <p className="text-xl font-bold tracking-tight text-primary-foreground">TurisClick</p>
-          <p className="text-xs font-medium uppercase tracking-wider text-primary-foreground/60">Backoffice</p>
-        </div>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-brand-900 px-4 py-12">
+      <div className="mb-8">
+        <BrandMark subtitle="Panel de operadores y administración" />
       </div>
 
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
           <div className="mb-5">
             <h1 className="text-lg font-semibold text-foreground">Iniciar sesión</h1>
-            <p className="text-sm text-muted-foreground">Ingresá con tu cuenta de ADMIN o PROVIDER.</p>
+            <p className="text-sm text-muted-foreground">Entrá con la cuenta con la que registraste tu empresa.</p>
           </div>
           <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
             <div className="flex flex-col gap-1.5">

@@ -8,5 +8,7 @@ export function RootRedirect() {
   if (status === 'idle' || status === 'loading') return <FullScreenSpinner />
   if (status !== 'authenticated' || !user) return <Navigate to="/login" replace />
 
-  return <Navigate to={user.role === 'ADMIN' ? '/admin/destinations' : '/provider/company'} replace />
+  // Los dos roles aterrizan en "Hoy": antes el ADMIN caia en una tabla de destinos y el PROVIDER en
+  // el formulario de su empresa, y ninguno veia el trabajo pendiente.
+  return <Navigate to="/dashboard" replace />
 }

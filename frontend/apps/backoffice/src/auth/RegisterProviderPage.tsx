@@ -6,6 +6,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { BrandMark } from '@/components/BrandMark'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -75,21 +76,15 @@ export function RegisterProviderPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-primary px-4 py-12">
-      <div className="mb-8 flex flex-col items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-xl font-bold text-secondary-foreground">
-          T
-        </div>
-        <div className="text-center">
-          <p className="text-xl font-bold tracking-tight text-primary-foreground">TurisClick</p>
-          <p className="text-xs font-medium uppercase tracking-wider text-primary-foreground/60">Backoffice</p>
-        </div>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-brand-900 px-4 py-12">
+      <div className="mb-8">
+        <BrandMark subtitle="Panel de operadores y administración" />
       </div>
 
       <Card className="w-full max-w-lg">
         <CardHeader>
           <CardTitle>Registrar empresa</CardTitle>
-          <CardDescription>UC-P-01. Tu empresa queda pendiente de aprobación por un administrador.</CardDescription>
+          <CardDescription>Un administrador revisa los datos antes de que tus experiencias se puedan publicar.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={form.handleSubmit(onSubmit)} noValidate>

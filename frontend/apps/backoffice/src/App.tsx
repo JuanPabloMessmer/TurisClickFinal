@@ -9,6 +9,7 @@ import { AppLayout } from '@/layout/AppLayout'
 import { queryClient } from '@/lib/queryClient'
 import { ExperienceAvailabilityPage } from '@/modules/availability/ExperienceAvailabilityPage'
 import { CategoriesPage } from '@/modules/categories/CategoriesPage'
+import { DashboardPage } from '@/modules/dashboard/DashboardPage'
 import { CompaniesApprovalPage } from '@/modules/companies/CompaniesApprovalPage'
 import { CompanyDetailPage } from '@/modules/companies/CompanyDetailPage'
 import { DestinationsPage } from '@/modules/destinations/DestinationsPage'
@@ -30,6 +31,14 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register-provider" element={<RegisterProviderPage />} />
+
+            {/* "Hoy" es la pantalla de inicio de los dos roles, y no exige empresa aprobada:
+                un operador en revision tambien necesita ver en que estado esta. */}
+            <Route element={<RequireRole roles={['ADMIN', 'PROVIDER']} />}>
+              <Route element={<AppLayout />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+              </Route>
+            </Route>
 
             <Route element={<RequireRole roles={['ADMIN']} />}>
               <Route element={<AppLayout />}>

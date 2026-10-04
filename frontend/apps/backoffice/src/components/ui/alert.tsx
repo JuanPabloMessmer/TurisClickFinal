@@ -3,13 +3,13 @@ import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react'
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 
-const alertVariants = cva('flex items-start gap-3 rounded-lg border px-4 py-3 text-sm', {
+const alertVariants = cva('flex items-start gap-3 rounded-md px-4 py-3 text-body', {
   variants: {
     variant: {
-      info: 'border-info/20 bg-info/10 text-info',
-      success: 'border-success/20 bg-success/10 text-success',
-      warning: 'border-warning/20 bg-warning/10 text-warning',
-      destructive: 'border-destructive/20 bg-destructive/10 text-destructive',
+      info: 'bg-info-soft text-info-soft-foreground',
+      success: 'bg-success-soft text-success-soft-foreground',
+      warning: 'bg-warning-soft text-warning-soft-foreground',
+      destructive: 'bg-destructive-soft text-destructive-soft-foreground',
     },
   },
   defaultVariants: { variant: 'info' },

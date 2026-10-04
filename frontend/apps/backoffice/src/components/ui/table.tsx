@@ -5,8 +5,10 @@ import { cn } from '@/lib/utils'
 
 export const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="w-full overflow-auto">
-      <table ref={ref} className={cn('w-full caption-bottom text-sm', className)} {...props} />
+    // Ancho minimo real: sin esto las columnas se comprimen hasta ser ilegibles en vez de desbordar,
+    // y el scroll horizontal nunca se activa (DESIGN.md §15).
+    <div className="w-full overflow-x-auto">
+      <table ref={ref} className={cn('w-full caption-bottom text-label', className)} {...props} />
     </div>
   ),
 )
@@ -33,7 +35,7 @@ export const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttr
   ({ className, ...props }, ref) => (
     <th
       ref={ref}
-      className={cn('h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground', className)}
+      className={cn('h-10 whitespace-nowrap px-3 text-left align-middle text-caption font-semibold text-ink-muted', className)}
       {...props}
     />
   ),
@@ -41,7 +43,7 @@ export const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttr
 TableHead.displayName = 'TableHead'
 
 export const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
-  ({ className, ...props }, ref) => <td ref={ref} className={cn('p-3 align-middle', className)} {...props} />,
+  ({ className, ...props }, ref) => <td ref={ref} className={cn('px-3 py-2.5 align-middle tabular', className)} {...props} />,
 )
 TableCell.displayName = 'TableCell'
 

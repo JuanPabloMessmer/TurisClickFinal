@@ -23,6 +23,7 @@ function renderAt(initialPath: string, element: React.ReactElement) {
       <Routes>
         <Route path="/login" element={<p>Pantalla de login</p>} />
         <Route path="/admin/destinations" element={<p>Destinos (admin)</p>} />
+        <Route path="/dashboard" element={<p>Hoy</p>} />
         <Route path="/provider/company" element={<p>Mi empresa (provider)</p>} />
         <Route element={element}>
           <Route path="/protegida" element={<p>Contenido protegido</p>} />
@@ -78,14 +79,18 @@ describe('RequireRole', () => {
 })
 
 describe('RootRedirect', () => {
-  it('lleva a cada rol a su pantalla inicial', () => {
+  // Los dos aterrizan en la misma pantalla, asi que cada rol se verifica en su propio render: dos
+  // renders en el mismo test dejarian dos "Hoy" en el DOM y la asercion dejaria de distinguirlos.
+  it('lleva al ADMIN a Hoy', () => {
     mockedUseAuth.mockReturnValue(session({ status: 'authenticated', user: { id: 'a1', role: 'ADMIN', fullName: 'Admin' } as AuthState['user'] }))
     renderAt('/', <RootRedirect />)
-    expect(screen.getByText('Destinos (admin)')).toBeTruthy()
+    expect(screen.getByText('Hoy')).toBeTruthy()
+  })
 
+  it('lleva al PROVIDER a Hoy', () => {
     mockedUseAuth.mockReturnValue(session({ status: 'authenticated', user: { id: 'p1', role: 'PROVIDER', fullName: 'Prov' } as AuthState['user'] }))
     renderAt('/', <RootRedirect />)
-    expect(screen.getByText('Mi empresa (provider)')).toBeTruthy()
+    expect(screen.getByText('Hoy')).toBeTruthy()
   })
 
   it('sin sesión va a login', () => {
