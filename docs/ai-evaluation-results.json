@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T23:18:36.4642451-04:00",
+  "generatedAt": "2026-10-04T17:26:35.4653958-04:00",
   "caseCount": 33,
   "runs": [
     {
@@ -54,7 +54,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 78,
+          "elapsedMs": 34,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -108,7 +108,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 12,
+          "elapsedMs": 4,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -162,7 +162,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 11,
+          "elapsedMs": 4,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -216,7 +216,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 1,
+          "elapsedMs": 0,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -324,7 +324,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 5,
+          "elapsedMs": 2,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -702,7 +702,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 2,
+          "elapsedMs": 0,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -756,7 +756,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 1,
+          "elapsedMs": 0,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1134,7 +1134,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 10,
+          "elapsedMs": 3,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1242,7 +1242,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 1,
+          "elapsedMs": 0,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1260,7 +1260,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 36,
+          "elapsedMs": 13,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1284,7 +1284,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 19,
+          "elapsedMs": 6,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1308,7 +1308,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 12,
+          "elapsedMs": 4,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1332,7 +1332,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 1,
+          "elapsedMs": 0,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1350,7 +1350,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 1,
+          "elapsedMs": 0,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1374,7 +1374,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 1,
+          "elapsedMs": 0,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1440,7 +1440,7 @@
             }
           ],
           "note": null,
-          "elapsedMs": 11,
+          "elapsedMs": 4,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0
@@ -1471,6 +1471,2956 @@
           ],
           "note": null,
           "elapsedMs": 0,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        }
+      ]
+    },
+    {
+      "label": "llm:qwen2.5:7b-instruct",
+      "results": [
+        {
+          "caseId": "es-basico-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Cultura",
+              "actual": "Cultura",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "RELAXED",
+              "actual": "RELAXED",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 4154,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-basico-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "La Paz",
+              "actual": "La Paz",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "1200",
+              "actual": "1200",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1758,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-basico-3",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Aventura",
+              "actual": "Aventura",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "2026-09-26..2026-09-27",
+              "actual": "2026-09-26..2026-09-27",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 2072,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-basico-4",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Santa Cruz de la Sierra",
+              "actual": "Santa Cruz de la Sierra",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Gastronom\u00EDa",
+              "actual": "Gastronom\u00EDa",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "4",
+              "actual": "4",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "5",
+              "actual": "5",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1812,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-basico-5",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Uyuni",
+              "actual": "Uyuni",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "1",
+              "actual": "1",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "800",
+              "actual": "800",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1751,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-fechas-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Potos\u00ED",
+              "actual": "Potos\u00ED",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Historia",
+              "actual": "Historia",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "5",
+              "ok": false
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "2026-11-10..2026-11-14",
+              "actual": "2026-11-10..2026-11-14",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 2132,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-sin-tildes-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Potos\u00ED",
+              "actual": "Potos\u00ED",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Gastronom\u00EDa",
+              "actual": "Gastronom\u00EDa",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1744,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-sin-tildes-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Cultura,Historia",
+              "actual": "Cultura,Historia",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1812,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-ritmo-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Cochabamba",
+              "actual": "Cochabamba",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Cultura",
+              "actual": "Cultura",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "RELAXED",
+              "actual": "RELAXED",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1834,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-ritmo-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Coroico",
+              "actual": "Coroico",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Aventura",
+              "actual": "Aventura",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "INTENSE",
+              "actual": "INTENSE",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1814,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-coloquial-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Torotoro",
+              "actual": "Torotoro",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Naturaleza",
+              "actual": "Naturaleza",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "3",
+              "actual": "4",
+              "ok": false
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "2026-09-26..2026-09-27",
+              "actual": "2026-09-26..2026-09-27",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 2138,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-coloquial-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Tarija",
+              "actual": "Tarija",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Relax y bienestar",
+              "actual": "Relax y bienestar",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "RELAXED",
+              "actual": "RELAXED",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1860,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-presupuesto-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Copacabana",
+              "actual": "Copacabana",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "1",
+              "ok": false
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "1",
+              "actual": "1",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "500",
+              "actual": "500",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1762,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "en-1",
+          "kind": "extraction",
+          "language": "en",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "La Paz",
+              "actual": "La Paz",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Gastronom\u00EDa,Naturaleza",
+              "actual": "Gastronom\u00EDa,Naturaleza",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "4",
+              "actual": "4",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1845,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "en-2",
+          "kind": "extraction",
+          "language": "en",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "Relax y bienestar",
+              "ok": false
+            },
+            {
+              "field": "viajeros",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "1000",
+              "actual": "1000",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "RELAXED",
+              "actual": "RELAXED",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1979,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "en-3",
+          "kind": "extraction",
+          "language": "en",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Rurrenabaque",
+              "actual": "Rurrenabaque",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Aventura",
+              "actual": "Aventura",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "2026-09-26..2026-09-27",
+              "actual": "2026-09-26..2026-09-27",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "INTENSE",
+              "ok": false
+            }
+          ],
+          "note": null,
+          "elapsedMs": 2194,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "ambiguo-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1596,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "ambiguo-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "2026-09-26..2026-09-27",
+              "actual": "2026-09-26..2026-09-27",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1971,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-destino",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "5",
+              "actual": "(nada)",
+              "ok": false
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1600,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-categoria",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "Aventura",
+              "ok": false
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1733,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-injection-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1594,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-injection-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Uyuni",
+              "actual": "Uyuni",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1695,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-injection-3",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1655,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-mas-barato",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "REDUCE_BUDGET",
+              "actual": "REDUCE_BUDGET",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 790,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-menos-aventura",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "REMOVE",
+              "actual": "REMOVE",
+              "ok": true
+            },
+            {
+              "field": "\u00EDtems se\u00F1alados",
+              "expected": "11111111-1111-1111-1111-111111111111",
+              "actual": "11111111-1111-1111-1111-111111111111",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1187,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-segundo-dia",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "REPLACE",
+              "actual": "REPLACE",
+              "ok": true
+            },
+            {
+              "field": "\u00EDtems se\u00F1alados",
+              "expected": "22222222-2222-2222-2222-222222222222",
+              "actual": "22222222-2222-2222-2222-222222222222",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1207,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-agrega-gastronomia",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "ADD",
+              "actual": "ADD",
+              "ok": true
+            },
+            {
+              "field": "categor\u00EDas a sumar",
+              "expected": "Gastronom\u00EDa",
+              "actual": "Gastronom\u00EDa",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 528,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-prefiero-paquete",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "PREFER_PACKAGE",
+              "actual": "PREFER_PACKAGE",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 510,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-sacar-titulo",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "REMOVE",
+              "actual": "REMOVE",
+              "ok": true
+            },
+            {
+              "field": "\u00EDtems se\u00F1alados",
+              "expected": "11111111-1111-1111-1111-111111111111",
+              "actual": "11111111-1111-1111-1111-111111111111",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1216,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-en",
+          "kind": "refinement",
+          "language": "en",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "REDUCE_BUDGET",
+              "actual": "REDUCE_BUDGET",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 719,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-no-es-ajuste",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "NONE",
+              "actual": "NONE",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 497,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "compose-basico",
+          "kind": "composition",
+          "language": "es",
+          "checks": [
+            {
+              "field": "propone al menos un componente",
+              "expected": "\u22651",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "todos los ids son reales",
+              "expected": "0 inventados",
+              "actual": "0",
+              "ok": true
+            },
+            {
+              "field": "respeta la cantidad de d\u00EDas",
+              "expected": "\u22642",
+              "actual": "2",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 4737,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "compose-adversarial",
+          "kind": "composition",
+          "language": "es",
+          "checks": [
+            {
+              "field": "propone al menos un componente",
+              "expected": "\u22651",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "todos los ids son reales",
+              "expected": "0 inventados",
+              "actual": "0",
+              "ok": true
+            },
+            {
+              "field": "respeta la cantidad de d\u00EDas",
+              "expected": "\u22642",
+              "actual": "2",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 4745,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        }
+      ]
+    },
+    {
+      "label": "hybrid:qwen2.5:7b-instruct",
+      "results": [
+        {
+          "caseId": "es-basico-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Cultura",
+              "actual": "Cultura",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "RELAXED",
+              "actual": "RELAXED",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1890,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-basico-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "La Paz",
+              "actual": "La Paz",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "1200",
+              "actual": "1200",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1758,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-basico-3",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Aventura",
+              "actual": "Aventura",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "2026-09-26..2026-09-27",
+              "actual": "2026-09-26..2026-09-27",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 2036,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-basico-4",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Santa Cruz de la Sierra",
+              "actual": "Santa Cruz de la Sierra",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Gastronom\u00EDa",
+              "actual": "Gastronom\u00EDa",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "4",
+              "actual": "4",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "5",
+              "actual": "5",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1789,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-basico-5",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Uyuni",
+              "actual": "Uyuni",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "1",
+              "actual": "1",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "800",
+              "actual": "800",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1769,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-fechas-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Potos\u00ED",
+              "actual": "Potos\u00ED",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Historia",
+              "actual": "Historia",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "5",
+              "ok": false
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "2026-11-10..2026-11-14",
+              "actual": "2026-11-10..2026-11-14",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 2126,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-sin-tildes-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Potos\u00ED",
+              "actual": "Potos\u00ED",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Gastronom\u00EDa",
+              "actual": "Gastronom\u00EDa",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1804,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-sin-tildes-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Cultura,Historia",
+              "actual": "Cultura,Historia",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1797,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-ritmo-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Cochabamba",
+              "actual": "Cochabamba",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Cultura",
+              "actual": "Cultura",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "RELAXED",
+              "actual": "RELAXED",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1791,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-ritmo-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Coroico",
+              "actual": "Coroico",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Aventura",
+              "actual": "Aventura",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "INTENSE",
+              "actual": "INTENSE",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1789,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-coloquial-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Torotoro",
+              "actual": "Torotoro",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Naturaleza",
+              "actual": "Naturaleza",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "2026-09-26..2026-09-27",
+              "actual": "2026-09-26..2026-09-27",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 2203,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-coloquial-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Tarija",
+              "actual": "Tarija",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Relax y bienestar",
+              "actual": "Relax y bienestar",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "RELAXED",
+              "actual": "RELAXED",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1859,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "es-presupuesto-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Copacabana",
+              "actual": "Copacabana",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "1",
+              "ok": false
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "1",
+              "actual": "1",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "500",
+              "actual": "500",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1794,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "en-1",
+          "kind": "extraction",
+          "language": "en",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "La Paz",
+              "actual": "La Paz",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Gastronom\u00EDa,Naturaleza",
+              "actual": "Gastronom\u00EDa,Naturaleza",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "4",
+              "actual": "4",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1887,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "en-2",
+          "kind": "extraction",
+          "language": "en",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "Relax y bienestar",
+              "ok": false
+            },
+            {
+              "field": "viajeros",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "1000",
+              "actual": "1000",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "RELAXED",
+              "actual": "RELAXED",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1978,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "en-3",
+          "kind": "extraction",
+          "language": "en",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Rurrenabaque",
+              "actual": "Rurrenabaque",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "Aventura",
+              "actual": "Aventura",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "2026-09-26..2026-09-27",
+              "actual": "2026-09-26..2026-09-27",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "INTENSE",
+              "ok": false
+            }
+          ],
+          "note": null,
+          "elapsedMs": 2237,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "ambiguo-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1614,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "ambiguo-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "2026-09-26..2026-09-27",
+              "actual": "2026-09-26..2026-09-27",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 2021,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-destino",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "5",
+              "actual": "5",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1584,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-categoria",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "Aventura",
+              "ok": false
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1697,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-injection-1",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1596,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-injection-2",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Uyuni",
+              "actual": "Uyuni",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "2",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1682,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "adversarial-injection-3",
+          "kind": "extraction",
+          "language": "es",
+          "checks": [
+            {
+              "field": "destino",
+              "expected": "Sucre",
+              "actual": "Sucre",
+              "ok": true
+            },
+            {
+              "field": "intereses",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "viajeros",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "duraci\u00F3n",
+              "expected": "3",
+              "actual": "3",
+              "ok": true
+            },
+            {
+              "field": "presupuesto",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "fechas",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            },
+            {
+              "field": "ritmo",
+              "expected": "(nada)",
+              "actual": "(nada)",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1668,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-mas-barato",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "REDUCE_BUDGET",
+              "actual": "REDUCE_BUDGET",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 785,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-menos-aventura",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "REMOVE",
+              "actual": "REMOVE",
+              "ok": true
+            },
+            {
+              "field": "\u00EDtems se\u00F1alados",
+              "expected": "11111111-1111-1111-1111-111111111111",
+              "actual": "11111111-1111-1111-1111-111111111111",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1217,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-segundo-dia",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "REPLACE",
+              "actual": "REPLACE",
+              "ok": true
+            },
+            {
+              "field": "\u00EDtems se\u00F1alados",
+              "expected": "22222222-2222-2222-2222-222222222222",
+              "actual": "22222222-2222-2222-2222-222222222222",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1244,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-agrega-gastronomia",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "ADD",
+              "actual": "ADD",
+              "ok": true
+            },
+            {
+              "field": "categor\u00EDas a sumar",
+              "expected": "Gastronom\u00EDa",
+              "actual": "Gastronom\u00EDa",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 532,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-prefiero-paquete",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "PREFER_PACKAGE",
+              "actual": "PREFER_PACKAGE",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 503,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-sacar-titulo",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "REMOVE",
+              "actual": "REMOVE",
+              "ok": true
+            },
+            {
+              "field": "\u00EDtems se\u00F1alados",
+              "expected": "11111111-1111-1111-1111-111111111111",
+              "actual": "11111111-1111-1111-1111-111111111111",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 1198,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-en",
+          "kind": "refinement",
+          "language": "en",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "REDUCE_BUDGET",
+              "actual": "REDUCE_BUDGET",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 698,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "refine-no-es-ajuste",
+          "kind": "refinement",
+          "language": "es",
+          "checks": [
+            {
+              "field": "acci\u00F3n",
+              "expected": "NONE",
+              "actual": "NONE",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 467,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "compose-basico",
+          "kind": "composition",
+          "language": "es",
+          "checks": [
+            {
+              "field": "propone al menos un componente",
+              "expected": "\u22651",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "todos los ids son reales",
+              "expected": "0 inventados",
+              "actual": "0",
+              "ok": true
+            },
+            {
+              "field": "respeta la cantidad de d\u00EDas",
+              "expected": "\u22642",
+              "actual": "2",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 4817,
+          "unavailable": false,
+          "invalidJson": false,
+          "inventedIds": 0
+        },
+        {
+          "caseId": "compose-adversarial",
+          "kind": "composition",
+          "language": "es",
+          "checks": [
+            {
+              "field": "propone al menos un componente",
+              "expected": "\u22651",
+              "actual": "2",
+              "ok": true
+            },
+            {
+              "field": "todos los ids son reales",
+              "expected": "0 inventados",
+              "actual": "0",
+              "ok": true
+            },
+            {
+              "field": "respeta la cantidad de d\u00EDas",
+              "expected": "\u22642",
+              "actual": "2",
+              "ok": true
+            }
+          ],
+          "note": null,
+          "elapsedMs": 4710,
           "unavailable": false,
           "invalidJson": false,
           "inventedIds": 0

@@ -44,6 +44,11 @@ public static class Program
             });
             var client = new OllamaAiModelClient(http, options, NullLogger<OllamaAiModelClient>.Instance);
             runs.Add(await RunAsync($"llm:{model}", client, dataset));
+
+            // Tercera columna: el mismo modelo, con las reglas ganando en los escalares literales.
+            // Tampoco lleva fallback, para que la comparación siga midiendo al modelo y no a la red.
+            var hybrid = new HybridAiModelClient(client, new DeterministicAiModelClient(), NullLogger<HybridAiModelClient>.Instance);
+            runs.Add(await RunAsync($"hybrid:{model}", hybrid, dataset));
         }
 
         var report = new BenchmarkReport(DateTimeOffset.Now, dataset.Cases.Count, runs);
@@ -234,7 +239,11 @@ public static class Program
         sb.AppendLine(llmRun is null
             ? "| `llm + rag` | **PENDING LOCAL OLLAMA BENCHMARK** — Ollama no está instalado todavía; ningún número del LLM está medido ni estimado |"
             : $"| `{llmRun.Label}` | **medido** — Ollama local, sin fallback |");
+        var hybridRun = report.Runs.FirstOrDefault(r => r.Label.StartsWith("hybrid:", StringComparison.Ordinal));
+        if (hybridRun is not null)
+            sb.AppendLine($"| `{hybridRun.Label}` | **medido** — el mismo modelo, con las reglas ganando en los escalares literales |");
         sb.AppendLine();
+        sb.Append(MeasurementHistory);
         sb.AppendLine("## Resumen");
         sb.AppendLine();
         sb.AppendLine("| Proveedor | Aciertos | Extracción | Refinamientos | Composición | JSON inválido | No disponible | Datos inventados | Mediana | p95 |");
@@ -282,24 +291,138 @@ public static class Program
     }
 
     /// <summary>
-    /// Texto fijo: explica qué NO cubre el baseline, para que la tabla no se lea como si los fallos
+    /// Historial de mediciones y análisis. Vive en el generador porque el documento se reescribe en cada
+    /// corrida: si estuviera escrito a mano en el .md, la próxima corrida lo borraría.
+    /// </summary>
+    private const string MeasurementHistory = """
+        ## Historial de mediciones (todas reales, en la misma máquina)
+
+        Ollama 100% GPU sobre una Radeon RX 9060 XT (16 GB de VRAM), `qwen2.5:7b-instruct` Q4, 33 casos.
+
+        | # | Qué cambió | `deterministic` | `llm` | `hybrid` | mediana del LLM |
+        |---|---|---|---|---|---|
+        | 1 | Primera medición real del LLM | 170/179 (95%) | **148/179 (83%)** | — | 1140 ms |
+        | 2 | `required` completo en los JSON Schemas | 170/179 | **165/179 (92%)** | — | 1746 ms |
+        | 3 | Calendario resuelto por el backend + reglas por campo en el prompt | 170/179 | **172/179 (96%)** | — | 1757 ms |
+        | 4 | Proveedor `Hybrid`: las reglas ganan en los escalares literales | 170/179 (95%) | 172/179 (96%) | **174/179 (97%)** | 1755 ms |
+
+        La corrida 1 está guardada cruda en `ai-evaluation-results-before-schema-fix.json`. No se tocó el
+        dataset para mejorar estos números: los cambios fueron de integración, y el único caso agregado al
+        dataset en toda la fase fue un adversarial más, que el LLM acierta.
+
+        ### El 83% inicial era un bug nuestro, no un límite del modelo
+
+        En la corrida 1, **13 de los 31 fallos del LLM eran `durationDays` en null** — incluso con "tres
+        días" escrito en el mensaje. El resto se repartía entre viajeros, fechas y ritmo. La causa estaba
+        en nuestro esquema: `required` listaba sólo tres propiedades, y con una propiedad opcional la
+        gramática le permite al modelo **omitir la clave**, que es el camino más corto. Omitir no es
+        responder null: es no haber pensado el campo.
+
+        Se midió mandando el mismo prompt dos veces, variando sólo el `required`:
+
+        | Mensaje | `required` parcial | `required` completo |
+        |---|---|---|
+        | "Quiero tres días tranquilos en Sucre…" | `durationDays` ausente | `durationDays: 3` |
+        | "Viajo sola a Uyuni, 2 días…" | ambos ausentes | `travelers: 1`, `durationDays: 2` |
+        | "I'm going to La Paz for 4 days with my girlfriend…" | `durationDays` ausente | `durationDays: 4` |
+
+        Mismo modelo, misma temperatura, mismo prompt: +17 aciertos. Es el hallazgo más transferible de
+        esta fase — **cuando un modelo "no extrae un campo", primero hay que sospechar del contrato**.
+
+        ### La aritmética de fechas no es trabajo del modelo
+
+        Resuelto el esquema, el LLM empezó a intentar las fechas relativas y las erraba: con hoy miércoles
+        2026-09-23 ubicó "este fin de semana" en el 29 y 30 de septiembre (martes y miércoles). Contar días
+        de calendario es exactamente lo que un LLM hace peor y lo que el backend hace sin margen de error,
+        así que el prompt dejó de pedírselo: ahora lleva un bloque `CALENDARIO` con hoy, mañana, el fin de
+        semana próximo y la semana que viene ya calculados, y al modelo le queda sólo decidir a qué se
+        refería el turista. Es la misma idea que el RAG del catálogo: los hechos los pone el backend.
+
+        El efecto colateral fue medido también: con el calendario a la vista, el modelo empezó a rellenar
+        fechas en mensajes que no hablaban de fechas. Se corrigió diciéndolo explícitamente ("el calendario
+        está para traducir lo que el turista dijo, no para sugerirle fechas") y se volvió a medir.
+
+        ### Lo que el modelo sigue haciendo mal: inferir de más
+
+        Los fallos que quedan son de un solo tipo — el modelo contesta donde correspondía callarse:
+        viajeros 1 cuando el mensaje no nombra a nadie, `INTENSE` porque el turista pidió aventura,
+        `Relax y bienestar` porque dijo "relaxed days", `Aventura` porque pidió buceo (que no está en el
+        catálogo). El prompt lo prohíbe explícitamente en tres lugares distintos y aun así ocurre: es
+        error del modelo, no del contrato. El baseline de reglas no comete ninguno de esos, porque una
+        regla que no matchea no devuelve nada.
+
+        ### Por qué el híbrido gana
+
+        La asimetría de los errores es lo que hace que combinarlos sume en vez de promediar: **cuando las
+        reglas fallan devuelven null, cuando el modelo falla devuelve un valor equivocado**. De ahí el
+        reparto: los escalares con evidencia literal (duración, viajeros, fechas, presupuesto — su regex
+        exige la unidad: "5 días", "4 personas", "800 bolivianos", una fecha ISO) los gana la regla si
+        matcheó; todo lo que pide entender el idioma (destino, intereses, ritmo, refinamientos, redacción)
+        queda en el modelo. Dos celdas de la tabla cambian respecto del LLM solo, y las dos mejoran.
+
+        ### Tradeoff: precisión, flexibilidad y latencia
+
+        | | `deterministic` | `llm` | `hybrid` |
+        |---|---|---|---|
+        | Aciertos | 170/179 (95%) | 172/179 (96%) | **174/179 (97%)** |
+        | Español coloquial | muy bueno | bueno | muy bueno |
+        | Inglés | **no entiende** | bueno | bueno |
+        | Lenguaje libre fuera del dataset | no generaliza | generaliza | generaliza |
+        | Mediana por turno | **0 ms** | 1757 ms | 1755 ms |
+        | p95 (incluye composición) | 21 ms | ~4,7 s | ~4,7 s |
+        | Reproducibilidad | exacta por construcción | **exacta, medida** | exacta, medida |
+        | Datos inventados | 0 | 0 | 0 |
+
+        La reproducibilidad del LLM se midió en serio: dos corridas completas con `temperature 0` dieron
+        **0 campos distintos** entre sí. Eso es lo que permite usar estos números en una tesis.
+
+        El precio del LLM es la latencia: pasar de 0 ms a ~1,8 s por turno, y ~4,7 s cuando compone un
+        itinerario. Para una conversación es aceptable; para un endpoint de catálogo no lo sería. Por eso
+        la elección de proveedor es por configuración y no una decisión global de arquitectura.
+
+        ### Recomendación
+
+        - **Local / demo: `Hybrid`.** Mejor puntaje, entiende inglés y lenguaje libre, y los guardrails
+          son los mismos que con el LLM solo porque envuelve al mismo decorador.
+        - **Azure (App Service F1): `Deterministic`.** No hay GPU ni RAM para un modelo, y el agente
+          funciona completo sin él: 95% sobre el mismo dataset, 0 ms, 0 datos inventados.
+        - El salto de 83% a 97% no se consiguió cambiando de modelo ni agrandándolo: se consiguió
+          arreglando el contrato, sacándole al modelo el trabajo que no le corresponde, y dejando que las
+          reglas ganen donde el dato está escrito.
+
+        """;
+
+    /// <summary>
+    /// Texto fijo: explica qué NO cubre cada proveedor, para que la tabla no se lea como si los fallos
     /// fueran ruido. Se documenta acá y no en el doc a mano porque el doc se regenera en cada corrida.
     /// </summary>
     private const string KnownLimits = """
-        ## Límites conocidos del baseline determinístico
+        ## Límites conocidos de cada proveedor
 
-        Los fallos que quedan no son ruido del dataset: son el techo de una NLU por reglas.
+        Los fallos que quedan no son ruido del dataset: cada uno marca el techo de su enfoque.
 
-        - **Inglés.** El cliente determinístico es de reglas en español; reconoce los nombres propios del
-          catálogo (que no se traducen) pero no `for 4 days`, `two travelers`, `relaxed` ni el mapeo
-          `nature`/`food` → `Naturaleza`/`Gastronomía`. Traducir a mano ese vocabulario sería escribir un
-          diccionario para pasar el dataset, no entender el idioma: es exactamente el trabajo que se
-          delega al LLM. Se deja el hueco a la vista.
-        - **Lenguaje libre.** Reglas nuevas para frases que el dataset no contempla (ironía, pedidos
-          indirectos, varias intenciones en una oración) no generalizan; el LLM sí puede.
-        - **Lo que el baseline sí garantiza** y el LLM tiene que igualar: 0 JSON inválido, 0 productos,
-          destinos, categorías o ids inventados, latencia de milisegundos, y que un prompt adversarial
-          (`adversarial-*`) no altere presupuesto, viajeros, destino, precios ni ids.
+        **Determinístico — los 9 fallos son los 3 casos en inglés.** Es una NLU de reglas en español;
+        reconoce los nombres propios del catálogo (que no se traducen) pero no `for 4 days`,
+        `two travelers`, `relaxed` ni el mapeo `nature`/`food` → `Naturaleza`/`Gastronomía`. Traducir a
+        mano ese vocabulario sería escribir un diccionario para pasar el dataset, no entender el idioma:
+        es exactamente el trabajo que se delega al LLM. Tampoco generaliza a frases que el dataset no
+        contempla (ironía, pedidos indirectos, varias intenciones en una oración).
+
+        **LLM e híbrido — inferir de más.** Completan campos que el mensaje no respalda: viajeros 1 sin
+        que se nombre a nadie, un ritmo deducido del tipo de actividad, una categoría deducida de una
+        palabra de ánimo o de una actividad que no está en el catálogo. El prompt lo prohíbe en tres
+        lugares distintos; es error del modelo. Dos matices honestos:
+
+        - En `es-coloquial-1` ("nos vamos con dos amigos") el LLM responde 4 viajeros y las reglas 3. El
+          mensaje es **genuinamente ambiguo** —"nos" ya son dos— y el benchmark puntúa la lectura del
+          baseline. La expectativa se deja como está: cambiarla para premiar al modelo sería maquillar.
+        - En `adversarial-categoria` ("buceo y paracaidismo") el modelo contesta `Aventura`. No es una
+          alucinación —`Aventura` existe en el catálogo— pero sí es una generalización que el producto no
+          quiere: deriva en proponer actividades que el turista no pidió.
+
+        **Lo que los tres garantizan por igual:** 0 JSON inválido, 0 productos, destinos, categorías o ids
+        inventados, y que un prompt adversarial (`adversarial-*`) no altere presupuesto, viajeros,
+        destino, precios ni ids. La precisión se negoció; la seguridad no.
 
         """;
 

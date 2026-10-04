@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TurisClick.Api.Modules.Ai;
@@ -51,6 +52,32 @@ public class AiProviderWiringTests
     public void Ollama_IsCaseInsensitive()
     {
         Assert.IsType<FallbackAiModelClient>(Resolve(("Ai:Provider", "ollama")));
+    }
+
+    [Fact]
+    public void Hybrid_ResolvesTheRulesOnTopOfTheLlm()
+    {
+        Assert.IsType<HybridAiModelClient>(Resolve(("Ai:Provider", "Hybrid")));
+    }
+
+    [Fact]
+    public void Hybrid_AlsoKeepsTheFallbackUnderneath()
+    {
+        // No se puede inspeccionar la capa interna desde afuera, pero sí que apagar el fallback no
+        // rompe el cableado: Hybrid sigue siendo Hybrid, sólo cambia qué envuelve.
+        Assert.IsType<HybridAiModelClient>(Resolve(("Ai:Provider", "Hybrid"), ("Ai:FallbackToDeterministic", "false")));
+    }
+
+    [Fact]
+    public void EveryExtractionPropertyIsRequired()
+    {
+        // Es la lección del benchmark: con propiedades opcionales el modelo las OMITE en vez de
+        // responder null, y se pierden duración, viajeros y fechas. Ver docs/ai-evaluation.md.
+        var schema = AiJsonSchemas.Extraction.AsObject();
+        var properties = schema["properties"]!.AsObject().Select(p => p.Key).OrderBy(k => k);
+        var required = schema["required"]!.AsArray().Select(n => n!.GetValue<string>()).OrderBy(k => k);
+
+        Assert.Equal(properties, required);
     }
 
     [Fact]

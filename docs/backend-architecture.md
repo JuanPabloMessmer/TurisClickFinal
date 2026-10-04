@@ -413,8 +413,11 @@ El agente (`AiConversationService`) es determinístico; lo único que delega en 
 | `DeterministicAiModelClient` | NLU por reglas (regex/keywords) en español, sin dependencias externas ni red | Proveedor `Deterministic`, tests, Newman, y como red de contención del proveedor LLM |
 | `OllamaAiModelClient` | HTTP/JSON contra un Ollama local (`/api/generate`), con `format` = JSON Schema, `temperature 0` y `keep_alive` | Proveedor `Ollama` |
 | `FallbackAiModelClient` | **Decorador**, no proveedor: envuelve al cliente primario y sanea su salida | Se registra automáticamente cuando el proveedor es un LLM |
+| `HybridAiModelClient` | **Decorador**: toma la extracción del LLM pero deja que las reglas ganen en los escalares que el mensaje escribe literalmente (duración, viajeros, fechas, presupuesto) | Proveedor `Hybrid` |
 
-`AiModuleExtensions` siempre registra `DeterministicAiModelClient` en el contenedor (lo necesita el decorador), y con proveedor `Ollama` registra el `HttpClient` tipado y expone `IAiModelClient` = `FallbackAiModelClient(OllamaAiModelClient, DeterministicAiModelClient)`. Cambiar de proveedor no toca controllers, services ni DTOs.
+`AiModuleExtensions` siempre registra `DeterministicAiModelClient` en el contenedor (lo necesita el decorador), y con proveedor `Ollama` expone `IAiModelClient` = `FallbackAiModelClient(OllamaAiModelClient, DeterministicAiModelClient)`; con `Hybrid`, una capa más: `HybridAiModelClient(FallbackAiModelClient(...), DeterministicAiModelClient)`. Cambiar de proveedor no toca controllers, services ni DTOs, y hay tests que lo fijan (`AiProviderWiringTests`).
+
+**Dos decisiones que salieron de medir, no de suponer** (ver [`ai-evaluation.md`](ai-evaluation.md)): todas las propiedades de los JSON Schemas van en `required` con tipos nullable —con propiedades opcionales el modelo omite la clave en vez de responder null, y eso costaba 17 aciertos— y el prompt de extracción lleva el calendario ya resuelto por el backend, porque la aritmética de fechas es lo que un LLM hace peor.
 
 ### Guardrails: qué hace exactamente el decorador
 
@@ -437,7 +440,7 @@ Encima de eso, `AiConversationService.ValidateComposedItems` revalida contra el 
 
 | Clave | Default | Para qué |
 |---|---|---|
-| `Ai:Provider` | `Deterministic` | `Deterministic` \| `Ollama` |
+| `Ai:Provider` | `Deterministic` | `Deterministic` \| `Ollama` \| `Hybrid` |
 | `Ai:FallbackToDeterministic` | `true` | Apagarlo sólo sirve para medir al LLM crudo en el benchmark |
 | `Ai:MaxCandidatesPerType` | `8` | Techo de candidatos por tipo en el prompt |
 | `Ai:Ollama:BaseUrl` | `http://localhost:11434` | |
@@ -453,7 +456,7 @@ Como cualquier configuración de ASP.NET Core, se pisa por entorno con doble gui
 
 | | Local | Azure (`app-turisclick-v2-api`, F1) |
 |---|---|---|
-| `Ai:Provider` | `Ollama` (`appsettings.Development.json`) | **`Deterministic`** (app setting `Ai__Provider`) |
+| `Ai:Provider` | `Hybrid` (`appsettings.Development.json`) | **`Deterministic`** (app setting `Ai__Provider`) |
 | Modelo | `qwen2.5:7b-instruct` en Ollama local | ninguno |
 | Por qué | hay GPU (16 GB de VRAM) y RAM suficiente | F1 tiene 1 GB de RAM compartida y sin GPU: no corre un LLM, y no se cambia el plan |
 

@@ -26,7 +26,7 @@ En este repositorio el LLM aparece detrás de exactamente una interfaz, `IAiMode
 
 **El modelo** es `qwen2.5:7b-instruct`: los pesos. Comparable a "la base de datos `turisclick_db_v2`".
 
-Se cambia de modelo sin tocar código (`AI__Ollama__Model`) y se cambia de proveedor sin tocar código (`AI__Provider`). Ver [`ai-model-selection.md`](ai-model-selection.md).
+Se cambia de modelo sin tocar código (`AI__Ollama__Model`) y se cambia de proveedor sin tocar código (`AI__Provider`: `Deterministic`, `Ollama` o `Hybrid`). Ver [`ai-model-selection.md`](ai-model-selection.md).
 
 ### RAG ≠ entrenamiento
 
@@ -84,6 +84,11 @@ Los once pasos, uno por uno:
 ### 2. Interpretación de la intención
 
 `AiConversationService` arma un `PreferenceExtractionRequest` con: el mensaje nuevo, los últimos turnos de la conversación, las preferencias ya conocidas y **el vocabulario real** — los nombres de destinos y categorías que existen en la base. Es la primera barrera: el modelo elige de una lista cerrada, no propone desde su imaginación.
+
+Dos detalles que el benchmark volvió obligatorios (ver [`ai-evaluation.md`](ai-evaluation.md)):
+
+- **El prompt lleva el calendario ya resuelto** (hoy, mañana, el fin de semana próximo, la semana que viene). Contar días es trabajo determinístico y un LLM lo hace mal —medido: ubicó "este fin de semana" en un martes—, así que el backend se lo entrega como dato y al modelo le queda sólo decidir a qué se refería el turista. Misma idea que el retrieval del catálogo: los hechos los pone el backend.
+- **Todas las propiedades del JSON Schema son obligatorias**, con tipos nullable. Con propiedades opcionales el modelo omite la clave en vez de responder null, y "omitir" no es "no hay dato": costaba 17 aciertos.
 
 Antes de interpretar nada, el texto pasa por `UntrustedUserText.WithoutInjectedInstructions`: los tramos que imitan reglas del sistema (`SYSTEM: …`, "ignorá tus instrucciones") se descartan, así sus números no pueden convertirse en presupuesto ni en cantidad de viajeros.
 
@@ -178,22 +183,33 @@ No hay una sola defensa; hay siete capas, y cada una asume que la anterior puede
 6. **Validación contra la fuente de verdad.** Ids, precios, monedas, fechas y cupos se releen de Postgres. Lo que no cuadra se descarta con un aviso, y el aviso se le muestra al turista.
 7. **Fallback determinístico.** Si el modelo está caído, tarda de más, devuelve JSON inválido tras el reintento, o devuelve ids inventados, responde `DeterministicAiModelClient`. El turista ve una respuesta peor redactada, nunca un error ni un producto falso.
 
-El resultado medible es el que está en [`ai-evaluation.md`](ai-evaluation.md): sobre 33 casos, incluidos adversariales que piden explícitamente inventar productos o pisar las reglas, **0 datos inventados**.
+El resultado medible es el que está en [`ai-evaluation.md`](ai-evaluation.md): sobre 33 casos, incluidos adversariales que piden explícitamente inventar productos o pisar las reglas, **0 datos inventados y 0 JSON inválido con los tres proveedores** — determinístico, LLM y híbrido.
+
+### El tercer proveedor: `Hybrid`
+
+Salió del benchmark, no de una intuición. Los errores de los dos enfoques son asimétricos: **cuando una regla falla devuelve null; cuando el modelo falla devuelve un valor equivocado.** Por eso conviene repartir en vez de elegir:
+
+- los escalares con evidencia literal —duración, viajeros, fechas, presupuesto— los gana la regla cuando matcheó, porque su regex exige la unidad ("5 días", "4 personas", "800 bolivianos", una fecha ISO);
+- todo lo que pide entender el idioma —destino, intereses, ritmo, refinamientos, redacción, composición— queda en el modelo.
+
+`HybridAiModelClient` envuelve al mismo `FallbackAiModelClient`, así que no agrega ni relaja guardrails: hereda la validación contra el catálogo, el saneo de inyección y el fallback. Puntúa 174/179 contra 172/179 del LLM solo y 170/179 del baseline, con la misma latencia que el LLM.
 
 ## 5. Configuración: local vs. Azure
 
 | | Local (desarrollo / demo) | Azure (`app-turisclick-v2-api`, App Service F1) |
 |---|---|---|
-| `AI__Provider` | `Ollama` | **`Deterministic`** |
-| Modelo | `qwen2.5:7b-instruct` en Ollama local | ninguno |
+| `AI__Provider` | `Hybrid` (o `Ollama`) | **`Deterministic`** |
+| Modelo | `qwen2.5:7b-instruct` en Ollama local, 100% GPU | ninguno |
 | Fallback | activo (`AI__FallbackToDeterministic=true`) | no aplica |
-| Por qué | hay GPU y 16 GB de RAM | F1 tiene 1 GB de RAM compartida y sin GPU: **un LLM no entra ni entraría con un plan pago razonable** |
+| Aciertos medidos | 174/179 (97%) híbrido, 172/179 (96%) LLM | 170/179 (95%) |
+| Latencia por turno | ~1,8 s | 0 ms |
+| Por qué | hay GPU con 16 GB de VRAM | F1 tiene 1 GB de RAM compartida y sin GPU: **un LLM no entra ni entraría con un plan pago razonable** |
 
 La API pública funciona igual en los dos casos, con las mismas rutas y los mismos DTOs; lo único que cambia es la calidad de la interpretación del lenguaje. Eso es exactamente lo que compra la abstracción `IAiModelClient`.
 
 ## 6. Prueba de que el agente no depende del LLM
 
-El backend corre hoy en Azure con `AI__Provider=Deterministic` y el asistente funciona: entiende español, busca en el catálogo real, arma itinerarios por día con precios reales y permite reservar. 491 tests de backend pasan sin que exista un LLM en ninguna parte.
+El backend corre hoy en Azure con `AI__Provider=Deterministic` y el asistente funciona: entiende español, busca en el catálogo real, arma itinerarios por día con precios reales y permite reservar — 95% de aciertos en el benchmark, 0 ms por turno. 505 tests de backend pasan sin que exista un LLM en ninguna parte.
 
 El LLM se suma para lo que las reglas no pueden dar —inglés, lenguaje libre, redacción natural— y se suma **detrás de un fallback**, sin poder de decisión sobre ningún dato. Ese es el diseño, y es la razón por la que se puede encender y apagar con una variable de entorno.
 
@@ -205,6 +221,7 @@ El LLM se suma para lo que las reglas no pueden dar —inglés, lenguaje libre, 
 | `Modules/Ai/Services/LlmClients/DeterministicAiModelClient.cs` | NLU por reglas, sin dependencias externas |
 | `Modules/Ai/Services/LlmClients/OllamaAiModelClient.cs` | HTTP contra Ollama, structured outputs |
 | `Modules/Ai/Services/LlmClients/FallbackAiModelClient.cs` | Decorador: saneo de salida + fallback |
+| `Modules/Ai/Services/LlmClients/HybridAiModelClient.cs` | Decorador: las reglas ganan en los escalares literales |
 | `Modules/Ai/Services/LlmClients/AiJsonSchemas.cs` | Los JSON Schemas (forma, no verdad) |
 | `Modules/Ai/Services/UntrustedUserText.cs` | El mensaje del turista es dato, no instrucción |
 | `Modules/Ai/Services/RetrievalService.cs` | La "R" de RAG: filtros y ranking determinísticos |

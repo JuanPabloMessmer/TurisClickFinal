@@ -1,6 +1,6 @@
 # Ollama local para TurisClick (paso a paso)
 
-Guía para correr el agente con un LLM local. **Nada de esto está instalado todavía**: Ollama no está en la máquina y no se descargó ningún modelo. Este documento son los comandos exactos, en orden, para hacerlo cuando quieras.
+Guía para correr el agente con un LLM local. Instalado y medido el 2026-10-04: Ollama corriendo, `qwen2.5:7b-instruct` descargado y **100% GPU** según `ollama ps`. Los resultados están en [`ai-evaluation.md`](ai-evaluation.md); este documento son los comandos exactos, en orden, para repetirlo.
 
 Todo lo de acá es local: no toca Azure, no crea recursos, no usa APIs pagas y no requiere credenciales. Azure sigue con `Ai__Provider=Deterministic` y **no debe cambiar**: el plan F1 tiene 1 GB de RAM compartida y sin GPU.
 
@@ -92,7 +92,7 @@ En la salida de `ollama ps`, la columna `PROCESSOR` dice `100% GPU`, `100% CPU` 
 
 ## E. Configurar TurisClick para usar Ollama
 
-El backend ya viene preparado: `src/TurisClick.Api/appsettings.Development.json` tiene `"Ai": { "Provider": "Ollama" }`, y los valores por defecto de `appsettings.json` ya apuntan al modelo elegido:
+El backend ya viene preparado: `src/TurisClick.Api/appsettings.Development.json` trae `"Ai": { "Provider": "Hybrid" }` —el proveedor que mejor puntúa: el mismo modelo, con las reglas ganando en duración, viajeros, fechas y presupuesto— y los valores por defecto de `appsettings.json` apuntan al modelo elegido. Hay tres valores posibles: `Deterministic` (sin LLM), `Ollama` (sólo el modelo) y `Hybrid` (recomendado para local).
 
 ```json
 "Ai": {
@@ -113,7 +113,7 @@ El backend ya viene preparado: `src/TurisClick.Api/appsettings.Development.json`
 **Corriendo en `Development` no hace falta configurar nada más.** Si querés forzarlo desde la terminal (por ejemplo para probar otro modelo sin editar archivos), las variables de entorno pisan el JSON — el separador es doble guión bajo:
 
 ```powershell
-$env:AI__Provider = "Ollama"
+$env:AI__Provider = "Hybrid"   # o "Ollama" para medir el modelo solo
 $env:AI__Ollama__Model = "qwen2.5:7b-instruct"
 ```
 
@@ -139,7 +139,7 @@ $env:AI__Provider = "Deterministic"
 Remove-Item Env:AI__Provider
 ```
 
-3. Permanente para desarrollo: en `src/TurisClick.Api/appsettings.Development.json`, cambiar `"Provider": "Ollama"` por `"Provider": "Deterministic"`.
+3. Permanente para desarrollo: en `src/TurisClick.Api/appsettings.Development.json`, cambiar `"Provider": "Hybrid"` por `"Provider": "Deterministic"`.
 
 **Importante:** aunque te olvides de volver atrás, la app no se rompe. Si Ollama está apagado, `FallbackAiModelClient` responde con el cliente determinístico y el turista ve una respuesta normal. El modo determinístico explícito sirve para medir y para tener latencia de milisegundos, no para evitar un error.
 
@@ -220,9 +220,9 @@ dotnet run --project tools/ai-benchmark -- --with-llm --model llama3.1:8b
 
 Flags disponibles: `--with-llm` (agrega la corrida del modelo), `--model <tag>`, `--ollama <url>` (por defecto `http://localhost:11434`).
 
-Cada corrida reescribe `docs/ai-evaluation.md` y `docs/ai-evaluation-results.json` con las dos columnas (determinístico y LLM) sobre los mismos 33 casos y las mismas métricas. **El LLM se mide sin fallback**: lo que falla cuenta como falla del modelo, que es la única forma honesta de compararlos.
+Cada corrida reescribe `docs/ai-evaluation.md` y `docs/ai-evaluation-results.json` con **tres** columnas —determinístico, LLM e híbrido— sobre los mismos 33 casos y las mismas métricas. **El LLM se mide sin fallback**: lo que falla cuenta como falla del modelo, que es la única forma honesta de compararlos.
 
-Mientras no se corra con `--with-llm`, el reporte dice `PENDING LOCAL OLLAMA BENCHMARK` en la fila del LLM. Ese texto está a propósito: **no hay ni un número de LLM estimado o inventado en este repositorio**.
+Mientras no se corra con `--with-llm`, el reporte dice `PENDING LOCAL OLLAMA BENCHMARK` en la fila del LLM. Ningún número de LLM del repositorio es estimado: los que están, están medidos.
 
 La primera corrida es la más lenta (carga el modelo); `KeepAlive=10m` lo mantiene residente para las siguientes.
 
@@ -242,7 +242,7 @@ ollama list
 curl http://localhost:11434/api/tags
 ollama ps          # ¿GPU o CPU?
 
-# 4. backend con LLM (Development ya viene con Provider=Ollama)
+# 4. backend con LLM (Development ya viene con Provider=Hybrid)
 dotnet run --project src/TurisClick.Api --urls http://0.0.0.0:5288
 
 # 5. mobile: poner EXPO_PUBLIC_API_TARGET=local en frontend/apps/tourist-mobile/.env

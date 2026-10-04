@@ -80,18 +80,22 @@ Su desventaja es la licencia: la Llama 3.1 Community License no es OSI, exige at
 
 Si Ollama termina corriendo en CPU y el 7B da turnos de más de ~30 s con la máquina cargada, el 1.5B (Apache 2.0, ~1 GB) mantiene el demo vivo: con el schema puesto sigue devolviendo JSON válido, se equivoca más en extracción, y **el fallback determinístico y los guardrails atrapan cada equivocación que importa**. Es degradación de calidad, no de seguridad.
 
-## 4. Latencia: expectativa, no medición
+## 4. Latencia y calidad: medido
 
-**Nada de esta sección está medido.** Ollama no está instalado, así que no hay un solo número de LLM real en este repositorio; `docs/ai-evaluation.md` marca la fila del LLM como `PENDING LOCAL OLLAMA BENCHMARK` a propósito. Lo que sigue son órdenes de magnitud esperables para un 7B Q4, para decidir si vale la pena intentarlo — se reemplazan por mediciones cuando se corra el benchmark con `--with-llm`.
+Ollama quedó instalado el 2026-10-04 y `ollama ps` reporta **100% GPU**: el modelo entra entero en los 15,9 GB de VRAM, como anticipaba el análisis. Estos números son mediciones reales sobre los 33 casos del benchmark, no estimaciones (el detalle completo, con el antes y el después de cada cambio de integración, está en [`ai-evaluation.md`](ai-evaluation.md)):
 
-| Escenario | Expectativa (a confirmar) |
+| Escenario | Medido |
 |---|---|
-| 7B Q4 con la GPU acelerando, extracción (~100 tokens de salida) | unos pocos segundos por turno |
-| 7B Q4 en CPU, extracción | decenas de segundos; sensible a cuánta RAM libre haya |
-| Composición de itinerario (prompt más grande, salida más grande) | claramente más que la extracción en ambos casos |
-| Primer turno tras levantar el modelo | suma la carga del modelo; por eso `AI__Ollama__KeepAlive=10m` lo deja residente |
+| Extracción de preferencias (mediana) | ~1,8 s por turno |
+| Refinamiento (mediana) | ~0,8 s |
+| Composición de itinerario (p95) | ~4,7 s |
+| Primer turno tras levantar el modelo | ~10 s la primera vez; `AI__Ollama__KeepAlive=10m` evita pagarlo de nuevo |
+| Reproducibilidad con `temperature 0` | **exacta**: dos corridas completas dieron 0 campos distintos |
+| Aciertos | 172/179 (96%) el LLM, 174/179 (97%) el híbrido, contra 170/179 (95%) del baseline |
 
 El timeout está en 60 s (`AI__Ollama__TimeoutSeconds`) y, al vencerse, el usuario **no ve un error**: ve la respuesta determinística (`FallbackAiModelClient`). Esa es la razón por la que se puede probar un modelo local sin arriesgar la demo.
+
+**La primera medición dio 83%, no 96%.** La diferencia no fue de modelo: fue un `required` incompleto en nuestros JSON Schemas, que le permitía al modelo omitir campos en vez de contestarlos. Vale la pena leer esa parte de [`ai-evaluation.md`](ai-evaluation.md) antes de evaluar cualquier modelo: un LLM mal integrado parece un LLM malo.
 
 ## 5. Cómo se verifica esta decisión
 
@@ -113,3 +117,5 @@ Se compara contra el baseline determinístico ya medido (170/179 = 95%, 0 JSON i
 4. **Latencia real** (mediana y p95), que es la métrica que decide si el modelo es usable en vivo.
 
 Si el 7B queda por debajo del baseline en aciertos **y** por encima en latencia, la conclusión honesta de la tesis es que para este dominio tan acotado las reglas alcanzan y el LLM aporta sobre todo idioma y tolerancia a lenguaje libre. Ese resultado también es un resultado; el benchmark está hecho para poder decirlo.
+
+**Resultado de esa verificación (2026-10-04):** el modelo principal quedó confirmado. Gana los tres casos en inglés, mantiene 0 JSON inválido y 0 datos inventados, resiste los tres prompts adversariales, y es reproducible. Cuesta ~1,8 s por turno contra 0 ms del baseline, así que el proveedor sigue siendo una decisión de configuración y no de arquitectura. El mejor puntaje lo da `Hybrid` (el mismo modelo con las reglas ganando en los escalares literales), que es el proveedor recomendado para local.
