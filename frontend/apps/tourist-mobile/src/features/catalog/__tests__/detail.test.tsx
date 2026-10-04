@@ -48,7 +48,7 @@ describe('BookingBar', () => {
     render(<BookingBar amount={350} currency="BOB" priceLabel="Precio por persona" ctaLabel="Elegir fecha" onPress={jest.fn()} />)
 
     expect(screen.getByText('Precio por persona')).toBeTruthy()
-    expect(screen.getByText(/BOB\s+350\.00/)).toBeTruthy()
+    expect(screen.getByText(/Bs\s+350,00/)).toBeTruthy()
   })
 })
 

@@ -78,7 +78,7 @@ describe('PENDING_PAYMENT', () => {
     await waitFor(() => expect(screen.getByText(/Tu lugar está reservado · \d\d:\d\d/)).toBeTruthy())
     expect(screen.getByText('Tour Illimani')).toBeTruthy()
     expect(screen.getByText(/2 viajeros × USD 40\.00/)).toBeTruthy()
-    expect(screen.getAllByText(/USD\s+80\.00/).length).toBeGreaterThanOrEqual(2) // subtotal + total
+    expect(screen.getAllByText(/USD\s+80,00/).length).toBeGreaterThanOrEqual(2) // subtotal + total
     expect(screen.getByText('Pago de demostración')).toBeTruthy()
     expect(button('Pagar')).toBeTruthy()
     expect(button('Cancelar reserva')).toBeTruthy()
@@ -118,8 +118,8 @@ describe('PENDING_PAYMENT', () => {
     renderCheckout()
 
     await waitFor(() => expect(screen.getByLabelText('Total')).toBeTruthy())
-    expect(screen.getAllByText(/USD\s+120\.00/).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/BOB\s+350\.00/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/USD\s+120,00/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Bs\s+350,00/).length).toBeGreaterThan(0)
     expect(screen.queryByText(/470/)).toBeNull()
   })
 })
@@ -211,7 +211,7 @@ describe('cambio de precio', () => {
     expect(screen.getByText('Antes: USD 40.00 por persona')).toBeTruthy()
     expect(screen.getByText('Ahora: USD 60.00 por persona')).toBeTruthy()
     expect(screen.getByLabelText('Nuevo total')).toBeTruthy()
-    expect(screen.getAllByText(/USD\s+120\.00/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/USD\s+120,00/).length).toBeGreaterThan(0)
     expect(screen.queryByText('El pago fue rechazado')).toBeNull()
   })
 
@@ -230,7 +230,7 @@ describe('cambio de precio', () => {
 
     await waitFor(() => expect(screen.getByText('¡Reserva confirmada!')).toBeTruthy())
     expect(mockPost).toHaveBeenLastCalledWith('/api/reservations/r1/pay', { success: true, acceptPriceChanges: true })
-    expect(screen.getAllByText(/USD\s+120\.00/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/USD\s+120,00/).length).toBeGreaterThan(0)
   })
 
   it('la moneda que cambió se indica', async () => {

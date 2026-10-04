@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native'
-import { Image } from 'react-native'
+import { Image } from 'expo-image'
 import { DestinationBanner, DestinationCard } from '@/features/catalog/DestinationCard'
 
 const sucre = {
@@ -24,21 +24,22 @@ describe('DestinationCard', () => {
     expect(onPress).toHaveBeenCalled()
   })
 
-  it('sin imagen usa el placeholder y conserva el nombre legible', () => {
+  it('sin imagen usa el fallback tipográfico y conserva el nombre legible', () => {
     render(<DestinationCard destination={{ ...sucre, imageUrl: null, publishedExperienceCount: 0 }} onPress={jest.fn()} />)
 
-    expect(screen.getByText('🏔️')).toBeTruthy()
+    // El nombre aparece dos veces: como fallback de la foto y como rótulo de la tarjeta.
+    expect(screen.getAllByText('Sucre').length).toBeGreaterThan(0)
+    expect(screen.UNSAFE_queryByType(Image)).toBeNull()
     expect(screen.getByRole('button', { name: 'Explorar Sucre' })).toBeTruthy()
     expect(screen.queryByText(/experiencia/)).toBeNull()
   })
 
-  it('si la imagen falla al cargar, cae al placeholder sin romper el layout', () => {
+  it('si la imagen falla al cargar, cae al fallback sin romper el layout', () => {
     render(<DestinationCard destination={sucre} onPress={jest.fn()} />)
 
     fireEvent(screen.UNSAFE_getByType(Image), 'error')
 
-    expect(screen.getByText('🏔️')).toBeTruthy()
-    expect(screen.getByText('Sucre')).toBeTruthy()
+    expect(screen.getAllByText('Sucre').length).toBeGreaterThan(0)
   })
 })
 

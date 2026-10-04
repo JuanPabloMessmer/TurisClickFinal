@@ -135,7 +135,7 @@ describe('selección de una experiencia', () => {
     choose('s1')
     fireEvent.press(screen.getByLabelText('Agregar un viajero'))
 
-    expect(screen.getByText(/USD\s+80\.00/)).toBeTruthy()
+    expect(screen.getByText(/USD\s+80,00/)).toBeTruthy()
     expect(screen.getByText('Estimado: se confirma al reservar')).toBeTruthy()
   })
 
@@ -174,7 +174,7 @@ describe('selección de un paquete', () => {
 
     choose('d1')
     expect(screen.getByText('Máximo 6 para esta salida.')).toBeTruthy()
-    expect(screen.getByText(/USD\s+480\.00/)).toBeTruthy()
+    expect(screen.getByText(/USD\s+480,00/)).toBeTruthy()
 
     fireEvent.press(continueButton())
 

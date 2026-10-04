@@ -26,6 +26,9 @@ const TRANSPILED_IN_NODE_MODULES = [
   'standard-navigation',
   'nativewind',
   'react-native-css-interop',
+  // lucide-react-native y react-native-svg se publican en ESM, igual que los paquetes de Expo.
+  'lucide-react-native',
+  'react-native-svg',
   '@turisclick',
 ]
 
@@ -45,6 +48,9 @@ module.exports = {
     '^react/(.*)$': path.join(own('react'), '$1'),
     '^react-dom$': own('react-dom'),
     '^react-dom/(.*)$': path.join(own('react-dom'), '$1'),
+    // lucide-react-native publica su condición `react-native` como .mjs, que Jest no transforma por
+    // extensión. En tests se resuelve su build CommonJS; Metro sigue usando el ESM en runtime.
+    '^lucide-react-native$': path.resolve(__dirname, '../../node_modules/lucide-react-native/dist/cjs/lucide-react-native.js'),
   },
   transformIgnorePatterns: [
     `/node_modules/(?!(${TRANSPILED_IN_NODE_MODULES.join('|')}))`,

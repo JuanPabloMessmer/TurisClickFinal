@@ -3,6 +3,7 @@ import { formatDate } from '@turisclick/utils'
 import { useRouter, type Href } from 'expo-router'
 import { useState } from 'react'
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native'
+import { Sparkles } from 'lucide-react-native'
 import { useItemExplanation } from '@/features/assistant/api'
 import {
   availabilityBadge,
@@ -32,11 +33,11 @@ export function ToneBadge({ label, tone }: { label: string; tone: Tone }) {
   )
 }
 
-/** Avatar del asistente: marca visual propia de TurisClick, no un logo de terceros. */
+/** Avatar del asistente: marca visual propia de TurisClick, no un logo de terceros ni un emoji. */
 export function AssistantAvatar({ size = 32 }: { size?: number }) {
   return (
     <View className="items-center justify-center rounded-full bg-primary" style={{ width: size, height: size }}>
-      <Text style={{ fontSize: size * 0.5 }}>✨</Text>
+      <Sparkles size={size * 0.52} color="#FFFFFF" strokeWidth={2} />
     </View>
   )
 }

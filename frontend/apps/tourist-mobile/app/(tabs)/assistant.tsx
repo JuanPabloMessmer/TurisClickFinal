@@ -1,6 +1,7 @@
 import { formatDate } from '@turisclick/utils'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
+import { ChevronRight, Compass, Map, MessageCircle, Send } from 'lucide-react-native'
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import { RequireTourist } from '@/auth/RequireTourist'
 import { useSession } from '@/auth/session'
@@ -11,7 +12,8 @@ import { useMyPreferences } from '@/features/preferences/api'
 import { isEmptyProfile, preferenceSummary } from '@/features/preferences/model'
 import { toApiError } from '@/lib/errors'
 import { colors } from '@/theme/colors'
-import { FormError, Price, Screen, SectionHeader, Skeleton } from '@/ui'
+import { elevation } from '@/theme/elevation'
+import { FormError, Icon, Price, Screen, SectionHeader, Skeleton } from '@/ui'
 
 /**
  * Asistente de viajes. Arma itinerarios SOLO con experiencias y paquetes publicados en TurisClick, con
@@ -51,18 +53,18 @@ function AssistantHome() {
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <View className="mx-5 mt-2 rounded-3xl bg-primary p-5" style={{ elevation: 4 }}>
+      <View className="mx-4 mt-2 rounded-lg bg-brand-900 p-5" style={elevation.raised}>
         <View className="flex-row items-center gap-3">
           <AssistantAvatar size={40} />
           <View className="flex-1">
-            <Text className="text-sm font-medium text-white/80">Asistente TurisClick</Text>
-            <Text className="text-xl font-bold text-white">Hola{user?.firstName ? `, ${user.firstName}` : ''}. ¿A dónde vamos?</Text>
+            <Text className="font-ui500 text-caption text-white/80">Asistente TurisClick</Text>
+            <Text className="font-display text-title text-white">Hola{user?.firstName ? `, ${user.firstName}` : ''}. ¿A dónde vamos?</Text>
           </View>
         </View>
-        <Text className="mt-3 text-sm leading-5 text-white/85">
+        <Text className="mt-3 font-sans text-label text-white/85">
           Contame destino, días y qué te gusta. Armo el viaje con actividades reales que podés reservar.
         </Text>
-        <View className="mt-4 flex-row items-end gap-2 rounded-2xl bg-surface p-2">
+        <View className="mt-4 flex-row items-end gap-2 rounded-md bg-surface p-2">
           <TextInput
             accessibilityLabel="Contale al asistente qué viaje querés"
             placeholder="Ej: 3 días en Sucre, algo cultural"
@@ -71,16 +73,16 @@ function AssistantHome() {
             onChangeText={setDraft}
             multiline
             maxLength={2000}
-            className="max-h-28 min-h-[44px] flex-1 px-2 py-2 text-base text-ink"
+            className="max-h-28 min-h-[44px] flex-1 px-2 py-2 font-sans text-base text-ink"
           />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Enviar"
             disabled={!draft.trim() || start.isPending}
             onPress={() => send(draft)}
-            className={`h-11 w-11 items-center justify-center rounded-xl bg-accent ${!draft.trim() || start.isPending ? 'opacity-40' : 'active:opacity-70'}`}
+            className={`h-11 w-11 items-center justify-center rounded-sm bg-accent ${!draft.trim() || start.isPending ? 'opacity-40' : 'active:opacity-70'}`}
           >
-            <Text className="text-lg font-bold text-ink">{start.isPending ? '…' : '➤'}</Text>
+            <Icon icon={Send} size={18} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -102,11 +104,10 @@ function AssistantHome() {
               accessibilityRole="button"
               disabled={start.isPending}
               onPress={() => send(prompt)}
-              className="flex-row items-center gap-3 rounded-2xl bg-surface p-4 active:opacity-80"
-              style={{ elevation: 1 }}
+              className="flex-row items-center gap-3 rounded-md border border-border bg-surface p-4 active:opacity-80"
             >
-              <Text className="text-lg">💬</Text>
-              <Text className="flex-1 text-base text-ink">{prompt}</Text>
+              <Icon icon={MessageCircle} size={18} color={colors.primary} />
+              <Text className="flex-1 font-sans text-body text-ink">{prompt}</Text>
             </Pressable>
           ))}
         </View>
@@ -118,7 +119,7 @@ function AssistantHome() {
           {saved.isPending ? (
             <Skeleton className="h-20 w-full" />
           ) : (saved.data?.items ?? []).length === 0 ? (
-            <Text className="text-sm text-[#5B7285]">Todavía no guardaste ninguno.</Text>
+            <Text className="font-sans text-label text-ink-muted">Todavía no guardaste ninguno.</Text>
           ) : (
             (saved.data?.items ?? []).map((itinerary) => {
               const status = itineraryStatusLabel(itinerary.status)
@@ -127,17 +128,19 @@ function AssistantHome() {
                   key={itinerary.id}
                   accessibilityRole="button"
                   onPress={() => router.push({ pathname: '/assistant/itinerary/[id]', params: { id: itinerary.id ?? '' } })}
-                  className="rounded-2xl bg-surface p-4 active:opacity-80"
-                  style={{ elevation: 1 }}
+                  className="rounded-md border border-border bg-surface p-4 active:opacity-80"
                 >
-                  <View className="flex-row items-center justify-between">
-                    <Text className="flex-1 pr-2 text-base font-semibold text-ink" numberOfLines={1}>
-                      🗺️ {itinerary.title ?? 'Itinerario'}
-                    </Text>
+                  <View className="flex-row items-center justify-between gap-2">
+                    <View className="flex-1 flex-row items-center gap-2">
+                      <Icon icon={Map} size={16} color={colors.primary} />
+                      <Text className="flex-1 font-ui600 text-body text-ink" numberOfLines={1}>
+                        {itinerary.title ?? 'Itinerario'}
+                      </Text>
+                    </View>
                     <ToneBadge label={status.label} tone={status.tone} />
                   </View>
                   <View className="mt-2 flex-row items-center justify-between">
-                    <Text className="text-sm text-[#5B7285]">
+                    <Text className="font-sans text-label text-ink-muted">
                       {itinerary.itemCount} actividades · {itinerary.updatedAt ? formatDate(itinerary.updatedAt) : ''}
                     </Text>
                     {(itinerary.totals ?? []).slice(0, 1).map((total) => (
@@ -157,25 +160,25 @@ function AssistantHome() {
           {conversations.isPending ? (
             <Skeleton className="h-16 w-full" />
           ) : (conversations.data?.items ?? []).length === 0 ? (
-            <Text className="text-sm text-[#5B7285]">Tus conversaciones con el asistente van a aparecer acá.</Text>
+            <Text className="font-sans text-label text-ink-muted">Tus conversaciones con el asistente van a aparecer acá.</Text>
           ) : (
             (conversations.data?.items ?? []).map((conversation) => (
               <Pressable
                 key={conversation.id}
                 accessibilityRole="button"
                 onPress={() => router.push({ pathname: '/assistant/[id]', params: { id: conversation.id ?? '' } })}
-                className="flex-row items-center justify-between rounded-2xl bg-surface p-4 active:opacity-80"
-                style={{ elevation: 1 }}
+                accessibilityLabel={`Abrir ${conversation.preferredDestinationName ? `viaje a ${conversation.preferredDestinationName}` : 'conversación nueva'}`}
+                className="flex-row items-center justify-between rounded-md border border-border bg-surface p-4 active:opacity-80"
               >
                 <View className="flex-1 pr-3">
-                  <Text className="text-base font-semibold text-ink">
+                  <Text className="font-ui600 text-body text-ink">
                     {conversation.preferredDestinationName ? `Viaje a ${conversation.preferredDestinationName}` : 'Conversación nueva'}
                   </Text>
-                  <Text className="text-sm text-[#5B7285]">
+                  <Text className="font-sans text-label text-ink-muted">
                     {conversation.updatedAt ? `Actualizada ${formatDate(conversation.updatedAt)}` : ''}
                   </Text>
                 </View>
-                <Text className="text-lg text-primary">›</Text>
+                <Icon icon={ChevronRight} size={18} color={colors.inkMuted} />
               </Pressable>
             ))
           )}
@@ -196,23 +199,23 @@ function ProfileStrip() {
 
   if (isEmptyProfile(data)) {
     return (
-      <Pressable accessibilityRole="button" onPress={goEdit} className="mx-5 mt-4 flex-row items-center gap-3 rounded-2xl border border-dashed border-primary/50 bg-surface p-4 active:opacity-80">
-        <Text className="text-2xl">🧭</Text>
-        <Text className="flex-1 text-sm text-ink">Completá tu perfil de viaje y no vas a tener que repetir tus gustos en cada conversación.</Text>
+      <Pressable accessibilityRole="button" onPress={goEdit} className="mx-4 mt-4 flex-row items-center gap-3 rounded-md border border-dashed border-border-control bg-surface p-4 active:opacity-80">
+        <Icon icon={Compass} size={20} color={colors.primary} />
+        <Text className="flex-1 font-sans text-label text-ink">Completá tu perfil de viaje y no vas a tener que repetir tus gustos en cada conversación.</Text>
       </Pressable>
     )
   }
 
   const parts = [summary.interests.join(', '), summary.pace && `ritmo ${summary.pace.toLowerCase()}`, summary.party, summary.budget && `presupuesto ${summary.budget.toLowerCase()}`].filter(Boolean)
   return (
-    <View className="mx-5 mt-4 flex-row items-center gap-3 rounded-2xl bg-secondary/10 p-4">
-      <Text className="text-2xl">🧭</Text>
+    <View className="mx-4 mt-4 flex-row items-center gap-3 rounded-md bg-primary/10 p-4">
+      <Icon icon={Compass} size={20} color={colors.primary} />
       <View className="flex-1">
-        <Text className="text-xs font-semibold uppercase tracking-wide text-secondary">Parto de tu perfil</Text>
-        <Text className="mt-0.5 text-sm text-ink">{parts.join(' · ')}</Text>
+        <Text className="font-ui600 text-caption text-primary">Parto de tu perfil</Text>
+        <Text className="mt-0.5 font-sans text-label text-ink">{parts.join(' · ')}</Text>
       </View>
-      <Pressable accessibilityRole="button" onPress={goEdit} className="px-1 py-1 active:opacity-60">
-        <Text className="text-sm font-semibold text-primary">Ajustar</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Ajustar tu perfil de viaje" onPress={goEdit} className="h-11 justify-center px-2 active:opacity-60">
+        <Text className="font-ui600 text-label text-primary">Ajustar</Text>
       </Pressable>
     </View>
   )

@@ -67,7 +67,7 @@ it('pide la lista real con paginación y muestra los datos de cada reserva', asy
   expect(screen.getByText('2 viajeros')).toBeTruthy()
   expect(screen.getByText(/09:00/)).toBeTruthy()
   expect(screen.getByText('Pendiente de pago')).toBeTruthy()
-  expect(screen.getByText(/USD\s+80\.00/)).toBeTruthy()
+  expect(screen.getByText(/USD\s+80,00/)).toBeTruthy()
 })
 
 it('scroll infinito: al llegar al final pide la página siguiente y acumula', async () => {
@@ -126,8 +126,8 @@ it('multi-moneda: una fila por moneda en la tarjeta, sin sumarlas', async () => 
   )
   renderTrips()
 
-  await waitFor(() => expect(screen.getByText(/USD\s+120\.00/)).toBeTruthy())
-  expect(screen.getByText(/BOB\s+350\.00/)).toBeTruthy()
+  await waitFor(() => expect(screen.getByText(/USD\s+120,00/)).toBeTruthy())
+  expect(screen.getByText(/Bs\s+350,00/)).toBeTruthy()
   expect(screen.queryByText(/470/)).toBeNull()
 })
 

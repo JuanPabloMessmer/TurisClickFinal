@@ -53,10 +53,10 @@ export function SignInPrompt({ title, message }: { title: string; message: strin
   const router = useRouter()
 
   return (
-    <View className="gap-6 px-5 pt-4">
-      <View className="rounded-2xl bg-surface p-6" style={{ elevation: 2 }}>
-        <Text className="text-xl font-bold text-ink">{title}</Text>
-        <Text className="mt-2 text-base leading-6 text-[#5B7285]">{message}</Text>
+    <View className="gap-6 px-4 pt-4">
+      <View className="rounded-lg border border-border bg-surface p-6">
+        <Text className="font-display text-title text-ink">{title}</Text>
+        <Text className="mt-2 font-sans text-body text-ink-muted">{message}</Text>
       </View>
       <View className="gap-3">
         <Button label="Iniciar sesión" onPress={() => router.push('/(auth)/login')} />

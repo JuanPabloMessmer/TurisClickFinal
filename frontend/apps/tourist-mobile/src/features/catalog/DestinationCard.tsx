@@ -1,7 +1,9 @@
 import type { PublicDestinationResponse } from '@turisclick/api-client'
 import { Pressable, Text, View } from 'react-native'
 import { experienceCountLabel } from '@/features/catalog/destinations'
+import { elevation } from '@/theme/elevation'
 import { CatalogImage } from '@/ui'
+import { Scrim } from '@/ui/Scrim'
 
 /**
  * Tarjeta visual de un destino: foto representativa a sangre con el nombre encima. Si el destino no tiene
@@ -25,16 +27,20 @@ export function DestinationCard({
       accessibilityRole="button"
       accessibilityLabel={`Explorar ${destination.name}${count ? `, ${count}` : ''}`}
       onPress={onPress}
-      className={`${dimensions} overflow-hidden rounded-2xl bg-[#E2E8F0] active:opacity-90`}
-      style={{ elevation: 3 }}
+      className={`${dimensions} overflow-hidden rounded-lg bg-brand-900 active:opacity-90`}
+      style={elevation.raised}
     >
-      <CatalogImage uri={destination.imageUrl} className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-x-0 bottom-0 h-24 bg-black/40" />
+      <CatalogImage
+        uri={destination.imageUrl}
+        className="absolute inset-0 h-full w-full"
+        fallbackLabel={destination.name}
+      />
+      <Scrim height="60%" />
       <View className="absolute inset-x-0 bottom-0 p-3">
-        <Text className="text-base font-bold text-white" numberOfLines={2}>
+        <Text className="font-display text-heading text-white" numberOfLines={2}>
           {destination.name}
         </Text>
-        {count ? <Text className="mt-0.5 text-xs font-medium text-white/85">{count}</Text> : null}
+        {count ? <Text className="mt-0.5 font-ui500 text-caption text-white/85">{count}</Text> : null}
       </View>
     </Pressable>
   )

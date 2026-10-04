@@ -1,4 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router'
+import { Clock } from 'lucide-react-native'
 import { ScrollView, Text, View } from 'react-native'
 import {
   AvailabilityRow,
@@ -8,15 +9,19 @@ import {
   DETAIL_DATES_PREVIEW,
   DetailBlock,
   DetailSkeleton,
+  Gallery,
+  OperatorNote,
 } from '@/features/catalog/detail'
 import { coverImageUrl } from '@/features/catalog/images'
 import { useExperience, useExperienceAvailability } from '@/features/catalog/queries'
 import { toApiError } from '@/lib/errors'
-import { CatalogImage, Chip, ErrorState } from '@/ui'
+import { colors } from '@/theme/colors'
+import { CatalogImage, ErrorState, Icon } from '@/ui'
+import { Scrim } from '@/ui/Scrim'
 
 /**
- * Detalle de una experiencia. Pantalla completa fuera de las tabs: la foto ocupa el tope con el botón
- * de volver flotando encima, que es lo que la hace sentir una app de viajes y no un formulario.
+ * Detalle de una experiencia. Pantalla completa fuera de las tabs: la foto ocupa el tope con el nombre
+ * del lugar encima, que es lo que la hace sentir una app de viajes y no un formulario.
  */
 export default function ExperienceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -37,24 +42,34 @@ export default function ExperienceDetailScreen() {
       ) : experience.isPending ? (
         <DetailSkeleton />
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
-          <CatalogImage uri={coverImageUrl(experience.data.images)} className="h-72 w-full" />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 170 }}>
+          {/* El destino y el título viven SOBRE la foto: el lugar es el producto, y leerlo ahí evita
+              que la ficha arranque con tres líneas de texto gris antes de mostrar a dónde se va. */}
+          <View className="h-80 w-full bg-brand-900">
+            <CatalogImage
+              uri={coverImageUrl(experience.data.images)}
+              className="absolute inset-0 h-full w-full"
+              fallbackLabel={experience.data.destinationName}
+            />
+            <Scrim />
+            <View className="absolute inset-x-0 bottom-0 p-4">
+              <Text className="font-ui600 text-caption text-white/85">{experience.data.destinationName}</Text>
+              <Text className="mt-1 font-display text-title text-white">{experience.data.title}</Text>
+            </View>
+          </View>
 
-          <View className="p-5">
-            <Text className="text-xs font-medium uppercase tracking-wide text-secondary">
-              {experience.data.destinationName}
-            </Text>
-            <Text className="mt-1 text-2xl font-bold text-ink">{experience.data.title}</Text>
-            <Text className="mt-1 text-sm text-[#5B7285]">Operado por {experience.data.companyName}</Text>
-
+          <View className="p-4">
             {experience.data.durationLabel ? (
-              <View className="mt-4 flex-row">
-                <Chip label={`⏱ ${experience.data.durationLabel}`} />
+              <View className="flex-row items-center gap-2">
+                <Icon icon={Clock} size={16} color={colors.inkMuted} />
+                <Text className="font-ui500 text-label text-ink-muted">{experience.data.durationLabel}</Text>
               </View>
             ) : null}
 
+            <OperatorNote companyName={experience.data.companyName} />
+
             {experience.data.description ? (
-              <Text className="mt-5 text-base leading-6 text-ink">{experience.data.description}</Text>
+              <Text className="mt-5 font-sans text-body text-ink">{experience.data.description}</Text>
             ) : null}
 
             {experience.data.includesText ? (
@@ -63,6 +78,8 @@ export default function ExperienceDetailScreen() {
             {experience.data.excludesText ? (
               <DetailBlock title="Qué no incluye" body={experience.data.excludesText} />
             ) : null}
+
+            <Gallery images={experience.data.images} />
 
             <AvailabilitySection
               isLoading={availability.isPending}

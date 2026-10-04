@@ -1,12 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react-native'
-import { Image } from 'react-native'
+import { Image } from 'expo-image'
 import { Badge, Button, CatalogImage, FormError, Price, SegmentedControl, TextField } from '@/ui'
 
 describe('Price', () => {
   it('muestra monto y moneda con dos decimales', () => {
     render(<Price amount={1250.5} currency="BOB" />)
 
-    expect(screen.getByText(/BOB\s+1250\.50/)).toBeTruthy()
+    expect(screen.getByText(/Bs\s+1\.250,50/)).toBeTruthy()
   })
 
   it('no inventa un 0 cuando el monto no vino', () => {
@@ -19,7 +19,7 @@ describe('Price', () => {
     render(<Price amount={0} currency="USD" />)
 
     expect(screen.queryByText('Consultar precio')).toBeNull()
-    expect(screen.getByText(/USD\s+0\.00/)).toBeTruthy()
+    expect(screen.getByText(/USD\s+0,00/)).toBeTruthy()
   })
 })
 
@@ -77,38 +77,40 @@ describe('FormError', () => {
 })
 
 describe('CatalogImage', () => {
-  it('muestra el placeholder cuando el producto no tiene foto', () => {
-    render(<CatalogImage uri={null} />)
+  it('sin foto muestra el fallback con el nombre del lugar, no un hueco', () => {
+    render(<CatalogImage uri={null} fallbackLabel="Uyuni" />)
 
-    expect(screen.getByText('🏔️')).toBeTruthy()
+    expect(screen.getByText('Uyuni')).toBeTruthy()
+    expect(screen.UNSAFE_queryByType(Image)).toBeNull()
   })
 
   it('intenta la foto cuando hay URL', () => {
-    render(<CatalogImage uri="https://cdn.example.com/foto.jpg" />)
+    render(<CatalogImage uri="https://cdn.example.com/foto.jpg" fallbackLabel="Uyuni" />)
 
-    expect(screen.queryByText('🏔️')).toBeNull()
+    expect(screen.queryByText('Uyuni')).toBeNull()
+    expect(screen.UNSAFE_getByType(Image)).toBeTruthy()
   })
 
   /**
    * Encontrado ejecutando la app: las fotos sembradas apuntan a example.com y no cargan, y sin este
    * fallback queda un hueco en blanco del alto de la tarjeta, que se lee como un error de la app.
    */
-  it('cae al placeholder si la foto existe pero no carga', () => {
-    render(<CatalogImage uri="https://example.com/rota.jpg" />)
+  it('cae al fallback si la foto existe pero no carga', () => {
+    render(<CatalogImage uri="https://example.com/rota.jpg" fallbackLabel="Uyuni" />)
 
     fireEvent(screen.UNSAFE_getByType(Image), 'error')
 
-    expect(screen.getByText('🏔️')).toBeTruthy()
+    expect(screen.getByText('Uyuni')).toBeTruthy()
   })
 
   it('vuelve a intentar si el producto cambia de foto', () => {
-    const { rerender } = render(<CatalogImage uri="https://example.com/rota.jpg" />)
+    const { rerender } = render(<CatalogImage uri="https://example.com/rota.jpg" fallbackLabel="Uyuni" />)
     fireEvent(screen.UNSAFE_getByType(Image), 'error')
-    expect(screen.getByText('🏔️')).toBeTruthy()
+    expect(screen.getByText('Uyuni')).toBeTruthy()
 
-    rerender(<CatalogImage uri="https://cdn.example.com/nueva.jpg" />)
+    rerender(<CatalogImage uri="https://cdn.example.com/nueva.jpg" fallbackLabel="Uyuni" />)
 
-    expect(screen.queryByText('🏔️')).toBeNull()
+    expect(screen.queryByText('Uyuni')).toBeNull()
   })
 })
 

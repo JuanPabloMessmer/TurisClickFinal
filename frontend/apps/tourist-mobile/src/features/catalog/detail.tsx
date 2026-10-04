@@ -1,8 +1,12 @@
 import { formatDate } from '@turisclick/utils'
 import { useRouter } from 'expo-router'
+import { ArrowLeft, BadgeCheck, CalendarDays } from 'lucide-react-native'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Button, CatalogImage, Chip, Price, Skeleton } from '@/ui'
+import { shortDateLabel } from '@/features/catalog/departures'
+import { colors } from '@/theme/colors'
+import { elevation } from '@/theme/elevation'
+import { Button, CatalogImage, Chip, Icon, Price, Skeleton, StateBadge, Surface } from '@/ui'
 
 /**
  * Piezas compartidas por los dos detalles (experiencia y paquete). Viven acá y no dentro de un archivo
@@ -20,9 +24,9 @@ export function BackButton() {
       accessibilityLabel="Volver"
       onPress={() => router.back()}
       className="absolute left-4 z-10 h-11 w-11 items-center justify-center rounded-full bg-surface/95 active:opacity-70"
-      style={{ top: insets.top + 8, elevation: 4 }}
+      style={[{ top: insets.top + 8 }, elevation.raised]}
     >
-      <Text className="text-lg">←</Text>
+      <Icon icon={ArrowLeft} size={20} color={colors.ink} />
     </Pressable>
   )
 }
@@ -30,10 +34,37 @@ export function BackButton() {
 export function DetailBlock({ title, body }: { title: string; body: string }) {
   return (
     <View className="mt-6">
-      <Text className="mb-1.5 text-base font-semibold text-ink">{title}</Text>
-      <Text className="text-base leading-6 text-[#5B7285]">{body}</Text>
+      <Text className="mb-1.5 font-ui600 text-heading text-ink">{title}</Text>
+      <Text className="font-sans text-body text-ink-muted">{body}</Text>
     </View>
   )
+}
+
+/**
+ * Quién opera el viaje. No es decoración: para publicar, el backend exige que la empresa esté APROBADA
+ * por un administrador, así que todo lo que se ve en el catálogo pasó por esa revisión. Es la única
+ * señal de confianza verificada que el sistema produce, y hasta ahora no se le mostraba al turista.
+ */
+export function OperatorNote({ companyName }: { companyName?: string | null }) {
+  if (!companyName) return null
+
+  return (
+    <Surface className="mt-5 flex-row items-center gap-3 rounded-md border border-border p-3.5" level="flat">
+      <Icon icon={BadgeCheck} size={20} color={colors.primary} />
+      <View className="flex-1">
+        <Text className="font-ui600 text-label text-ink">{companyName}</Text>
+        <Text className="mt-0.5 font-sans text-caption text-ink-muted">
+          Operador verificado: TurisClick revisa cada empresa antes de dejarla publicar.
+        </Text>
+      </View>
+    </Surface>
+  )
+}
+
+/** Crédito de la fotografía: trazabilidad del material y señal de que las fotos son reales. */
+export function PhotoCredit({ credit }: { credit?: string | null }) {
+  if (!credit) return null
+  return <Text className="mt-2 font-sans text-caption text-ink-muted">Foto: {credit}</Text>
 }
 
 /** Se dice "Sin cupo" en vez de "0 lugares": la fecha existe pero ya no admite reservas. */
@@ -43,7 +74,10 @@ export function slotsLabel(availableSlots?: number) {
   return `${availableSlots} ${availableSlots === 1 ? 'lugar' : 'lugares'}`
 }
 
-/** Fila de una fecha con cupo. `time` solo lo usan las experiencias; los paquetes no tienen horario. */
+/**
+ * Fila de una fecha con cupo. `time` solo lo usan las experiencias; los paquetes no tienen horario.
+ * El cupo es lo que decide, así que tiene su propio peso visual en vez de ser texto gris al margen.
+ */
 export function AvailabilityRow({
   date,
   time,
@@ -53,13 +87,24 @@ export function AvailabilityRow({
   time?: string | null
   availableSlots?: number
 }) {
+  const soldOut = availableSlots === 0
+  const last = typeof availableSlots === 'number' && availableSlots > 0 && availableSlots <= 3
+
   return (
-    <View className="flex-row items-center justify-between rounded-xl bg-surface px-4 py-3" style={{ elevation: 1 }}>
-      <Text className="text-base text-ink">
-        {date ? formatDate(date) : '—'}
-        {time ? <Text className="text-[#5B7285]">{`  ${time.slice(0, 5)}`}</Text> : null}
-      </Text>
-      <Text className="text-sm text-[#5B7285]">{slotsLabel(availableSlots)}</Text>
+    <View className="flex-row items-center justify-between rounded-md border border-border bg-surface px-4 py-3">
+      <View className="flex-row items-center gap-2.5">
+        <Icon icon={CalendarDays} size={16} color={colors.inkMuted} />
+        <Text className="font-ui500 text-body text-ink">
+          {date ? shortDateLabel(date) : '—'}
+          {time ? <Text className="font-sans text-ink-muted">{`  ${time.slice(0, 5)}`}</Text> : null}
+        </Text>
+      </View>
+      {availableSlots != null ? (
+        <StateBadge
+          label={slotsLabel(availableSlots)}
+          tone={soldOut ? 'neutral' : last ? 'warning' : 'success'}
+        />
+      ) : null}
     </View>
   )
 }
@@ -88,21 +133,21 @@ export function AvailabilitySection({
 
   return (
     <View>
-      <Text className="mb-3 mt-8 text-lg font-bold text-ink">Próximas fechas</Text>
+      <Text className="mb-3 mt-8 font-ui700 text-title text-ink">Próximas salidas</Text>
       {isLoading ? (
         <View className="gap-2">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
         </View>
       ) : slots.length === 0 ? (
-        <Text className="text-sm text-[#5B7285]">
+        <Text className="font-sans text-body text-ink-muted">
           No hay fechas con cupo por el momento. Consultá más adelante.
         </Text>
       ) : (
         <View className="gap-2">
           {children}
           {remaining > 0 ? (
-            <Text className="mt-1 text-sm text-[#5B7285]">
+            <Text className="mt-1 font-sans text-label text-ink-muted">
               {`y ${remaining} ${remaining === 1 ? 'fecha más' : 'fechas más'} — elegí la tuya en el calendario.`}
             </Text>
           ) : null}
@@ -135,16 +180,17 @@ export function BookingBar({
   const insets = useSafeAreaInsets()
 
   return (
-    <View
-      className="absolute inset-x-0 bottom-0 border-t border-[#E2E8F0] bg-surface px-5 pt-4"
+    <Surface
+      className="absolute inset-x-0 bottom-0 border-t border-border px-4 pt-4"
+      level="overlay"
       style={{ paddingBottom: insets.bottom + 16 }}
     >
-      <View className="mb-3 flex-row items-baseline justify-between">
-        <Text className="text-sm text-[#5B7285]">{priceLabel}</Text>
+      <View className="mb-3 flex-row items-end justify-between">
+        <Text className="font-sans text-label text-ink-muted">{priceLabel}</Text>
         <Price amount={amount} currency={currency} size="lg" />
       </View>
       <Button label={ctaLabel} onPress={onPress} disabled={disabled} />
-    </View>
+    </Surface>
   )
 }
 
@@ -152,7 +198,7 @@ export function DetailSkeleton() {
   return (
     <View>
       <Skeleton className="h-72 w-full rounded-none" />
-      <View className="gap-3 p-5">
+      <View className="gap-3 p-4">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-6 w-3/4" />
         <Skeleton className="h-4 w-40" />
@@ -186,14 +232,10 @@ export function Gallery({ images }: { images?: { id?: string; url?: string | nul
 
   return (
     <View className="mt-6">
-      <Text className="mb-3 text-lg font-bold text-ink">Fotos</Text>
+      <Text className="mb-3 font-ui700 text-heading text-ink">Fotos</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
         {usable.map((image, index) => (
-          <CatalogImage
-            key={image.id ?? index}
-            uri={image.url}
-            className="h-32 w-44 overflow-hidden rounded-xl"
-          />
+          <CatalogImage key={image.id ?? index} uri={image.url} className="h-32 w-44 overflow-hidden rounded-md" />
         ))}
       </ScrollView>
     </View>

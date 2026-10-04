@@ -90,7 +90,7 @@ describe('chat del asistente', () => {
     expect(screen.getByText('Tiwanaku y la Puerta del Sol')).toBeTruthy()
     expect(screen.getByText('Disponible · 16 lugares')).toBeTruthy()
     expect(screen.getByText('Sin cupo')).toBeTruthy()
-    expect(screen.getAllByText(/BOB\s+700\.00/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Bs\s+700,00/).length).toBeGreaterThan(0)
     // Refinamientos rápidos cuando ya hay propuesta.
     expect(screen.getByLabelText('Quiero algo más barato')).toBeTruthy()
   })
