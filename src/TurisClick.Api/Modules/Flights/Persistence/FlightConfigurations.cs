@@ -132,10 +132,13 @@ public class FlightBookingConfiguration : IEntityTypeConfiguration<FlightBooking
         builder.Property(b => b.ProviderOrderId).HasColumnName("provider_order_id").HasMaxLength(200);
         builder.Property(b => b.BookingReference).HasColumnName("booking_reference").HasMaxLength(20);
 
+        // 40 y no 20: RECONCILIATION_REQUIRED no entra en veinte caracteres, y recortar el nombre del
+        // estado para que quepa en una columna sería dejar que el almacenamiento decida el vocabulario del
+        // dominio. Ampliar un varchar en Postgres es un cambio de metadatos, sin reescritura de la tabla.
         builder.Property(b => b.Status)
             .HasColumnName("status")
             .HasConversion<string>()
-            .HasMaxLength(20)
+            .HasMaxLength(40)
             .IsRequired();
 
         builder.Property(b => b.TotalAmount).HasColumnName("total_amount").HasColumnType("numeric(12,2)").IsRequired();
@@ -147,10 +150,44 @@ public class FlightBookingConfiguration : IEntityTypeConfiguration<FlightBooking
         builder.Property(b => b.FailedAt).HasColumnName("failed_at");
         builder.Property(b => b.FailureReason).HasColumnName("failure_reason").HasMaxLength(500);
 
+        // ---- snapshot inmutable de lo comprado ----
+        builder.Property(b => b.OriginIata).HasColumnName("origin_iata").HasMaxLength(3).IsRequired();
+        builder.Property(b => b.DestinationIata).HasColumnName("destination_iata").HasMaxLength(3).IsRequired();
+        builder.Property(b => b.OutboundDate).HasColumnName("outbound_date").IsRequired();
+        builder.Property(b => b.InboundDate).HasColumnName("inbound_date");
+        builder.Property(b => b.Travelers).HasColumnName("travelers").IsRequired();
+
+        builder.Property(b => b.CarrierIata).HasColumnName("carrier_iata").HasMaxLength(3);
+        builder.Property(b => b.CarrierName).HasColumnName("carrier_name").HasMaxLength(100);
+
+        builder.Property(b => b.OutboundDepartureAt).HasColumnName("outbound_departure_at").HasColumnType("timestamp");
+        builder.Property(b => b.OutboundArrivalAt).HasColumnName("outbound_arrival_at").HasColumnType("timestamp");
+        builder.Property(b => b.OutboundFlightNumber).HasColumnName("outbound_flight_number").HasMaxLength(10);
+
+        builder.Property(b => b.InboundDepartureAt).HasColumnName("inbound_departure_at").HasColumnType("timestamp");
+        builder.Property(b => b.InboundArrivalAt).HasColumnName("inbound_arrival_at").HasColumnType("timestamp");
+        builder.Property(b => b.InboundFlightNumber).HasColumnName("inbound_flight_number").HasMaxLength(10);
+
+        builder.Property(b => b.ItinerarySummary).HasColumnName("itinerary_summary").HasMaxLength(500).IsRequired();
+
+        // ---- reconciliación ----
+        builder.Property(b => b.ReconciliationAttempts).HasColumnName("reconciliation_attempts").IsRequired();
+        builder.Property(b => b.NextReconciliationAt).HasColumnName("next_reconciliation_at");
+        builder.Property(b => b.LastReconciliationAt).HasColumnName("last_reconciliation_at");
+
         // Una reserva tiene a lo sumo un vuelo, y la base lo garantiza: es lo que vuelve segura la
         // doble solicitud concurrente, igual que el índice único sobre ai_itinerary_id.
         builder.HasIndex(b => b.ReservationId).IsUnique().HasDatabaseName("ux_flight_bookings_reservation_id");
         builder.HasIndex(b => b.IdempotencyKey).IsUnique().HasDatabaseName("ux_flight_bookings_idempotency_key");
+
+        // Una cotización se puede reservar UNA vez. Es la idempotencia real del flujo: dos toques del
+        // botón, o un reintento del cliente tras un timeout, chocan contra este índice en vez de retener
+        // cupo dos veces y comprar dos pasajes.
+        builder.HasIndex(b => b.FlightQuoteId).IsUnique().HasDatabaseName("ux_flight_bookings_flight_quote_id");
+
+        // Lo que lee el reconciliador: las pocas filas con un desenlace sin resolver.
+        builder.HasIndex(b => new { b.Status, b.NextReconciliationAt })
+            .HasDatabaseName("ix_flight_bookings_reconciliation");
 
         builder.HasOne(b => b.Reservation)
             .WithOne()

@@ -13,6 +13,15 @@ namespace TurisClick.Api.Modules.Flights.Services.Providers;
 ///   EXP -> cualquier destino  : la oferta nace vencida
 ///   CHG -> cualquier destino  : al revalidar, el precio sube
 ///   GON -> cualquier destino  : al revalidar, la oferta ya no existe
+///   FAI -> cualquier destino  : al reservar, el proveedor rechaza los datos (falla definitiva)
+///   UNK -> cualquier destino  : al reservar se pierde la respuesta, y la orden SÍ quedó creada
+///   UNL -> cualquier destino  : al reservar se pierde la respuesta, y NO quedó ninguna orden
+///   NET -> cualquier destino  : no se pudo abrir la conexión; la orden nunca salió
+///   DOC -> cualquier destino  : la oferta exige documento de identidad
+///
+/// UNK y UNL son el par que importa: desde el lado del backend las dos fallas son idénticas —una
+/// respuesta que no llegó—, y lo único que las distingue es lo que el proveedor contesta después. Es
+/// exactamente la ambigüedad que la reconciliación tiene que resolver.
 /// </summary>
 public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProvider
 {
@@ -24,6 +33,11 @@ public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProv
     public const string ExpiredOrigin = "EXP";
     public const string PriceChangeOrigin = "CHG";
     public const string GoneOrigin = "GON";
+    public const string OrderRejectedOrigin = "FAI";
+    public const string UnknownButOrderedOrigin = "UNK";
+    public const string UnknownAndLostOrigin = "UNL";
+    public const string UnreachableOrigin = "NET";
+    public const string DocumentsRequiredOrigin = "DOC";
 
     public Task<FlightSearchResult> SearchAsync(FlightSearchRequest request, CancellationToken ct)
     {
@@ -62,19 +76,79 @@ public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProv
             throw new FlightOfferExpiredException("La oferta ya no está disponible.");
 
         var decoded = DecodeOffer(request.OfferId);
-        var slices = BuildOffer(decoded.Request, decoded.Index).Slices;
+        var origin = decoded.Request.Slices[0].OriginIata;
 
-        return Task.FromResult(new FlightOrderResult(
-            $"ord_fake_{decoded.Request.Slices[0].OriginIata}{decoded.Index}",
+        if (origin == OrderRejectedOrigin)
+            throw new FlightProviderRequestException(
+                "El proveedor rechazó los datos de los pasajeros.", 422, "invalid_passenger_data");
+
+        if (origin == UnreachableOrigin)
+            throw new FlightProviderUnavailableException(
+                "No se pudo abrir la conexión con el proveedor.", requestMayHaveBeenSent: false);
+
+        // La orden se creó o no —eso lo decide el origen— pero en los dos casos el llamador se queda sin
+        // respuesta. Es el escenario que obliga a reconciliar antes de volver a intentar.
+        if (origin is UnknownButOrderedOrigin or UnknownAndLostOrigin)
+            throw new FlightProviderUnavailableException(
+                "El proveedor no respondió a tiempo.", requestMayHaveBeenSent: true);
+
+        return Task.FromResult(BuildOrder(request, decoded));
+    }
+
+    public Task<FlightOrderResult?> GetOrderAsync(string orderId, CancellationToken ct)
+    {
+        if (!orderId.StartsWith("ord_fake_", StringComparison.Ordinal))
+            return Task.FromResult<FlightOrderResult?>(null);
+
+        var origin = orderId.Split('_') is { Length: > 2 } parts ? parts[2] : string.Empty;
+
+        return Task.FromResult<FlightOrderResult?>(new FlightOrderResult(
+            orderId,
+            $"FAKE{origin}",
+            new FlightPrice(120m, "USD"),
+            LiveMode: false,
+            _time.GetUtcNow(),
+            []));
+    }
+
+    /// <summary>
+    /// Lo que la reconciliación le pregunta al proveedor: ¿quedó una orden con esta oferta? UNK contesta
+    /// que sí (el timeout tapó una compra real) y UNL que no (nunca se creó nada).
+    /// </summary>
+    public Task<FlightOrderResult?> FindOrderByOfferAsync(string offerId, string? correlationKey, CancellationToken ct)
+    {
+        if (!offerId.Contains(UnknownButOrderedOrigin, StringComparison.Ordinal))
+            return Task.FromResult<FlightOrderResult?>(null);
+
+        var decoded = DecodeOffer(offerId);
+        var offer = BuildOffer(decoded.Request, decoded.Index);
+
+        return Task.FromResult<FlightOrderResult?>(BuildOrder(
+            new FlightOrderRequest(offerId, offer.Price, [], correlationKey), decoded));
+    }
+
+    public Task<FlightCancellationResult> CancelOrderAsync(string orderId, bool confirm, CancellationToken ct) =>
+        Task.FromResult(new FlightCancellationResult(
+            $"ore_fake_{orderId}",
+            RefundAmount: 0m,
+            RefundCurrency: "USD",
+            RefundTo: "balance",
+            confirm ? _time.GetUtcNow() : null));
+
+    private FlightOrderResult BuildOrder(FlightOrderRequest request, (FlightSearchRequest Request, int Index) decoded)
+    {
+        var origin = decoded.Request.Slices[0].OriginIata;
+
+        return new FlightOrderResult(
+            $"ord_fake_{origin}{decoded.Index}",
             $"FAKE{decoded.Index}{decoded.Request.Slices[0].DestinationIata}",
             request.ConfirmedPrice,
             LiveMode: false,
             _time.GetUtcNow(),
-            slices));
+            BuildOffer(decoded.Request, decoded.Index).Slices,
+            request.OfferId,
+            request.CorrelationKey);
     }
-
-    public Task<FlightOrderResult?> GetOrderAsync(string orderId, CancellationToken ct) =>
-        Task.FromResult<FlightOrderResult?>(null);
 
     // ---------------------------------------------------------------- construcción
 
@@ -109,7 +183,7 @@ public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProv
                     ]),
             ],
             expired ? _time.GetUtcNow().AddMinutes(-1) : _time.GetUtcNow().AddMinutes(20),
-            IdentityDocumentsRequired: false,
+            IdentityDocumentsRequired: slice.OriginIata == DocumentsRequiredOrigin,
             InstantPaymentRequired: true,
             LiveMode: false,
             "Fake Airways",

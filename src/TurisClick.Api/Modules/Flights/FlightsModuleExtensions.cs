@@ -11,8 +11,9 @@ public static class FlightsModuleExtensions
     /// default es "Fake", que no toca la red: lo usan los tests, el entorno desplegado y cualquier demo
     /// sin credenciales. "Duffel" se activa sólo donde hay un token, que vive en User Secrets.
     ///
-    /// El módulo todavía no expone controllers ni entidades: esta fase prueba la integración, no la
-    /// vende. Lo que se registra acá es lo que consumirá el flujo de paquetes con vuelo.
+    /// Además del proveedor, acá se registran la orquestación de reserva y el reconciliador: el proceso de
+    /// fondo que resuelve las emisiones de desenlace desconocido se puede apagar por configuración, igual
+    /// que el de expiración, porque los tests invocan la reconciliación a mano en vez de esperar un timer.
     /// </summary>
     public static IServiceCollection AddFlightsModule(this IServiceCollection services, IConfiguration configuration)
     {
@@ -31,6 +32,12 @@ public static class FlightsModuleExtensions
         }
 
         services.AddScoped<IPackageFlightService, PackageFlightService>();
+        services.AddScoped<IFlightBookingOrchestrator, FlightBookingOrchestrator>();
+        services.AddScoped<IFlightReconciliationService, FlightReconciliationService>();
+
+        services.Configure<FlightReconciliationOptions>(
+            configuration.GetSection(FlightReconciliationOptions.SectionName));
+        services.AddHostedService<FlightReconciliationBackgroundService>();
 
         return services;
     }

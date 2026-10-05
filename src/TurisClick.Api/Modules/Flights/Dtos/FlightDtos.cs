@@ -197,3 +197,100 @@ public class FlightQuoteRevalidationResponse
     /// <summary>true cuando hace falta que acepte explícitamente el precio nuevo antes de seguir.</summary>
     public bool RequiresAcceptance { get; set; }
 }
+
+/// <summary>
+/// Un pasajero, con lo que la oferta exige y nada más.
+///
+/// Esta lista no sale de "lo que suele pedir una aerolínea": sale de lo que el proveedor valida para
+/// emitir. No hay pasaporte ni documento acá a propósito —un vuelo doméstico no lo necesita, y si una
+/// oferta lo exigiera el flujo lo dice y no la vende, en vez de pedirle a todo el mundo datos sensibles
+/// por las dudas.
+///
+/// **Nada de esto se persiste.** Se valida, se manda al proveedor y se descarta; tampoco entra en ningún
+/// log. Ver <see cref="Entities.FlightBooking"/>.
+/// </summary>
+public class FlightTravelerRequest
+{
+    /// <summary>
+    /// Sin dígitos, y la restricción no es estética: el proveedor rechaza la orden entera si un nombre
+    /// trae números, así que se corta acá con un mensaje entendible en vez de allá con un 422.
+    /// </summary>
+    [Required, StringLength(50, MinimumLength = 2)]
+    [RegularExpression(@"^\p{L}[\p{L} '\-\.]*$", ErrorMessage = "El nombre sólo puede tener letras, espacios, apóstrofos y guiones.")]
+    public string GivenName { get; set; } = string.Empty;
+
+    [Required, StringLength(50, MinimumLength = 2)]
+    [RegularExpression(@"^\p{L}[\p{L} '\-\.]*$", ErrorMessage = "El apellido sólo puede tener letras, espacios, apóstrofos y guiones.")]
+    public string FamilyName { get; set; } = string.Empty;
+
+    [Required]
+    public DateOnly BornOn { get; set; }
+
+    /// <summary>"m" o "f": es lo que el proveedor acepta hoy. Se mapea en el adapter, no se interpreta acá.</summary>
+    [Required, RegularExpression("^[mf]$", ErrorMessage = "Indicá 'm' o 'f'.")]
+    public string Gender { get; set; } = string.Empty;
+
+    [Required, RegularExpression("^(mr|ms|mrs|miss|dr)$", ErrorMessage = "Tratamiento no reconocido.")]
+    public string Title { get; set; } = string.Empty;
+
+    [Required, EmailAddress, StringLength(150)]
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>Formato internacional (+591…): es el único que la aerolínea puede usar para avisar un cambio.</summary>
+    [Required, RegularExpression(@"^\+[1-9]\d{6,14}$", ErrorMessage = "Escribí el teléfono en formato internacional, por ejemplo +59170000000.")]
+    public string PhoneNumber { get; set; } = string.Empty;
+}
+
+/// <summary>Importe que el cliente declara haber aceptado. Se compara contra el precio vigente; no se confía en él.</summary>
+public class MoneyRequest
+{
+    [Range(0, 1_000_000)]
+    public decimal Amount { get; set; }
+
+    [Required, RegularExpression("^[A-Z]{3}$")]
+    public string Currency { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// El vuelo de una reserva, tal como se lo muestra a su dueño. Nunca lleva el id de la oferta ni el de la
+/// orden del proveedor: lo que la persona necesita es el localizador, y lo que la app necesita es el
+/// estado.
+/// </summary>
+public class FlightBookingResponse
+{
+    /// <summary>PENDING | ORDERING | CONFIRMED | FAILED | RECONCILIATION_REQUIRED | CANCELLED</summary>
+    public string Status { get; set; } = string.Empty;
+
+    public string OriginIata { get; set; } = string.Empty;
+    public string OriginLabel { get; set; } = string.Empty;
+    public string DestinationIata { get; set; } = string.Empty;
+    public string DestinationLabel { get; set; } = string.Empty;
+
+    public DateOnly OutboundDate { get; set; }
+    public DateOnly? InboundDate { get; set; }
+    public int Travelers { get; set; }
+
+    public string? CarrierIata { get; set; }
+    public string? CarrierName { get; set; }
+
+    public DateTime? OutboundDepartureAt { get; set; }
+    public DateTime? OutboundArrivalAt { get; set; }
+    public string? OutboundFlightNumber { get; set; }
+
+    public DateTime? InboundDepartureAt { get; set; }
+    public DateTime? InboundArrivalAt { get; set; }
+    public string? InboundFlightNumber { get; set; }
+
+    /// <summary>Localizador de la aerolínea. Sólo existe cuando la orden está confirmada.</summary>
+    public string? BookingReference { get; set; }
+
+    public MoneyResponse Price { get; set; } = new();
+
+    public string ItinerarySummary { get; set; } = string.Empty;
+
+    /// <summary>Qué está pasando con el vuelo, en palabras, para mostrarlo sin que la app interprete estados.</summary>
+    public string StatusMessage { get; set; } = string.Empty;
+
+    /// <summary>true mientras el desenlace esté sin resolver: la app vuelve a consultar en vez de ofrecer reintentar.</summary>
+    public bool InProgress { get; set; }
+}

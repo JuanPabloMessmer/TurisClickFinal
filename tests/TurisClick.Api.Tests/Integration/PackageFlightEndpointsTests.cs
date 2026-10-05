@@ -73,6 +73,17 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
         return (providerClient, package, availability!.Id);
     }
 
+    /// <summary>
+    /// Un turista con sesión. Cotizar la exige desde esta oleada: una cotización consulta a un proveedor
+    /// externo y escribe filas, así que no puede dispararla cualquiera sin cuenta.
+    /// </summary>
+    private async Task<HttpClient> CreateTouristClientAsync(string emailPrefix)
+    {
+        var client = _factory.CreateClient();
+        UseBearerToken(client, await RegisterAndLoginTouristAsync(client, emailPrefix));
+        return client;
+    }
+
     private static object RuleBody(string destination = "AMM", object? origins = null) => new
     {
         destinationIata = destination,
@@ -206,9 +217,8 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
         var (providerClient, package, availabilityId) = await CreatePublishedPackageAsync("flight-quote-ok");
         await providerClient.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", RuleBody());
 
-        // El catálogo es público: se puede cotizar sin sesión, igual que se puede ver un precio.
-        var publicClient = _factory.CreateClient();
-        var response = await publicClient.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
+        var touristClient = await CreateTouristClientAsync("flight-quote-ok-t");
+        var response = await touristClient.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
             new { originIata = "VVI", packageAvailabilityId = availabilityId, travelers = 2 });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -233,7 +243,8 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
         var (providerClient, package, availabilityId) = await CreatePublishedPackageAsync("flight-quote-dates");
         await providerClient.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", RuleBody());
 
-        var quote = await (await _factory.CreateClient().PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
+        var touristClient = await CreateTouristClientAsync("flight-quote-dates-t");
+        var quote = await (await touristClient.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
             new { originIata = "VVI", packageAvailabilityId = availabilityId, travelers = 1 }))
             .Content.ReadFromJsonAsync<PackageFlightQuoteResponse>(JsonOptions);
 
@@ -248,7 +259,8 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
     {
         var (_, package, availabilityId) = await CreatePublishedPackageAsync("flight-quote-noflight");
 
-        var response = await _factory.CreateClient().PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
+        var touristClient = await CreateTouristClientAsync("flight-quote-noflight-t");
+        var response = await touristClient.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
             new { originIata = "VVI", packageAvailabilityId = availabilityId, travelers = 1 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -260,7 +272,8 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
         var (providerClient, package, availabilityId) = await CreatePublishedPackageAsync("flight-quote-origin");
         await providerClient.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", RuleBody("AMM", new[] { "VVI" }));
 
-        var response = await _factory.CreateClient().PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
+        var touristClient = await CreateTouristClientAsync("flight-quote-origin-t");
+        var response = await touristClient.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
             new { originIata = "CBB", packageAvailabilityId = availabilityId, travelers = 1 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -274,7 +287,8 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
         var (providerClient, package, availabilityId) = await CreatePublishedPackageAsync("flight-quote-fx", currency: "BOB");
         await providerClient.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", RuleBody());
 
-        var quote = await (await _factory.CreateClient().PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
+        var touristClient = await CreateTouristClientAsync("flight-quote-fx-t");
+        var quote = await (await touristClient.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
             new { originIata = "VVI", packageAvailabilityId = availabilityId, travelers = 1 }))
             .Content.ReadFromJsonAsync<PackageFlightQuoteResponse>(JsonOptions);
 
@@ -290,7 +304,8 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
         var (providerClient, package, availabilityId) = await CreatePublishedPackageAsync("flight-quote-leak");
         await providerClient.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", RuleBody());
 
-        var body = await (await _factory.CreateClient().PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
+        var touristClient = await CreateTouristClientAsync("flight-quote-leak-t");
+        var body = await (await touristClient.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
             new { originIata = "VVI", packageAvailabilityId = availabilityId, travelers = 1 })).Content.ReadAsStringAsync();
 
         // El cliente recibe NUESTRO id de cotización; el del proveedor se queda en el backend, que es lo
@@ -307,7 +322,8 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
 
         var (_, _, otherAvailabilityId) = await CreatePublishedPackageAsync("flight-quote-other-dep");
 
-        var response = await _factory.CreateClient().PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
+        var touristClient = await CreateTouristClientAsync("flight-quote-wrong-dep-t");
+        var response = await touristClient.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
             new { originIata = "VVI", packageAvailabilityId = otherAvailabilityId, travelers = 1 });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -321,7 +337,7 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
         var (providerClient, package, availabilityId) = await CreatePublishedPackageAsync("flight-reval-ok");
         await providerClient.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", RuleBody());
 
-        var client = _factory.CreateClient();
+        var client = await CreateTouristClientAsync("flight-reval-ok-t");
         var quote = await (await client.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
             new { originIata = "VVI", packageAvailabilityId = availabilityId, travelers = 1 }))
             .Content.ReadFromJsonAsync<PackageFlightQuoteResponse>(JsonOptions);
@@ -342,7 +358,7 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
         // CHG es la ruta con la que el proveedor falso simula un cambio de precio al revalidar.
         await providerClient.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", RuleBody("AMM", new[] { "CHG" }));
 
-        var client = _factory.CreateClient();
+        var client = await CreateTouristClientAsync("flight-reval-change-t");
         var quote = await (await client.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
             new { originIata = "CHG", packageAvailabilityId = availabilityId, travelers = 1 }))
             .Content.ReadFromJsonAsync<PackageFlightQuoteResponse>(JsonOptions);
@@ -362,7 +378,7 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
         var (providerClient, package, availabilityId) = await CreatePublishedPackageAsync("flight-reval-gone");
         await providerClient.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", RuleBody("AMM", new[] { "GON" }));
 
-        var client = _factory.CreateClient();
+        var client = await CreateTouristClientAsync("flight-reval-gone-t");
         var quote = await (await client.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
             new { originIata = "GON", packageAvailabilityId = availabilityId, travelers = 1 }))
             .Content.ReadFromJsonAsync<PackageFlightQuoteResponse>(JsonOptions);
@@ -377,8 +393,44 @@ public class PackageFlightEndpointsTests(TurisClickApiFactory factory)
     [Fact]
     public async Task UnaCotizacionInexistenteDevuelve404()
     {
-        var response = await _factory.CreateClient().PostAsync($"/api/flight-quotes/{Guid.NewGuid()}/revalidate", null);
+        var client = await CreateTouristClientAsync("flight-reval-404-t");
+        var response = await client.PostAsync($"/api/flight-quotes/{Guid.NewGuid()}/revalidate", null);
 
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SinSesionNoSePuedeCotizarYNoSeEscribeNada()
+    {
+        var (providerClient, package, availabilityId) = await CreatePublishedPackageAsync("flight-quote-anon");
+        await providerClient.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", RuleBody());
+
+        // La ficha del paquete sigue siendo pública: lo que exige sesión es pedirle inventario al proveedor.
+        var anonymous = _factory.CreateClient();
+        var detail = await anonymous.GetAsync($"/api/packages/{package.Id}");
+        Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
+
+        var response = await anonymous.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
+            new { originIata = "VVI", packageAvailabilityId = availabilityId, travelers = 1 });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task LaCotizacionDeOtraPersonaNoSePuedeRevalidar()
+    {
+        var (providerClient, package, availabilityId) = await CreatePublishedPackageAsync("flight-reval-owner");
+        await providerClient.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", RuleBody());
+
+        var owner = await CreateTouristClientAsync("flight-reval-owner-a");
+        var quote = await (await owner.PostAsJsonAsync($"/api/packages/{package.Id}/flight-quotes",
+            new { originIata = "VVI", packageAvailabilityId = availabilityId, travelers = 1 }))
+            .Content.ReadFromJsonAsync<PackageFlightQuoteResponse>(JsonOptions);
+
+        var intruder = await CreateTouristClientAsync("flight-reval-owner-b");
+        var response = await intruder.PostAsync($"/api/flight-quotes/{quote!.Options[0].QuoteId}/revalidate", null);
+
+        // 404 y no 403: confirmar que ese id existe ya sería contar algo de otra persona.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 

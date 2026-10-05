@@ -6,9 +6,22 @@ namespace TurisClick.Api.Modules.Flights.Services;
 /// </summary>
 public abstract class FlightProviderException(string message, Exception? inner = null) : Exception(message, inner);
 
-/// <summary>No se pudo hablar con el proveedor: red caída, timeout, 5xx. Se puede reintentar.</summary>
-public class FlightProviderUnavailableException(string message, Exception? inner = null)
-    : FlightProviderException(message, inner);
+/// <summary>
+/// No se pudo hablar con el proveedor: red caída, timeout, 5xx.
+///
+/// <para>
+/// <see cref="RequestMayHaveBeenSent"/> es la distinción que decide si una falla es recuperable o
+/// ambigua, y por eso vive en la excepción y no en el llamador. Si la conexión nunca se abrió (DNS que no
+/// resuelve, conexión rechazada) el proveedor no pudo haber creado nada y reintentar es seguro. Si en
+/// cambio la request salió y lo que faltó fue la respuesta —un timeout es exactamente eso—, la orden
+/// puede existir del otro lado: ahí reintentar a ciegas es lo que duplica una compra.
+/// </para>
+/// </summary>
+public class FlightProviderUnavailableException(string message, Exception? inner = null, bool requestMayHaveBeenSent = true)
+    : FlightProviderException(message, inner)
+{
+    public bool RequestMayHaveBeenSent { get; } = requestMayHaveBeenSent;
+}
 
 /// <summary>El proveedor respondió, pero lo que mandamos no sirve (4xx de validación). Reintentar igual no arregla nada.</summary>
 public class FlightProviderRequestException(string message, int statusCode, string? providerCode = null, Exception? inner = null)

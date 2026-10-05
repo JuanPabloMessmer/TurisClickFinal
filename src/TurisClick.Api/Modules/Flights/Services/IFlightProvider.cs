@@ -26,4 +26,21 @@ public interface IFlightProvider
     Task<FlightOrderResult> CreateOrderAsync(FlightOrderRequest request, CancellationToken ct);
 
     Task<FlightOrderResult?> GetOrderAsync(string orderId, CancellationToken ct);
+
+    /// <summary>
+    /// Busca una orden de la que NO tenemos el id. Es la operación que vuelve resoluble el peor caso del
+    /// flujo: la llamada a <see cref="CreateOrderAsync"/> salió, la respuesta no llegó, y hay que
+    /// averiguar si del otro lado quedó una compra antes de intentar otra.
+    ///
+    /// Se busca por la oferta con la que se pidió y por la clave de correlación que nosotros generamos
+    /// antes de llamar; devolver null significa "el proveedor no tiene ninguna orden nuestra para esa
+    /// oferta", nunca "no pude averiguarlo" —eso es una excepción.
+    /// </summary>
+    Task<FlightOrderResult?> FindOrderByOfferAsync(string offerId, string? correlationKey, CancellationToken ct);
+
+    /// <summary>
+    /// Cancela una orden. El resultado dice qué se devuelve y a dónde: TurisClick no asume que una
+    /// cancelación implique reembolso, lo informa el proveedor.
+    /// </summary>
+    Task<FlightCancellationResult> CancelOrderAsync(string orderId, bool confirm, CancellationToken ct);
 }

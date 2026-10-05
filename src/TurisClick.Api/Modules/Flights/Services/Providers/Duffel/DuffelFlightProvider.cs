@@ -112,7 +112,10 @@ public partial class DuffelFlightProvider : IFlightProvider
                 p.Gender,
                 p.Title,
                 p.Email,
-                p.PhoneNumber))]));
+                p.PhoneNumber))],
+            request.CorrelationKey is { Length: > 0 } key
+                ? new Dictionary<string, string> { [CorrelationMetadataKey] = key }
+                : null));
 
         var order = await SendAsync<DuffelOrder>(HttpMethod.Post, "air/orders", body, ct);
 
@@ -134,6 +137,43 @@ public partial class DuffelFlightProvider : IFlightProvider
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Clave con la que viaja nuestro identificador de correlación en los metadatos de la orden.
+    /// </summary>
+    public const string CorrelationMetadataKey = "turisclick_booking_key";
+
+    /// <summary>
+    /// Duffel **no documenta** un mecanismo de idempotencia para `POST /air/orders`, así que no se finge
+    /// que lo tenga. Lo que sí documenta y acá se usa: `GET /air/orders` pagina las órdenes de la cuenta
+    /// (`limit` hasta 200) y el objeto orden incluye `offer_id` y los `metadata` que se enviaron. Con eso
+    /// alcanza para responder la única pregunta que importa después de perder una respuesta: ¿quedó una
+    /// orden creada con MI oferta?
+    ///
+    /// La búsqueda está acotada a una página: si una orden nuestra no está entre las más recientes de la
+    /// cuenta, no se la va a encontrar revisando miles, y decir "no la encontré" con certeza falsa sería
+    /// peor que dejar el caso marcado para revisión humana.
+    /// </summary>
+    public async Task<FlightOrderResult?> FindOrderByOfferAsync(string offerId, string? correlationKey, CancellationToken ct)
+    {
+        var page = await SendAsync<List<DuffelOrder>>(HttpMethod.Get, "air/orders?limit=200", null, ct);
+
+        var match = page.FirstOrDefault(order =>
+            (correlationKey is { Length: > 0 }
+                && order.Metadata is { } metadata
+                && metadata.TryGetValue(CorrelationMetadataKey, out var stored)
+                && stored == correlationKey)
+            || string.Equals(order.OfferId, offerId, StringComparison.Ordinal));
+
+        if (match is null)
+        {
+            _logger.LogInformation(
+                "Duffel: ninguna orden entre las {Count} más recientes corresponde a la oferta consultada.", page.Count);
+            return null;
+        }
+
+        return MapOrder(match);
     }
 
     /// <summary>
@@ -168,12 +208,23 @@ public partial class DuffelFlightProvider : IFlightProvider
         }
         catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
         {
-            // Timeout propio del HttpClient: para el llamador es lo mismo que el proveedor caído.
-            throw new FlightProviderUnavailableException($"Duffel no respondió en {_options.TimeoutSeconds} s.", ex);
+            // Timeout del HttpClient: la request SALIÓ y lo que faltó fue la respuesta. Del otro lado
+            // puede haber quedado una orden creada, así que este caso es ambiguo por definición.
+            throw new FlightProviderUnavailableException(
+                $"Duffel no respondió en {_options.TimeoutSeconds} s.", ex, requestMayHaveBeenSent: true);
         }
         catch (HttpRequestException ex)
         {
-            throw new FlightProviderUnavailableException("No se pudo contactar a Duffel.", ex);
+            // Si la conexión nunca se estableció, Duffel no recibió nada y reintentar es seguro. Cualquier
+            // otro error de transporte se trata como ambiguo: es la suposición conservadora.
+            var neverLeft = ex.HttpRequestError
+                is HttpRequestError.NameResolutionError
+                or HttpRequestError.ConnectionError
+                or HttpRequestError.SecureConnectionError
+                or HttpRequestError.ProxyTunnelError;
+
+            throw new FlightProviderUnavailableException(
+                "No se pudo contactar a Duffel.", ex, requestMayHaveBeenSent: !neverLeft);
         }
 
         var payload = await response.Content.ReadAsStringAsync(ct);
@@ -280,7 +331,9 @@ public partial class DuffelFlightProvider : IFlightProvider
         new FlightPrice(ParseAmount(order.TotalAmount), order.TotalCurrency ?? string.Empty),
         order.LiveMode,
         order.CreatedAt,
-        [.. (order.Slices ?? []).Select(MapSlice)]);
+        [.. (order.Slices ?? []).Select(MapSlice)],
+        order.OfferId,
+        order.Metadata?.GetValueOrDefault(CorrelationMetadataKey));
 
     private static FlightCancellationResult MapCancellation(DuffelOrderCancellation cancellation) => new(
         cancellation.Id,

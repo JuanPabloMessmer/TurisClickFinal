@@ -8,12 +8,15 @@ using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Experiences.Repositories;
 using TurisClick.Api.Modules.Packages.Entities;
 using TurisClick.Api.Modules.Packages.Repositories;
+using TurisClick.Api.Modules.Flights.Entities;
+using TurisClick.Api.Modules.Flights.Services;
 using TurisClick.Api.Modules.Reservations.Dtos;
 using TurisClick.Api.Modules.Reservations.Entities;
 using TurisClick.Api.Modules.Reservations.Payments;
 using TurisClick.Api.Modules.Reservations.Repositories;
 using TurisClick.Api.Modules.Reservations.Services;
 using TurisClick.Api.Shared.Exceptions;
+using TurisClick.Api.Tests.Support;
 using Xunit;
 
 namespace TurisClick.Api.Tests.Modules.Reservations;
@@ -47,6 +50,11 @@ public class ReservationServiceTests
         var options = new DbContextOptionsBuilder<TurisClickDbContext>().Options;
         var db = new Mock<TurisClickDbContext>(options);
 
+        // Estos tests cubren reservas SIN vuelo: la tabla de vuelos existe y está vacía. Devolver un set
+        // vacío es lo que corresponde, y deja que el servicio tome exactamente el camino que toma en
+        // producción cuando la reserva no tiene pasaje.
+        db.Setup(d => d.Set<FlightBooking>()).Returns(FakeDbSet.From<FlightBooking>());
+
         _currentUser.Setup(c => c.UserId).Returns(_touristId);
         _currentUser.Setup(c => c.CompanyId).Returns(_myCompanyId);
 
@@ -65,6 +73,7 @@ public class ReservationServiceTests
             _packageAvailabilityRepository.Object,
             _paymentGateway.Object,
             Mock.Of<IReservationBookingService>(),
+            Mock.Of<IFlightBookingOrchestrator>(),
             _currentUser.Object,
             ownershipGuard.Object,
             Mock.Of<ILogger<ReservationService>>(),

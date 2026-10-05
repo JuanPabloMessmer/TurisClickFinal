@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Ai.Entities;
+using TurisClick.Api.Modules.Flights.Entities;
 using TurisClick.Api.Modules.Reservations.Entities;
 using TurisClick.Api.Modules.Reservations.Repositories;
 
@@ -47,6 +48,22 @@ public class ReservationExpirationService(
     /// <summary>Virtual solo para que los tests puedan observar el orquestador de lotes por separado.</summary>
     public virtual async Task<bool> ExpireAsync(Guid reservationId, CancellationToken ct)
     {
+        // Una reserva cuyo pasaje se está emitiendo no expira, y no es una excepción cosmética: liberar el
+        // cupo mientras el proveedor puede estar creando la orden dejaría a alguien con vuelo comprado y sin
+        // lugar en el paquete. La reconciliación resuelve ese vuelo en minutos y después sí puede expirar.
+        var flightInFlight = await db.FlightBookings
+            .AsNoTracking()
+            .AnyAsync(b => b.ReservationId == reservationId
+                && (b.Status == FlightBookingStatus.ORDERING
+                    || b.Status == FlightBookingStatus.RECONCILIATION_REQUIRED), ct);
+
+        if (flightInFlight)
+        {
+            logger.LogInformation(
+                "Reserva {ReservationId} no se expira todavía: su vuelo está pendiente de resolución.", reservationId);
+            return false;
+        }
+
         await using var tx = await BeginTransactionAsync(ct);
 
         // ---- La transición de estado es la ÚNICA autoridad sobre quién libera el cupo ----
@@ -84,6 +101,13 @@ public class ReservationExpirationService(
                 .SetProperty(i => i.CancelledAt, now), ct);
 
         var releasedItinerary = await ReleaseAiItineraryAsync(reservationId, now, ct);
+
+        // El pasaje no se había emitido: lo que caduca es la intención, y no hay nada que cancelar afuera.
+        await db.FlightBookings
+            .Where(b => b.ReservationId == reservationId && b.Status == FlightBookingStatus.PENDING)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(b => b.Status, FlightBookingStatus.CANCELLED)
+                .SetProperty(b => b.FailureReason, "La reserva expiró antes de emitir el pasaje."), ct);
 
         await tx.CommitAsync(ct);
 

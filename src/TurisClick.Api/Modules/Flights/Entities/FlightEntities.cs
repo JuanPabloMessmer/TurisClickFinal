@@ -128,7 +128,10 @@ public enum FlightQuoteStatus
 /// availability propia por su restricción de forma; un vuelo no tiene ninguna de las dos, y meterlo ahí
 /// obligaría a debilitar las dos garantías y a mostrarle vuelos ajenos a cada operador en su listado.
 ///
-/// En esta oleada la tabla existe y nada la escribe todavía: la orquestación de reserva es la próxima.
+/// **No guarda un solo dato de pasajero.** Los nombres, la fecha de nacimiento y el contacto se validan,
+/// se envían al proveedor y se descartan: después de emitir, TurisClick no necesita ninguno de esos
+/// campos, y la aerolínea ya los tiene. Lo que queda acá es el itinerario comprado y el localizador, que
+/// es lo que hace falta para explicarle a la persona qué compró y para presentarse a volar.
 /// </summary>
 public class FlightBooking
 {
@@ -162,12 +165,80 @@ public class FlightBooking
     public DateTimeOffset? ConfirmedAt { get; set; }
     public DateTimeOffset? FailedAt { get; set; }
     public string? FailureReason { get; set; }
+
+    // ------------------------------------------------------------------ snapshot inmutable
+    //
+    // Por qué hay un snapshot además de la cotización: una FlightQuote vence, y una oferta vencida no
+    // puede ser el único registro de lo que alguien compró. Estos campos se escriben una vez —ruta y
+    // fechas al crear la intención, aerolínea y horarios al confirmar la orden— y nunca se recalculan.
+
+    public string OriginIata { get; set; } = string.Empty;
+    public string DestinationIata { get; set; } = string.Empty;
+    public DateOnly OutboundDate { get; set; }
+    public DateOnly? InboundDate { get; set; }
+    public int Travelers { get; set; }
+
+    public string? CarrierIata { get; set; }
+    public string? CarrierName { get; set; }
+
+    /// <summary>Hora local del aeropuerto, sin huso: igual que en el resto del módulo.</summary>
+    public DateTime? OutboundDepartureAt { get; set; }
+    public DateTime? OutboundArrivalAt { get; set; }
+    public string? OutboundFlightNumber { get; set; }
+
+    public DateTime? InboundDepartureAt { get; set; }
+    public DateTime? InboundArrivalAt { get; set; }
+    public string? InboundFlightNumber { get; set; }
+
+    /// <summary>Resumen legible del itinerario, copiado de la cotización al reservar.</summary>
+    public string ItinerarySummary { get; set; } = string.Empty;
+
+    // ------------------------------------------------------------------ reconciliación
+
+    /// <summary>Cuántas veces se le preguntó al proveedor por una orden de desenlace desconocido.</summary>
+    public int ReconciliationAttempts { get; set; }
+
+    /// <summary>Cuándo corresponde volver a preguntar. Null = no hay nada pendiente.</summary>
+    public DateTimeOffset? NextReconciliationAt { get; set; }
+
+    public DateTimeOffset? LastReconciliationAt { get; set; }
 }
 
+/// <summary>
+/// Estados de una reserva aérea. El cliente nunca los escribe: cada transición la gana el servidor con un
+/// UPDATE condicional, igual que las de Reservation.
+///
+/// <code>
+///                 ┌──────────────── el turista cancela / la reserva expira ───────────► CANCELLED
+///                 │
+///   (crear) ─► PENDING ─► ORDERING ─┬─► CONFIRMED            (el proveedor confirmó la orden)
+///                                   ├─► PENDING              (la conexión nunca salió: se puede reintentar)
+///                                   ├─► FAILED               (rechazo definitivo: se libera el cupo)
+///                                   └─► RECONCILIATION_REQUIRED ─┬─► CONFIRMED  (la orden existía)
+///                                                                └─► FAILED     (no existe ninguna)
+/// </code>
+/// </summary>
 public enum FlightBookingStatus
 {
+    /// <summary>Intención registrada: hay cupo retenido y cotización elegida, pero nadie llamó al proveedor.</summary>
     PENDING,
+
+    /// <summary>
+    /// Escrito y commiteado JUSTO ANTES de llamar al proveedor. Es lo que convierte una caída del proceso
+    /// en un caso resoluble: sin este estado, un crash a mitad de la llamada no dejaría ninguna huella.
+    /// </summary>
+    ORDERING,
+
     CONFIRMED,
+
+    /// <summary>Falla definitiva: el proveedor rechazó, o la reconciliación probó que no existe ninguna orden.</summary>
     FAILED,
+
+    /// <summary>
+    /// Desenlace desconocido: la llamada salió y la respuesta no llegó. Nunca se reintenta la compra desde
+    /// acá; primero se le pregunta al proveedor si la orden existe.
+    /// </summary>
+    RECONCILIATION_REQUIRED,
+
     CANCELLED,
 }

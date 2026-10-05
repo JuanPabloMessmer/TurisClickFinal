@@ -18,6 +18,14 @@ public class CreateReservationRequest : IValidatableObject
     [Range(1, 100)]
     public int Travelers { get; set; }
 
+    /// <summary>
+    /// UC-T-21 — cotización de vuelo elegida, para un paquete que incluye pasaje. Es un id NUESTRO: el
+    /// cliente nunca manda el identificador de la oferta del proveedor ni el precio. Sólo aplica a paquetes.
+    ///
+    /// Reservar dos veces la misma cotización no crea dos reservas: la segunda devuelve la que ya existe.
+    /// </summary>
+    public Guid? FlightQuoteId { get; set; }
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var hasExperience = ExperienceAvailabilityId.HasValue;
@@ -27,5 +35,10 @@ public class CreateReservationRequest : IValidatableObject
             yield return new ValidationResult(
                 "Debe indicarse exactamente uno de ExperienceAvailabilityId o PackageAvailabilityId.",
                 [nameof(ExperienceAvailabilityId), nameof(PackageAvailabilityId)]);
+
+        // Una experiencia individual no tiene vuelo: el vuelo es una regla del paquete.
+        if (FlightQuoteId.HasValue && hasExperience)
+            yield return new ValidationResult(
+                "Sólo un paquete puede incluir vuelo.", [nameof(FlightQuoteId)]);
     }
 }

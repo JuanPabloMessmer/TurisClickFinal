@@ -1,3 +1,5 @@
+using TurisClick.Api.Modules.Flights.Dtos;
+
 namespace TurisClick.Api.Modules.Reservations.Dtos;
 
 /// <summary>Vista del TOURIST dueño (UC-T-08/10) — incluye todos los Items, sin importar a qué empresa pertenezca cada uno.</summary>
@@ -27,6 +29,28 @@ public class ReservationResponse
 
     /// <summary>Motivo del rechazo devuelto por el gateway — solo poblado cuando PaymentApproved es false.</summary>
     public string? PaymentFailureReason { get; set; }
+
+    /// <summary>
+    /// UC-T-21 — el vuelo de la reserva, si el paquete incluye pasaje. Null en una reserva sin vuelo, que es
+    /// el caso de todas las anteriores a esta oleada.
+    /// </summary>
+    public FlightBookingResponse? Flight { get; set; }
+
+    /// <summary>
+    /// true si el precio del vuelo cambió y hace falta aceptarlo explícitamente: no se cobró ni se emitió
+    /// nada. El importe a aceptar es <see cref="FlightCurrentPrice"/>, y hay que reenviar el pago con ese
+    /// mismo monto en `AcceptedFlightPrice`.
+    /// </summary>
+    public bool RequiresFlightPriceAcceptance { get; set; }
+
+    /// <summary>El precio del vuelo que la persona tenía aceptado hasta ahora.</summary>
+    public MoneyResponse? FlightPreviousPrice { get; set; }
+
+    /// <summary>El precio que el proveedor informa en este momento.</summary>
+    public MoneyResponse? FlightCurrentPrice { get; set; }
+
+    /// <summary>Qué decirle a la persona sobre el vuelo en esta respuesta puntual (cambio de precio, emisión en curso).</summary>
+    public string? FlightMessage { get; set; }
 }
 
 /// <summary>Vista del PROVIDER dueño de ESE Item puntual (UC-P-12/13) — no expone los Items de otras empresas de la misma Reservation.</summary>

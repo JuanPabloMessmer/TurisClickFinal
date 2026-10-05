@@ -197,8 +197,9 @@ public class PackageFlightService(
                 Id = Guid.NewGuid(),
                 PackageId = package.Id,
                 PackageAvailabilityId = availability.Id,
-                // El catálogo es público: se cotiza con o sin sesión, y si la hay queda registrada.
-                TouristId = currentUser.IsAuthenticated ? currentUser.UserId : null,
+                // Cotizar exige sesión, así que siempre hay un dueño: es lo que permite exigir después que
+                // sólo esa persona pueda revalidarla y reservarla.
+                TouristId = currentUser.UserId,
                 Provider = flightProvider.Name,
                 ProviderOfferId = offer.Id,
                 OriginIata = origin,
@@ -238,6 +239,11 @@ public class PackageFlightService(
             .Include(q => q.Package)
             .FirstOrDefaultAsync(q => q.Id == quoteId, ct)
             ?? throw new NotFoundAppException("Cotización no encontrada.");
+
+        // Una cotización es de quien la pidió. Para cualquier otro no existe: decir "no es tuya" ya
+        // confirmaría que ese id existe.
+        if (quote.TouristId != currentUser.UserId)
+            throw new NotFoundAppException("Cotización no encontrada.");
 
         var previous = new MoneyResponse { Amount = quote.TotalAmount, Currency = quote.Currency };
         var response = new FlightQuoteRevalidationResponse { QuoteId = quote.Id, PreviousPrice = previous };

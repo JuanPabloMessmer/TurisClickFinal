@@ -117,7 +117,13 @@ public record FlightOrderRequest(
     string OfferId,
     /// <summary>Monto que el backend revalidó. El proveedor rechaza la orden si no coincide con su precio vigente.</summary>
     FlightPrice ConfirmedPrice,
-    IReadOnlyList<FlightPassengerDetails> Passengers);
+    IReadOnlyList<FlightPassengerDetails> Passengers,
+    /// <summary>
+    /// Clave nuestra, generada y persistida ANTES de llamar. Viaja como metadato de la orden para poder
+    /// reconocerla después sin su id. No es un dato sensible y no reemplaza ninguna garantía del
+    /// proveedor: Duffel no documenta idempotencia propia, así que esto es lo que nos deja reconciliar.
+    /// </summary>
+    string? CorrelationKey = null);
 
 public record FlightOrderResult(
     string OrderId,
@@ -126,7 +132,11 @@ public record FlightOrderResult(
     FlightPrice Price,
     bool LiveMode,
     DateTimeOffset? CreatedAt,
-    IReadOnlyList<FlightSlice> Slices);
+    IReadOnlyList<FlightSlice> Slices,
+    /// <summary>Oferta con la que se compró, si el proveedor la informa. Sirve para emparejar una orden con nuestra cotización.</summary>
+    string? OfferId = null,
+    /// <summary>Nuestra clave de correlación, tal como volvió del proveedor. Confirma que la orden es la que buscábamos.</summary>
+    string? CorrelationKey = null);
 
 public record FlightCancellationResult(
     string CancellationId,

@@ -14,6 +14,9 @@ using TurisClick.Api.Modules.Reservations.Repositories;
 using TurisClick.Api.Shared.Exceptions;
 using TurisClick.Api.Shared.Responses;
 using TurisClick.Api.Modules.Companies.Entities;
+using TurisClick.Api.Modules.Flights.Dtos;
+using TurisClick.Api.Modules.Flights.Entities;
+using TurisClick.Api.Modules.Flights.Services;
 
 namespace TurisClick.Api.Modules.Reservations.Services;
 
@@ -24,6 +27,7 @@ public class ReservationService(
     IPackageAvailabilityRepository packageAvailabilityRepository,
     IPaymentGateway paymentGateway,
     IReservationBookingService bookingService,
+    IFlightBookingOrchestrator flightOrchestrator,
     ICurrentUserContext currentUser,
     ICompanyOwnershipGuard ownershipGuard,
     ILogger<ReservationService> logger,
@@ -34,10 +38,26 @@ public class ReservationService(
 
     public async Task<ReservationResponse> CreateAsync(CreateReservationRequest request, CancellationToken ct)
     {
+        // Idempotencia del paso que retiene cupo: una cotización de vuelo se reserva UNA vez. Un doble
+        // toque, o un reintento del cliente después de un timeout, devuelve la reserva que ya existe en vez
+        // de tomar cupo otra vez y comprar un segundo pasaje.
+        if (request.FlightQuoteId is { } quoteId)
+        {
+            var existingId = await flightOrchestrator.FindReservationForQuoteAsync(quoteId, currentUser.UserId, ct);
+            if (existingId is { } already) return await GetByIdForTouristAsync(already, ct);
+        }
+
+        // El FlightBooking se valida ANTES de tocar cupo: si la cotización no sirve, no hay nada que
+        // revertir. Todavía no se persiste nada.
+        var flightBooking = request.FlightQuoteId is { } quote
+            ? await flightOrchestrator.PrepareAsync(
+                quote, currentUser.UserId, request.PackageAvailabilityId!.Value, request.Travelers, ct)
+            : null;
+
         // Forma ya garantizada por CreateReservationRequest.Validate: exactamente uno de los dos ids.
         var (item, tx) = request.ExperienceAvailabilityId.HasValue
             ? await BuildExperienceReservationItemAsync(request.ExperienceAvailabilityId.Value, request.Travelers, ct)
-            : await BuildPackageReservationItemAsync(request.PackageAvailabilityId!.Value, request.Travelers, ct);
+            : await BuildPackageReservationItemAsync(request.PackageAvailabilityId!.Value, request.Travelers, ct, flightBooking is not null);
 
         await using var _ = tx;
 
@@ -56,13 +76,22 @@ public class ReservationService(
         reservation.Items.Add(item);
 
         await reservationRepository.AddAsync(reservation, ct);
+
+        // Cupo tomado y vuelo pendiente de emitir se guardan juntos: una reserva con vuelo que no registre
+        // su intención aérea sería imposible de reconciliar después.
+        if (flightBooking is not null)
+        {
+            flightBooking.ReservationId = reservation.Id;
+            db.FlightBookings.Add(flightBooking);
+        }
+
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
         var created = await reservationRepository.GetByIdForReadAsync(reservation.Id, ct)
             ?? throw new InvalidOperationException("La reserva recién creada no pudo leerse.");
 
-        return ToResponse(created);
+        return ToResponse(created, flight: flightBooking);
     }
 
     /// <summary>UC-T-08 — reserva directa de una Experience individual. Devuelve la transacción todavía abierta (se cierra en CreateAsync tras persistir la Reservation completa).</summary>
@@ -126,7 +155,7 @@ public class ReservationService(
 
     /// <summary>UC-T-09 — reserva directa de un Package de proveedor. Mismo patrón que la Experience (UC-SYS-01/02/06), sobre PackageAvailability.</summary>
     private async Task<(ReservationItem Item, IDbContextTransaction Tx)> BuildPackageReservationItemAsync(
-        Guid packageAvailabilityId, int travelers, CancellationToken ct)
+        Guid packageAvailabilityId, int travelers, CancellationToken ct, bool withFlight = false)
     {
         var availability = await packageAvailabilityRepository.GetByIdWithPackageAsync(packageAvailabilityId, ct)
             ?? throw new NotFoundAppException("Disponibilidad no encontrada.");
@@ -144,6 +173,13 @@ public class ReservationService(
 
         if (availability.DepartureDate < DateOnly.FromDateTime(DateTime.UtcNow))
             throw new GoneAppException("La salida ya expiró.");
+
+        // Un paquete con vuelo no se vende sin vuelo: el pasaje es parte del producto que el operador
+        // publicó, no un extra. Reservar sólo la parte terrestre dejaría a la persona con medio viaje.
+        if (package.IncludesFlight && !withFlight)
+            throw new ValidationAppException(
+                "Este paquete incluye vuelo: elegí una opción de vuelo antes de reservar.",
+                ErrorCodes.FlightQuoteMismatch);
 
         var tx = await db.Database.BeginTransactionAsync(ct);
 
@@ -186,7 +222,13 @@ public class ReservationService(
         if (reservation.TouristId != currentUser.UserId)
             throw new ForbiddenAppException("Esta reserva no te pertenece.");
 
-        return ToResponse(reservation);
+        // El vuelo se lee aparte y no con un Include: FlightBooking vive en otro módulo, y el repositorio de
+        // reservas no tiene por qué conocerlo para seguir funcionando igual en las reservas sin vuelo.
+        var flight = await db.FlightBookings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(b => b.ReservationId == id, ct);
+
+        return ToResponse(reservation, flight: flight);
     }
 
     public async Task<PagedResult<ReservationResponse>> ListMineAsync(int page, int pageSize, CancellationToken ct)
@@ -196,9 +238,17 @@ public class ReservationService(
 
         var (items, totalCount) = await reservationRepository.ListByTouristAsync(currentUser.UserId, page, pageSize, ct);
 
+        // Una sola consulta para toda la página: la alternativa es una por reserva, que es la forma más
+        // cara posible de mostrar una lista.
+        var reservationIds = items.Select(r => r.Id).ToList();
+        var flights = await db.FlightBookings
+            .AsNoTracking()
+            .Where(b => reservationIds.Contains(b.ReservationId))
+            .ToDictionaryAsync(b => b.ReservationId, ct);
+
         return new PagedResult<ReservationResponse>
         {
-            Items = items.Select(r => ToResponse(r)).ToList(),
+            Items = items.Select(r => ToResponse(r, flight: flights.GetValueOrDefault(r.Id))).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = totalCount
@@ -259,6 +309,13 @@ public class ReservationService(
         if (reservation.ExpiresAt is { } expiresAt && expiresAt < now)
             throw new GoneAppException("La reserva expiró; el cupo retenido ya no es válido para pagar.");
 
+        // ---- El vuelo, si lo hay. Una reserva sin vuelo sigue exactamente el mismo camino que antes ----
+        var flight = await db.FlightBookings
+            .Include(b => b.FlightQuote)
+            .FirstOrDefaultAsync(b => b.ReservationId == id, ct);
+
+        if (flight is not null) GuardFlightIsPayable(flight);
+
         // UC-SYS-02: revalidación de precio contra el valor vigente de cada Experience/Package.
         var revalidationByItemId = reservation.Items.ToDictionary(i => i.Id, BuildRevalidation);
 
@@ -271,6 +328,43 @@ public class ReservationService(
             logger.LogInformation(
                 "Pago de la reserva {ReservationId} detenido: el precio vigente cambió y no fue aceptado.", reservation.Id);
             return ToResponse(reservation, revalidationByItemId, requiresPriceAcceptance: true);
+        }
+
+        // ---- Revalidación del vuelo: ANTES de cobrar, nunca después ----
+        //
+        // El orden importa y es el único defendible: primero se confirma que el pasaje existe y a qué
+        // precio, y sólo entonces se autoriza el pago. Cobrar y después descubrir que el vuelo no está
+        // disponible deja a la persona pagando algo que no se le puede dar.
+        FlightPreflight? preflight = null;
+        if (flight is not null)
+        {
+            if (request.Travelers is not { Count: > 0 } travelerData)
+                throw new ValidationAppException(
+                    "Faltan los datos de los pasajeros del vuelo.", ErrorCodes.FlightTravelersRequired);
+
+            if (travelerData.Count != flight.Travelers)
+                throw new ValidationAppException(
+                    $"La reserva es para {flight.Travelers} viajero(s) y llegaron datos de {travelerData.Count}.",
+                    ErrorCodes.FlightTravelersRequired);
+
+            preflight = await flightOrchestrator.PreflightAsync(flight, request.AcceptedFlightPrice, ct);
+
+            switch (preflight.Kind)
+            {
+                case FlightPreflightKind.REQUIRES_ACCEPTANCE:
+                    // Bloqueante igual que el cambio de precio del paquete: no se cobra, no se emite y no
+                    // se cambia ningún estado. Se devuelven los dos importes para que la persona decida.
+                    return ToResponse(reservation, revalidationByItemId, flight: flight, preflight: preflight);
+
+                case FlightPreflightKind.UNAVAILABLE:
+                    throw new GoneAppException(preflight.Message, preflight.ErrorCode);
+
+                case FlightPreflightKind.UNSUPPORTED:
+                    throw new ValidationAppException(preflight.Message, preflight.ErrorCode);
+
+                case FlightPreflightKind.PROVIDER_UNAVAILABLE:
+                    throw new ConflictAppException(preflight.Message, preflight.ErrorCode);
+            }
         }
 
         if (anyPriceChanged)
@@ -291,9 +385,18 @@ public class ReservationService(
         // MONEDAS distintas. Sumar los subtotales en un único importe implicaría una conversión que
         // TurisClick no hace, así que se cobra un cargo por moneda. Una reserva directa tiene una sola
         // moneda y sigue produciendo exactamente un cargo, igual que antes.
-        var chargesByCurrency = reservation.Items
-            .GroupBy(i => i.Currency)
-            .Select(g => new { Currency = g.Key, Amount = g.Sum(i => i.Subtotal) })
+        // El vuelo entra en el cobro como una linea mas, en SU moneda. Si el paquete cotiza en bolivianos y
+        // el pasaje en dolares, son dos cargos: convertir uno al otro exigiria un tipo de cambio que
+        // TurisClick no tiene y no va a inventar.
+        var chargeableAmounts = reservation.Items
+            .Select(i => (i.Currency, Amount: i.Subtotal))
+            .Concat(flight is null
+                ? Array.Empty<(string Currency, decimal Amount)>()
+                : [(flight.Currency, flight.TotalAmount)]);
+
+        var chargesByCurrency = chargeableAmounts
+            .GroupBy(line => line.Currency)
+            .Select(g => new { Currency = g.Key, Amount = g.Sum(line => line.Amount) })
             .OrderBy(c => c.Currency)
             .ToList();
 
@@ -315,6 +418,13 @@ public class ReservationService(
                 break;
             }
         }
+
+        // ---- Emision del pasaje: despues de autorizar el pago y FUERA de cualquier transaccion ----
+        //
+        // Nunca se sostiene una transaccion de base abierta durante una llamada externa, y aca menos que en
+        // ningun otro lado: la emision puede tardar segundos y lo que esta en juego es el cupo del paquete.
+        if (flight is not null && chargeResult.Approved && preflight?.Offer is { } offer)
+            return await PlaceFlightOrderAsync(reservation, flight, offer, request.Travelers!, now, ct);
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
@@ -367,8 +477,182 @@ public class ReservationService(
         await tx.CommitAsync(ct);
 
         return ToResponse(reservation,
+            flight: flight,
             paymentApproved: chargeResult.Approved,
             paymentFailureReason: chargeResult.FailureReason);
+    }
+
+    /// <summary>
+    /// El paso irreversible del checkout coordinado, y el unico punto donde TurisClick compra algo que no
+    /// controla. Todo lo que sigue esta ordenado por lo que pasa si el proceso se muere en esa linea:
+    ///
+    /// <list type="number">
+    /// <item>la transicion a ORDERING se commitea ANTES de llamar, asi una caida deja rastro;</item>
+    /// <item>la llamada ocurre sin ninguna transaccion abierta;</item>
+    /// <item>el desenlace y el destino de la reserva se escriben en UNA sola transaccion, para que no pueda
+    /// quedar un pasaje emitido con una reserva sin confirmar.</item>
+    /// </list>
+    /// </summary>
+    private async Task<ReservationResponse> PlaceFlightOrderAsync(
+        Reservation reservation,
+        FlightBooking flight,
+        FlightOffer offer,
+        IReadOnlyList<FlightTravelerRequest> travelers,
+        DateTimeOffset now,
+        CancellationToken ct)
+    {
+        // Candado contra el doble envio: dos pagos simultaneos llegan hasta aca y solo uno consigue emitir.
+        if (!await flightOrchestrator.BeginOrderingAsync(flight, ct))
+            throw new ConflictAppException(
+                "Ya estamos emitiendo el pasaje de esta reserva. Esperá unos segundos y volvé a consultarla.",
+                ErrorCodes.FlightBookingInProgress);
+
+        var outcome = await flightOrchestrator.PlaceOrderAsync(flight, offer, travelers, ct);
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        flightOrchestrator.Apply(flight, outcome, now);
+
+        switch (outcome.Kind)
+        {
+            case FlightOrderOutcomeKind.CONFIRMED:
+            {
+                // Misma transicion condicional que el pago sin vuelo: entre el cobro y este punto pudo
+                // haber corrido la expiracion.
+                var confirmed = await db.Reservations
+                    .Where(r => r.Id == reservation.Id && r.Status == ReservationStatus.PENDING_PAYMENT)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(r => r.Status, ReservationStatus.CONFIRMED)
+                        .SetProperty(r => r.ConfirmedAt, now), ct);
+
+                if (confirmed != 1)
+                {
+                    // El pasaje existe y la reserva ya no lo admite. No se finge que no paso: queda marcado
+                    // para que la reconciliacion lo cancele con la aerolinea en vez de dejar un pasaje
+                    // emitido que nadie reclama.
+                    flight.Status = FlightBookingStatus.RECONCILIATION_REQUIRED;
+                    flight.NextReconciliationAt = now;
+                    flight.FailureReason = "La reserva dejó de estar vigente mientras se emitía el pasaje.";
+
+                    await db.SaveChangesAsync(ct);
+                    await tx.CommitAsync(ct);
+
+                    logger.LogError(
+                        "Reserva {ReservationId}: el pasaje se emitió pero la reserva ya no admitía confirmación. Queda para reconciliar.",
+                        reservation.Id);
+
+                    throw new GoneAppException(
+                        "La reserva dejó de estar vigente mientras emitíamos el pasaje. Estamos resolviéndolo con la aerolínea; " +
+                        "no se te va a cobrar el vuelo.",
+                        ErrorCodes.ReservationNoLongerPayable);
+                }
+
+                reservation.Status = ReservationStatus.CONFIRMED;
+                reservation.ConfirmedAt = now;
+                foreach (var item in reservation.Items) item.Status = ReservationItemStatus.CONFIRMED;
+
+                await db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+
+                return ToResponse(reservation, flight: flight, paymentApproved: true);
+            }
+
+            case FlightOrderOutcomeKind.FAILED:
+            {
+                // Falla definitiva: el cupo del paquete vuelve al catalogo. Dejarlo tomado por un vuelo que
+                // nunca se emitio le quita el lugar a otra persona sin darle nada a nadie.
+                await ReleaseAfterFlightFailureAsync(reservation, now, ct);
+
+                await db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+
+                await paymentGateway.VoidAsync(
+                    new PaymentVoidRequest(reservation.Id, flight.TotalAmount, flight.Currency, outcome.Message), ct);
+
+                throw new ConflictAppException(outcome.Message, outcome.ErrorCode);
+            }
+
+            case FlightOrderOutcomeKind.NOT_SENT:
+            {
+                // La solicitud nunca salio: no hay nada emitido y el cupo se mantiene para reintentar.
+                await db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+
+                await paymentGateway.VoidAsync(
+                    new PaymentVoidRequest(reservation.Id, flight.TotalAmount, flight.Currency, outcome.Message), ct);
+
+                throw new ConflictAppException(outcome.Message, outcome.ErrorCode);
+            }
+
+            default:
+            {
+                // Desenlace desconocido. No se libera cupo ni se revierte el pago: puede haber un pasaje
+                // emitido del otro lado, y tirar el cupo aca seria dejar a alguien con vuelo y sin paquete.
+                await db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+
+                var response = ToResponse(reservation, flight: flight, paymentApproved: true);
+                response.FlightMessage = outcome.Message;
+                return response;
+            }
+        }
+    }
+
+    /// <summary>Compensacion local de una emision fallida: cancela la reserva y devuelve el cupo.</summary>
+    private async Task ReleaseAfterFlightFailureAsync(Reservation reservation, DateTimeOffset now, CancellationToken ct)
+    {
+        var cancelled = await db.Reservations
+            .Where(r => r.Id == reservation.Id && r.Status == ReservationStatus.PENDING_PAYMENT)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(r => r.Status, ReservationStatus.CANCELLED)
+                .SetProperty(r => r.CancelledAt, now), ct);
+
+        // Si otra transicion gano, el cupo ya lo libero quien la gano: liberarlo de nuevo seria devolver
+        // lugares que no se tenian.
+        if (cancelled != 1) return;
+
+        var activeItems = reservation.Items
+            .Where(i => i.Status == ReservationItemStatus.PENDING_PAYMENT)
+            .ToList();
+
+        await bookingService.ReleaseHoldsAsync(activeItems, ct);
+
+        await db.ReservationItems
+            .Where(i => i.ReservationId == reservation.Id && i.Status == ReservationItemStatus.PENDING_PAYMENT)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(i => i.Status, ReservationItemStatus.CANCELLED)
+                .SetProperty(i => i.CancelledAt, now), ct);
+
+        reservation.Status = ReservationStatus.CANCELLED;
+        reservation.CancelledAt = now;
+        foreach (var item in activeItems) item.Status = ReservationItemStatus.CANCELLED;
+
+        logger.LogWarning(
+            "Reserva {ReservationId} cancelada porque el vuelo no se pudo emitir: {Items} línea(s) liberada(s).",
+            reservation.Id, activeItems.Count);
+    }
+
+    /// <summary>
+    /// Un vuelo cuyo desenlace todavia no se conoce no se vuelve a intentar: reintentar la compra es
+    /// exactamente lo que duplica un pasaje. Y uno que ya fallo o se cancelo no revive con otro pago.
+    /// </summary>
+    private static void GuardFlightIsPayable(FlightBooking flight)
+    {
+        switch (flight.Status)
+        {
+            case FlightBookingStatus.ORDERING:
+            case FlightBookingStatus.RECONCILIATION_REQUIRED:
+                throw new ConflictAppException(
+                    "Estamos confirmando el vuelo de esta reserva con la aerolínea. No hace falta volver a intentar: " +
+                    "consultá la reserva en unos minutos.",
+                    ErrorCodes.FlightBookingInProgress);
+
+            case FlightBookingStatus.FAILED:
+            case FlightBookingStatus.CANCELLED:
+                throw new ConflictAppException(
+                    "El vuelo de esta reserva no se pudo emitir. Volvé a buscar vuelos y armá la reserva de nuevo.",
+                    ErrorCodes.FlightBookingFailed);
+        }
     }
 
     /// <summary>
@@ -395,6 +679,15 @@ public class ReservationService(
             throw new ConflictAppException(
                 $"Una reserva en estado {reservation.Status} no se puede cancelar.",
                 ErrorCodes.ReservationNotCancellable);
+
+        var flight = await db.FlightBookings.FirstOrDefaultAsync(b => b.ReservationId == id, ct);
+
+        // Cancelar mientras se emite el pasaje liberaría un cupo que puede estar comprado. Primero se
+        // resuelve el vuelo —lo hace la reconciliación, en minutos— y después se cancela.
+        if (flight is not null && flight.Status is FlightBookingStatus.ORDERING or FlightBookingStatus.RECONCILIATION_REQUIRED)
+            throw new ConflictAppException(
+                "Estamos confirmando el vuelo de esta reserva. Vas a poder cancelarla en unos minutos.",
+                ErrorCodes.FlightBookingInProgress);
 
         var now = DateTimeOffset.UtcNow;
 
@@ -428,6 +721,15 @@ public class ReservationService(
             .ExecuteUpdateAsync(s => s
                 .SetProperty(i => i.Status, ReservationItemStatus.CANCELLED)
                 .SetProperty(i => i.CancelledAt, now), ct);
+
+        // El vuelo todavía no se emitió (lo garantiza el guard de arriba): no hay nada que cancelar en la
+        // aerolínea, sólo una intención que deja de tener sentido.
+        if (flight is not null && flight.Status == FlightBookingStatus.PENDING)
+        {
+            flight.Status = FlightBookingStatus.CANCELLED;
+            flight.FailureReason = "La reserva se canceló antes de emitir el pasaje.";
+            await db.SaveChangesAsync(ct);
+        }
 
         await tx.CommitAsync(ct);
 
@@ -503,12 +805,14 @@ public class ReservationService(
         return new PriceRevalidation(changed, currentPrice, currentCurrency);
     }
 
-    private static ReservationResponse ToResponse(
+    private ReservationResponse ToResponse(
         Reservation reservation,
         IReadOnlyDictionary<Guid, PriceRevalidation>? revalidationByItemId = null,
         bool requiresPriceAcceptance = false,
         bool? paymentApproved = null,
-        string? paymentFailureReason = null) => new()
+        string? paymentFailureReason = null,
+        FlightBooking? flight = null,
+        FlightPreflight? preflight = null) => new()
     {
         Id = reservation.Id,
         Status = reservation.Status.ToString(),
@@ -522,7 +826,14 @@ public class ReservationService(
             .Select(g => new ReservationTotalResponse { Currency = g.Key, Amount = g.Sum(i => i.Subtotal) })],
         RequiresPriceAcceptance = requiresPriceAcceptance,
         PaymentApproved = paymentApproved,
-        PaymentFailureReason = paymentFailureReason
+        PaymentFailureReason = paymentFailureReason,
+
+        // El bloque de vuelo lo arma el módulo de vuelos: acá no se interpretan estados aéreos.
+        Flight = flight is null ? null : flightOrchestrator.ToResponse(flight),
+        RequiresFlightPriceAcceptance = preflight?.Kind == FlightPreflightKind.REQUIRES_ACCEPTANCE,
+        FlightPreviousPrice = preflight?.Kind == FlightPreflightKind.REQUIRES_ACCEPTANCE ? preflight.Previous : null,
+        FlightCurrentPrice = preflight?.Kind == FlightPreflightKind.REQUIRES_ACCEPTANCE ? preflight.Current : null,
+        FlightMessage = preflight?.Kind == FlightPreflightKind.REQUIRES_ACCEPTANCE ? preflight.Message : null
     };
 
     /// <summary>

@@ -98,7 +98,13 @@ internal sealed record DuffelCreateOrderBody(
     [property: JsonPropertyName("type")] string Type,
     [property: JsonPropertyName("selected_offers")] List<string> SelectedOffers,
     [property: JsonPropertyName("payments")] List<DuffelPayment> Payments,
-    [property: JsonPropertyName("passengers")] List<DuffelOrderPassenger> Passengers);
+    [property: JsonPropertyName("passengers")] List<DuffelOrderPassenger> Passengers,
+    /// <summary>
+    /// `metadata` es un diccionario libre que Duffel guarda y devuelve sin usarlo. Acá viaja UNA sola
+    /// clave: la nuestra de correlación, para poder reconocer la orden si perdemos su respuesta. La
+    /// documentación advierte que no se guarde información sensible ahí, y no se guarda: es un GUID.
+    /// </summary>
+    [property: JsonPropertyName("metadata")] Dictionary<string, string>? Metadata);
 
 /// <summary>
 /// En modo de prueba el saldo de la cuenta es ilimitado y el pago se declara como `balance`: no hay
@@ -122,6 +128,8 @@ internal sealed record DuffelOrderPassenger(
 internal sealed record DuffelOrder(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("booking_reference")] string? BookingReference,
+    [property: JsonPropertyName("offer_id")] string? OfferId,
+    [property: JsonPropertyName("metadata")] Dictionary<string, string>? Metadata,
     [property: JsonPropertyName("total_amount")] string? TotalAmount,
     [property: JsonPropertyName("total_currency")] string? TotalCurrency,
     [property: JsonPropertyName("live_mode")] bool LiveMode,

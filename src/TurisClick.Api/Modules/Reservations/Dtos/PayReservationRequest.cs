@@ -1,3 +1,6 @@
+using System.ComponentModel.DataAnnotations;
+using TurisClick.Api.Modules.Flights.Dtos;
+
 namespace TurisClick.Api.Modules.Reservations.Dtos;
 
 /// <summary>
@@ -18,4 +21,18 @@ public class PayReservationRequest
     /// reenvíe el pago con AcceptPriceChanges=true una vez que el turista lo acepte.
     /// </summary>
     public bool AcceptPriceChanges { get; set; }
+
+    /// <summary>
+    /// UC-T-21 — los pasajeros del vuelo, obligatorios sólo si la reserva incluye uno. Se validan, se
+    /// mandan al proveedor y **no se guardan**: TurisClick no necesita un nombre después de emitir.
+    /// </summary>
+    public List<FlightTravelerRequest>? Travelers { get; set; }
+
+    /// <summary>
+    /// El importe del vuelo que el turista aceptó, cuando el precio cambió desde que cotizó. Es un monto y
+    /// no un booleano a propósito: un "sí" suelto se puede reenviar contra cualquier precio, y entonces la
+    /// persona terminaría comprando algo que no aceptó. El backend compara esto contra el precio que el
+    /// proveedor informa en ese mismo instante, y si no coinciden vuelve a pedir la aceptación.
+    /// </summary>
+    public MoneyRequest? AcceptedFlightPrice { get; set; }
 }

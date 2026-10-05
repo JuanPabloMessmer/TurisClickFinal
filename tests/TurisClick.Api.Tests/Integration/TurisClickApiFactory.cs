@@ -54,7 +54,11 @@ public class TurisClickApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
                 // por su cuenta podría expirar una reserva en medio de otra prueba. Los tests que
                 // ejercitan la expiración invocan IReservationExpirationService directamente, sin
                 // depender de un timer real.
-                ["Reservations:Expiration:Enabled"] = "false"
+                ["Reservations:Expiration:Enabled"] = "false",
+                // Misma razón: la reconciliación de vuelos se invoca a mano en los tests que la ejercitan.
+                // Un proceso de fondo resolviendo emisiones por su cuenta volvería no determinístico
+                // cualquier test que observe un vuelo a medio camino.
+                ["Flights:Reconciliation:Enabled"] = "false"
             });
         });
     }

@@ -38,17 +38,23 @@ public class PackageFlightRulesController(IPackageFlightService service) : Contr
 }
 
 /// <summary>
-/// Cotización de vuelo de un paquete. Es pública, igual que el resto del catálogo: la persona puede ver
-/// precios reales antes de crear una cuenta, y la sesión se pide al reservar.
+/// Cotización de vuelo de un paquete. **Exige sesión de turista**, y eso cambió a propósito respecto de la
+/// oleada anterior: cotizar no es leer el catálogo, es pedirle inventario a un proveedor externo y escribir
+/// filas en nuestra base. Dejarlo abierto convertía cada visita anónima en consultas al proveedor y en
+/// cotizaciones que nadie iba a usar.
+///
+/// El catálogo sigue siendo público: la ficha de un paquete con vuelo se ve sin cuenta, dice desde qué
+/// ciudades sale y a dónde llega, y pide iniciar sesión para ver precios de pasaje. Esa es la frontera más
+/// simple que resuelve el abuso sin inventar una plataforma de rate limiting.
 ///
 /// El cliente nunca manda precios ni ids del proveedor: manda desde dónde sale, para qué salida y
 /// cuántos son. Todo lo demás lo decide el servidor.
 /// </summary>
 [ApiController]
+[Authorize(Policy = "RequireTourist")]
 public class PackageFlightQuotesController(IPackageFlightService service) : ControllerBase
 {
     [HttpPost("api/packages/{packageId:guid}/flight-quotes")]
-    [AllowAnonymous]
     public async Task<ActionResult<PackageFlightQuoteResponse>> Quote(
         Guid packageId, [FromBody] PackageFlightQuoteRequest request, CancellationToken ct)
         => Ok(await service.QuoteAsync(packageId, request, ct));
@@ -59,7 +65,6 @@ public class PackageFlightQuotesController(IPackageFlightService service) : Cont
     /// que la persona acepte explícitamente antes de seguir.
     /// </summary>
     [HttpPost("api/flight-quotes/{quoteId:guid}/revalidate")]
-    [AllowAnonymous]
     public async Task<ActionResult<FlightQuoteRevalidationResponse>> Revalidate(Guid quoteId, CancellationToken ct)
         => Ok(await service.RevalidateAsync(quoteId, ct));
 }
