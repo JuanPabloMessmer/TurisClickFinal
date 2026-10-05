@@ -1,6 +1,11 @@
 # Vuelos en TurisClick — propuesta técnica
 
-Estado: **diseño, sin implementar**. Ningún cambio de dominio, de base ni de infraestructura salió de este documento todavía.
+Estado: **abstracción y adapter implementados y probados contra una API real; dominio persistido todavía no**.
+Lo que existe hoy en código: `IFlightProvider`, `DuffelFlightProvider`, `FakeFlightProvider` y el spike
+que los ejercita. Lo que sigue en propuesta: las entidades, la migración y la orquestación de reserva.
+
+**Proveedor elegido: Duffel, en modo de prueba.** La evidencia de que funciona —búsqueda, revalidación,
+orden y cancelación reales— está en [`duffel-test-results.md`](duffel-test-results.md).
 
 Objetivo: que una agencia pueda publicar "Jordania Mágica — 7 días / 6 noches — desde USD 2.490" con el pasaje incluido, y que el turista compre sin que nadie del otro lado tenga que cotizar a mano. El vuelo no es un texto en la descripción: es un componente con precio vivo que se revalida antes de cobrar.
 
@@ -25,91 +30,80 @@ Un paquete sin vuelo sigue funcionando exactamente como hoy; nada de esto se le 
 ### Lo que el producto promete y lo que no
 
 - Promete: buscar, cotizar, revalidar, reservar y mostrar el estado real de la reserva aérea.
-- **No promete emitir el ticket.** Las Self-Service APIs de Amadeus no emiten: hace falta un consolidador (§2.5). Un paquete con vuelo queda `RESERVADO` y la emisión es un paso operativo documentado, no una promesa de la interfaz. Decir "ticket emitido" cuando no lo está sería la peor mentira posible en este dominio.
+- **No promete emitir el ticket.** En modo de prueba una orden de Duffel es una reserva confirmada con su localizador, no un pasaje emitido, y el documento lo dice con todas las letras. Decir "ticket emitido" cuando no lo está sería la peor mentira posible en este dominio.
 
 ---
 
-## 2. Investigación Amadeus — qué verifiqué y cómo
+## 2. Por qué Duffel, y qué se verificó
 
-Toda afirmación de esta sección tiene su fuente. Lo que no pude verificar está marcado como **sin verificar**, y no se usa como base de ninguna decisión.
+### 2.1 Amadeus quedó fuera, y no por una cuestión técnica
 
-### 2.1 El hallazgo que condiciona el plan: `test.api.amadeus.com` no resuelve
+La investigación previa de este documento apuntaba a las **Self-Service APIs de Amadeus**. Dos hallazgos
+la dieron de baja como objetivo de implementación:
 
-Verificado el 2026-10-05, desde dos redes distintas y contra el DNS autoritativo de Amadeus:
+1. El portal Self-Service fue **dado de baja el 17 de julio**; el acceso pasó al portal Enterprise y está
+   mediado por un alta comercial.
+2. De forma consistente con eso, `test.api.amadeus.com` **ya no resuelve**: el nombre existe en la zona
+   pero no tiene registros A, AAAA ni CNAME, y lo responde el DNS autoritativo de Amadeus
+   (`mucdns01.amadeus-dns.com`), no un bloqueo de nuestra red. Verificado desde dos redes y contra el
+   resolutor público de Google.
 
-| Consulta | Resultado |
+Amadeus Enterprise **sigue siendo un proveedor posible a futuro**, por otra vía de acceso. Nada de lo
+construido acá se pierde si algún día se suma: entraría como un `AmadeusFlightProvider` más.
+
+### 2.2 Lo que Duffel documenta, verificado en su documentación vigente
+
+| Tema | Qué dice la documentación oficial |
 |---|---|
-| `curl https://test.api.amadeus.com/...` (entorno de herramientas) | `Could not resolve host` |
-| `Invoke-WebRequest` (red del host) | `The remote name could not be resolved` |
-| `dns.google/resolve?name=test.api.amadeus.com&type=A` | `Status 0` (NOERROR) y **sin registros A** |
-| idem `type=AAAA` y `type=CNAME` | sin registros; responde la autoridad `mucdns01.amadeus-dns.com` |
-| `dns.google/resolve?name=api.amadeus.com&type=A` | resuelve a `45.60.161.120` (Imperva) |
+| Autenticación | `Authorization: Bearer <token>`; los tokens de prueba empiezan con `duffel_test_` y sólo ven recursos de prueba |
+| Versionado | Cabecera obligatoria `Duffel-Version: v2` en cada request |
+| Búsqueda | `POST /air/offer_requests` con `slices`, `passengers` y `cabin_class` |
+| Revalidación | `GET /air/offers/{id}`; la documentación advierte que *"you may see changes to the offer (e.g a changed `total_amount`)"* y que los precios de búsqueda no están garantizados al reservar |
+| Vencimiento | Cada oferta trae `expires_at`, típicamente 15–30 minutos; Duffel recomienda comprobarlo antes de crear la orden |
+| Orden | `POST /air/orders` con `selected_offers`, `passengers` y `payments` |
+| Pago en prueba | El saldo de la cuenta es **ilimitado** en modo de prueba y el pago se declara como `type: "balance"` — sin tarjeta y sin dinero |
+| Modo de prueba | Las ofertas y órdenes vienen con `live_mode: false` |
+| Cancelación | Dos pasos: `POST /air/order_cancellations` y luego `.../actions/confirm` |
+| Límites | Las respuestas traen `ratelimit-limit` y `ratelimit-reset`; la búsqueda en vivo ronda 10 pedidos por 60 s |
+| Idempotencia | **No encontré** un mecanismo de clave de idempotencia documentado para crear órdenes. Se marca como no verificado y el diseño no se apoya en él (§9) |
 
-El nombre existe en la zona pero **hoy no tiene dirección**: no es un bloqueo de nuestra red ni un NXDOMAIN, es NODATA desde el servidor autoritativo de Amadeus. La documentación y los SDK oficiales siguen describiendo ese host como el entorno de test ([SDK Python, sección de entornos](https://github.com/amadeus4dev/amadeus-python)), así que o el hostname fue retirado, o cambió la forma de acceder al sandbox.
+### 2.3 Rutas de escenario: el regalo de Duffel para probar lo difícil
 
-**Consecuencia para el plan:** no puedo validar nada contra el sandbox desde acá, y **la primera tarea de la fase 0 es que vos confirmes la URL base vigente en el dashboard de Amadeus**, que solo se ve con sesión iniciada. Hasta entonces, todo lo que construyamos corre contra el proveedor falso (§3).
+Duffel documenta rutas que **provocan comportamientos concretos** en modo de prueba, lo que permite
+ejercitar los caminos de error contra la API real y no sólo contra un mock:
 
-Dato adicional: `api.amadeus.com` sí responde, pero mi request fue rechazado por su WAF (`410 Gone`, *"This request was blocked by our security service"*, Imperva). Las llamadas desde entornos automatizados o IPs de datacenter pueden ser filtradas — es un riesgo a considerar para CI, no solo para mi caja.
+| Ruta | Comportamiento |
+|---|---|
+| `PVD → RAI` | no devuelve ofertas |
+| `LHR → STN` | el precio cambia al revalidar |
+| `LGW → LHR` | oferta vencida |
+| `LHR → LGW` | error al crear la orden |
+| `LGW → STN` | saldo insuficiente |
+| `STN → LHR` | timeout garantizado |
+| `JFK → EWR` | ofertas que no exigen pago inmediato |
+| `LHR → DXB` | vuelos con escalas |
 
-### 2.2 Las tres operaciones del flujo de reserva
+### 2.4 Lo que la corrida real confirmó (y lo que corrigió)
 
-Verificado contra la especificación OpenAPI oficial ([amadeus4dev/amadeus-open-api-specification](https://github.com/amadeus4dev/amadeus-open-api-specification), archivada en julio de 2026 pero es la fuente formal de los contratos):
+Detalle completo en [`duffel-test-results.md`](duffel-test-results.md). Tres cosas que sólo se supieron
+llamando a la API:
 
-| API | Qué hace | Lo que importa para nosotros |
-|---|---|---|
-| **Flight Offers Search** (`GET /v2/shopping/flight-offers`) | *"Return list of Flight Offers based on searching criteria"* | Requeridos: `originLocationCode`, `destinationLocationCode`, `departureDate`, `adults`. `max` por defecto 250. Cada oferta trae `numberOfBookableSeats` (máx. 9), `lastTicketingDate`, `instantTicketingRequired`, `oneWay`, `price.grandTotal` |
-| **Flight Offers Price** (`POST /v1/shopping/flight-offers/pricing`) | *"Confirm pricing of given flightOffers"* | Devuelve precio confirmado con impuestos y cargos, y **`bookingRequirements`**: qué datos de pasajero y de contacto son obligatorios para esa oferta concreta. Parámetros `include` (`credit-card-fees`, `bags`, `other-services`, `detailed-fare-rules`) y `forceClass` |
-| **Flight Create Orders** (`POST /v1/booking/flight-orders`) | Convierte una oferta priceada en una reserva | Cuerpo: `flightOffers` (1–6), `travelers` (1–18), y opcionales `contacts`, `remarks`, `ticketingAgreement` (`CONFIRM` / `DELAY_TO_QUEUE` / `DELAY_TO_CANCEL`) |
-| **Flight Order Management** (`GET`/`DELETE /v1/booking/flight-orders/{id}`) | Consultar o cancelar la reserva creada | Es la pieza que hace posible la reconciliación (§4.4) |
+1. **Las rutas domésticas de Bolivia SÍ devuelven ofertas** en modo de prueba: VVI→LPB, VVI→CBB,
+   LPB→VVI, LPB→CBB y CBB→VVI, 20 ofertas cada una. Duffel Airways (`ZZ`) es una aerolínea sintética
+   que vuela a los aeropuertos que se le pidan, así que la demo de la tesis **no necesita cambiarse a
+   una ruta europea**. Los horarios y precios no son realistas, y eso se dice.
+2. **Los horarios vienen en hora local del aeropuerto y sin huso.** Tipar eso como `DateTimeOffset`
+   hacía que el servidor les aplicara su propio offset y corriera todos los vuelos cuatro horas. El
+   modelo usa `DateTime` sin huso a propósito.
+3. **Duffel rechaza un apellido con dígitos** (`Field 'family_name' has invalid format`). Los pasajeros
+   sintéticos tienen nombres sin números, y el caso quedó cubierto por un test.
 
-**Campos obligatorios de un `traveler`:** `id`, `dateOfBirth`, `name` (`firstName`, `lastName`) y `gender` (`MALE`/`FEMALE`/`UNSPECIFIED`/`UNDISCLOSED`). `contact` y `documents` existen en el esquema pero **no están marcados como requeridos**: cuáles hacen falta lo dice `bookingRequirements` de la respuesta de Price, por oferta. Es la diferencia entre pedirle el pasaporte a todo el mundo "por las dudas" y pedirlo solo cuando la aerolínea lo exige.
+### 2.5 Lo que queda sin verificar
 
-### 2.3 Vencimiento y revalidación de ofertas
-
-La especificación de Price define `lastTicketingDate` / `lastTicketingDateTime` así: *"If booked on the same day as the search (with respect to timezone), this flight offer is guaranteed to be thereafter valid for ticketing until this date (included)"*.
-
-Leído con cuidado, eso **no** es "la oferta vale hasta esa fecha". Es: si reservás el mismo día de la búsqueda, el ticketing queda garantizado hasta esa fecha. El precio de una búsqueda vieja no está garantizado. Por eso:
-
-- toda cotización nuestra lleva **nuestro propio TTL corto** además del dato del proveedor;
-- **siempre** se llama a Price antes de reservar, aunque el TTL no haya vencido;
-- si Price devuelve otro precio, no se cobra: se le muestra al turista la diferencia y decide. Es el mismo patrón que ya usa el checkout actual con `acceptPriceChanges`, y conviene reusar su vocabulario.
-
-### 2.4 Qué permite realmente el entorno de test
-
-Verificado en el contenido oficial indexado ([guía de datos de test](https://developers.amadeus.com/self-service/apis-docs/guides/test-environment-data-collection-746), [tutorial de APIs de vuelos](https://developers.amadeus.com/self-service/apis-docs/guides/developer-guides/resources/flights/)) — las páginas se renderizan en el cliente y no se pueden citar textual con un fetch, así que lo marco como verificado por búsqueda, no por lectura directa:
-
-- el entorno de test es **gratuito con datos limitados**: cacheados, de cobertura parcial o directamente falsos;
-- *"our test environment is based on a subset of the production, if you are not returning any results try with big cities/airports like LON (London) or NYC (New-York)"* (esto sí está en la especificación OpenAPI, es cita literal);
-- se pueden crear órdenes sin pago real, pero **el inventario es una copia del real**: reservar mucho lo vacía y deja de haber disponibilidad;
-- el id que devuelve Flight Create Orders en test es **temporal**;
-- límite de ~**10 TPS** en test (sin verificar contra una fuente citable; tratarlo como orden de magnitud, no como contrato).
-
-**Sobre datos personales reales en test: no encontré una prohibición explícita de Amadeus.** No voy a inventar una regla y atribuírsela. Lo que sí está documentado es que el entorno es de desarrollo, con datos falsos y órdenes temporales — y nuestra decisión, propia, es **no enviar nunca datos de personas reales a un sandbox** (§10).
-
-### 2.5 Emisión, pago y consolidador
-
-El punto que más cambia el alcance del producto: **con Self-Service no se emiten tickets**. Según el tutorial oficial de vuelos, quien usa Self-Service tiene que trabajar con un **consolidador aéreo** que emita en su nombre, el pago se arregla directamente con el consolidador y **no pasa por la API**; agregar una forma de pago al cuerpo de Flight Create Orders es rechazado con `INVALID FORMAT`.
-
-Para la tesis esto es una restricción, no un bloqueo: podemos demostrar el ciclo completo hasta la **reserva confirmada con su localizador**, que es exactamente donde termina el trabajo del software. La emisión es un paso comercial que requiere un acuerdo que TurisClick no tiene y no puede fingir.
-
-### 2.6 Test vs Production, en una tabla
-
-| | Test | Production |
-|---|---|---|
-| Base URL | `test.api.amadeus.com` **(hoy no resuelve — §2.1)** | `api.amadeus.com` |
-| Datos | limitados, cacheados o falsos; subconjunto de producción | reales y en tiempo real |
-| Costo | cuota gratuita | pago por uso, requiere alta |
-| Órdenes | sin pago real; id temporal; consumen inventario copiado | reales |
-| Emisión | no | tampoco, sin consolidador |
-
-### 2.7 Lo que queda sin verificar
-
-1. La URL base vigente del entorno de test (necesita tu dashboard).
-2. Si el sandbox devuelve ofertas para rutas con origen en Bolivia (VVI, LPB, CBB). La documentación sugiere ciudades grandes, así que **podría no haber datos útiles para un caso boliviano** — es una decisión de producto que te dejo planteada en el informe.
-3. Límites exactos de cuota mensual y TPS en producción.
-4. Si `ticketingAgreement: DELAY_TO_CANCEL` se comporta igual en test que en producción (es nuestra red de seguridad para que una reserva huérfana se cancele sola).
-
----
+- Si existe un mecanismo oficial de idempotencia al crear órdenes.
+- El comportamiento de emisión y de reembolso en modo **live**: este spike no lo tocó y no lo va a tocar.
+- Cobertura real de aerolíneas bolivianas en modo live (en prueba, lo que responde es Duffel Airways).
+- **KIU**, de interés para Bolivia y la región, no fue investigado: no afirmo nada sobre su API.
 
 ## 3. Arquitectura propuesta
 
@@ -119,34 +113,51 @@ Mismo patrón que ya probó bien con `IAiModelClient` (ver [`ai-rag-architecture
 
 ```
 Modules/Flights/
+  FlightsModuleExtensions.cs            <- Flights:Provider elige la implementación
   Services/
-    IFlightProvider.cs          <- el contrato del dominio
-    FlightSearchCriteria.cs     <- modelos propios, sin una sola palabra de Amadeus
-    FlightQuoteResult.cs
-    FlightBookingRequest.cs
+    IFlightProvider.cs                  <- el contrato del dominio
+    FlightModels.cs                     <- modelos propios, sin una palabra de ningún proveedor
+    FlightProviderExceptions.cs         <- una excepción por decisión, no por código HTTP
+    FlightsOptions.cs
     Providers/
-      FakeFlightProvider.cs     <- determinístico, para tests, demo y Azure
-      AmadeusFlightProvider.cs  <- HTTP + OAuth2 + mapeo
-      Amadeus/                  <- DTOs de Amadeus, encapsulados acá adentro
+      FakeFlightProvider.cs             <- determinístico: tests, demo y entorno desplegado
+      Duffel/
+        DuffelFlightProvider.cs         <- HTTP + mapeo
+        DuffelDtos.cs                   <- `internal`: ningún tipo sale de esta carpeta
 ```
+
+Mañana, sin tocar el dominio: `Providers/Kiu/KiuFlightProvider.cs` (interesante para Bolivia y la
+región, todavía sin investigar), `Providers/Amadeus/AmadeusFlightProvider.cs` (Enterprise), o el que
+venga.
 
 ```csharp
 public interface IFlightProvider
 {
-    Task<IReadOnlyList<FlightQuote>> SearchAsync(FlightSearchCriteria criteria, CancellationToken ct);
-    Task<FlightQuote> RevalidateAsync(string providerOfferRef, CancellationToken ct);
-    Task<FlightBookingResult> BookAsync(FlightBookingRequest request, CancellationToken ct);
-    Task<FlightBookingResult?> GetBookingAsync(string providerOrderId, CancellationToken ct);
+    string Name { get; }
+    Task<FlightSearchResult> SearchAsync(FlightSearchRequest request, CancellationToken ct);
+    Task<FlightOffer> RefreshOfferAsync(string offerId, CancellationToken ct);
+    Task<FlightOrderResult> CreateOrderAsync(FlightOrderRequest request, CancellationToken ct);
+    Task<FlightOrderResult?> GetOrderAsync(string orderId, CancellationToken ct);
 }
 ```
+
+Esto ya está implementado y probado: 29 tests sobre el adapter y el proveedor falso, ninguno de los
+cuales toca la red.
 
 `GetBookingAsync` no es decorativo: es lo que permite reconciliar una orden que quedó huérfana (§4.4).
 
 Tres decisiones que vale la pena explicitar:
 
-1. **La carga cruda del proveedor se guarda, pero no se expone.** `FlightQuote.ProviderPayload` (jsonb) guarda la oferta tal cual vino, porque Flight Offers Price y Flight Create Orders exigen reenviar **el objeto de oferta completo**, no un id. Es un detalle de integración que obliga a persistirlo; no se filtra al cliente ni al LLM.
+1. **No se guarda la respuesta cruda del proveedor.** Era necesario con el flujo de Amadeus, que exige
+   reenviar el objeto de oferta completo; **con Duffel alcanza el `offer_id` opaco**, que es lo único
+   que viaja entre buscar, revalidar y reservar. Menos datos guardados, menos superficie que proteger.
+   Si un proveedor futuro exigiera el payload, se guarda en ese adapter, no en el dominio.
 2. **El cliente nunca manda una oferta.** Manda el id de nuestra `FlightQuote`. Si el payload viajara al navegador y volviera, cualquiera podría cambiar el precio.
-3. **Selección por configuración**, igual que la IA: `Flights__Provider = Fake | Amadeus`. Azure se queda en `Fake` hasta que exista una decisión explícita de ir a producción.
+3. **Selección por configuración**, igual que la IA: `Flights__Provider = Fake | Duffel`. El default es
+   `Fake` y el entorno desplegado se queda ahí hasta que exista una decisión explícita.
+4. **Candado contra el modo real.** El adapter **no arranca** si el token no empieza con `duffel_test_`,
+   salvo que alguien ponga `Flights:Duffel:RequireTestToken` en false a propósito. Una reserva aérea
+   real cuesta dinero: el error tiene que saltar en el arranque, no en la primera venta.
 
 ---
 
@@ -185,7 +196,7 @@ public class FlightQuote
     public string Currency { get; set; }
     public decimal PricePerTraveler { get; set; }
 
-    public string Provider { get; set; }             // "Amadeus" | "Fake"
+    public string Provider { get; set; }             // "Duffel" | "Fake"
     public string ProviderOfferRef { get; set; }
     public string ProviderPayload { get; set; }      // jsonb; nunca sale del backend
     public FlightItinerarySummary Summary { get; set; } // tramos legibles: horarios, escalas, aerolínea
@@ -333,7 +344,7 @@ Escribir la intención **antes** de llamar al proveedor es lo que hace recuperab
 
 | | Local / demo | Azure |
 |---|---|---|
-| `Flights__Provider` | `Fake`, o `Amadeus` cuando haya credenciales | **`Fake`** |
+| `Flights__Provider` | `Duffel` con el token de prueba en User Secrets | **`Fake`** |
 | Credenciales | user-secrets | ninguna hasta decisión explícita |
 | Datos de pasajero | sintéticos, validados | sintéticos |
 
@@ -346,7 +357,7 @@ El proveedor falso no es un mock pobre: devuelve itinerarios verosímiles y dete
 1. **Unitarios del dominio**, sin red: cálculo del precio total, vencimiento, transiciones de `FlightBookingStatus`, derivación de fechas desde la salida del paquete.
 2. **Orquestación con `FakeFlightProvider`**: el camino feliz y los cuatro fallos de la tabla de §9, incluida la reserva que sobrevive a la caída entre el paso 2 y el 3.
 3. **Contrato del adapter contra fixtures grabadas**: respuestas reales del sandbox, capturadas una vez en el spike, guardadas como JSON y reproducidas con un `HttpMessageHandler` falso. Verifican el mapeo sin tocar la red.
-4. **CI nunca llama a Amadeus.** Ni con credenciales. Un test que depende de un tercero no es un test.
+4. **CI nunca llama a Duffel.** Ni con credenciales: los 29 tests del módulo usan un `HttpMessageHandler` simulado y fixtures. Un test que depende de un tercero no es un test.
 5. **Un spike manual, documentado y reproducible**, para capturar esas fixtures (fase 0).
 6. Los 505 tests de backend y los 333 de frontend siguen verdes: esta integración no toca sus caminos.
 
@@ -356,11 +367,10 @@ El proveedor falso no es un mock pobre: devuelve itinerarios verosímiles y dete
 
 | Fase | Qué incluye | Depende de |
 |---|---|---|
-| **0 — Spike** | Confirmar la URL base vigente del sandbox, obtener token, correr Search → Price → Create Order a mano, **capturar las fixtures** y anotar qué devuelve para rutas bolivianas | Vos: dashboard y credenciales de test |
-| **1 — Dominio + Fake** | Entidades, migración aditiva, `IFlightProvider`, `FakeFlightProvider`, endpoints de cotización, UI del proveedor para configurar el vuelo. Sin Amadeus | — |
-| **2 — Adapter Amadeus** | OAuth2, mapeo, resiliencia, tests de contrato contra las fixtures. Detrás del flag, apagado por defecto | Fase 0 y 1 |
-| **3 — Reserva** | Orquestación de §9, idempotencia, reconciliación, UI de pasajeros guiada por `bookingRequirements`, confirmación | Fase 2 |
-| **4 — IA** | El vuelo como herramienta del agente (§14) | Fase 3 |
+| **0 — Spike** ✅ | `IFlightProvider`, `DuffelFlightProvider`, `FakeFlightProvider`, 29 tests y el ciclo completo probado contra la API real | hecho |
+| **1 — Dominio** | Entidades (`PackageFlightRule`, `FlightQuote`, `FlightBooking`), migración aditiva, endpoints de cotización y UI del operador para configurar el vuelo | — |
+| **2 — Reserva** | Orquestación de §9, reconciliación, formulario de pasajeros, confirmación | Fase 1 |
+| **3 — IA** | El vuelo como herramienta del agente (§14) | Fase 2 |
 
 Cada fase termina con tests verdes y puede quedar en `master` sin activar nada: el flag apagado deja el comportamiento actual intacto.
 

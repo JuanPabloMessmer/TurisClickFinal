@@ -1,0 +1,12 @@
+{
+  "data": {
+    "id": "ore_0000TestCancellation",
+    "order_id": "ord_0000TestOrder",
+    "live_mode": false,
+    "refund_amount": "48.99",
+    "refund_currency": "USD",
+    "refund_to": "balance",
+    "expires_at": "2026-11-01T12:05:00Z",
+    "confirmed_at": "2026-11-01T11:40:00Z"
+  }
+}

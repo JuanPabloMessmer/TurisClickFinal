@@ -1,0 +1,73 @@
+{
+  "data": {
+    "id": "ord_0000TestOrder",
+    "booking_reference": "OSQLFL",
+    "live_mode": false,
+    "created_at": "2026-11-01T11:35:00Z",
+    "total_amount": "48.99",
+    "total_currency": "USD",
+    "passengers": [
+      {
+        "id": "pas_0000TestPassenger",
+        "given_name": "Prueba",
+        "family_name": "Demostracion",
+        "born_on": "1990-01-01",
+        "gender": "m",
+        "title": "mr",
+        "email": "qa@example.com",
+        "phone_number": "+59170000000"
+      }
+    ],
+    "slices": [
+      {
+        "id": "sli_0000TestSlice",
+        "duration": "PT1H19M",
+        "origin": {
+          "iata_code": "VVI",
+          "name": "Viru Viru International Airport"
+        },
+        "destination": {
+          "iata_code": "LPB",
+          "name": "El Alto International Airport"
+        },
+        "segments": [
+          {
+            "id": "seg_0000TestSegment",
+            "departing_at": "2026-11-19T13:56:00",
+            "arriving_at": "2026-11-19T15:15:00",
+            "origin": {
+              "iata_code": "VVI"
+            },
+            "destination": {
+              "iata_code": "LPB"
+            },
+            "marketing_carrier": {
+              "name": "Duffel Airways",
+              "iata_code": "ZZ"
+            },
+            "marketing_carrier_flight_number": "3551",
+            "aircraft": {
+              "name": "Boeing 737"
+            },
+            "passengers": [
+              {
+                "passenger_id": "pas_0000TestPassenger",
+                "cabin_class": "economy",
+                "baggages": [
+                  {
+                    "type": "checked",
+                    "quantity": 1
+                  },
+                  {
+                    "type": "carry_on",
+                    "quantity": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

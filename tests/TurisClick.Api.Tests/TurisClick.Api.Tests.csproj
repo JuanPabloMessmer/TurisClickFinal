@@ -24,4 +24,10 @@
     <ProjectReference Include="..\..\src\TurisClick.Api\TurisClick.Api.csproj" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <!-- Fixtures de Duffel: forma verificada contra el entorno de prueba, sin secretos ni datos reales. -->
+    <Content Include="fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

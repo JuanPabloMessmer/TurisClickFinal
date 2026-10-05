@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -9,6 +9,7 @@ using TurisClick.Api.Infrastructure.Database.Seed;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Admin;
 using TurisClick.Api.Modules.Ai;
+using TurisClick.Api.Modules.Flights;
 using TurisClick.Api.Modules.Preferences;
 using TurisClick.Api.Modules.Auth;
 using TurisClick.Api.Modules.Categories;
@@ -114,6 +115,7 @@ try
 builder.Services.AddAdminModule();
     builder.Services.AddPreferencesModule();
     builder.Services.AddAiModule(builder.Configuration);
+    builder.Services.AddFlightsModule(builder.Configuration);
 
     // ---- Manejo global de errores ----
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
