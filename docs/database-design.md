@@ -806,9 +806,33 @@ Ref: reservation_items.package_availability_id > package_availabilities.id
 7. `packages`, `package_items`, `package_images`, `package_categories`, `package_availabilities`
 8. `ai_conversations`, `ai_conversation_categories`, `ai_messages`, `ai_itineraries`, `ai_itinerary_items`
 9. `reservations`, `reservation_items`
+10. `package_flight_rules`, `flight_quotes`, `flight_bookings` (migración 0010; `packages.includes_flight` se suma como columna con default)
 
 Este orden coincide con las oleadas de implementación de `use-cases.md`, así que cada migración de FASE 5 solo agrega las tablas que su oleada necesita — no hace falta crear el esquema completo de una vez.
 
 ---
 
 Diseño de base de datos cerrado. Quedo en pausa para tu revisión antes de pasar a **FASE 4 — Arquitectura del backend**.
+
+---
+
+## Oleada 10 — vuelos en paquetes (migración 0010, aditiva)
+
+| Tabla | PK | Para qué |
+|---|---|---|
+| `package_flight_rules` | `package_id` | Con qué criterio se busca el vuelo de ese paquete: destino, orígenes permitidos, cabina, desfases de fecha y si es ida y vuelta. **No guarda un vuelo**: ni aerolínea, ni número, ni tarifa |
+| `flight_quotes` | `id` | Una cotización que se le mostró a alguien: identificador opaco de la oferta del proveedor, precio inicial, precio vigente, vencimiento y estado |
+| `flight_bookings` | `id` | La reserva aérea, cuando exista. Único por `reservation_id` |
+
+Tres decisiones que el esquema materializa:
+
+1. **El vuelo no es un `reservation_item`.** Esa tabla exige `company_id` —el aislamiento por empresa de
+   UC-SYS-03— y una availability propia por `ck_reservation_items_product_shape`. Un vuelo no tiene
+   ninguna de las dos: meterlo ahí obligaría a debilitar las dos garantías y a mostrarle vuelos ajenos a
+   cada operador en su listado de reservas. Por eso `flight_bookings` es 1—1 con `reservations`, con
+   índice único, igual que el 1—1 que ya existe contra `ai_itineraries`.
+2. **`initial_amount` y `total_amount` conviven en `flight_quotes`.** El primero es lo que se cotizó y no
+   cambia nunca; el segundo se actualiza al revalidar. Es lo que permite decir "antes era X, ahora es Y"
+   en lugar de pedirle a la persona que recuerde el precio.
+3. **`idempotency_key` se escribe antes de llamar al proveedor.** Si el proveedor crea la orden y
+   nuestra escritura falla, queda rastro para reconciliar en vez de una reserva huérfana.

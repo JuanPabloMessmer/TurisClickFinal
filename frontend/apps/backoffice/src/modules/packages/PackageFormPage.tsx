@@ -18,7 +18,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { KNOWN_CURRENCIES } from '@/modules/experiences/currencies'
 import { useMyExperiences } from '@/modules/experiences/api'
 import { getErrorMessage } from '@/lib/errors'
-import { useCityDestinations, useCreatePackage, useMyPackage, useUpdatePackage } from './api'
+import { cn } from '@/lib/utils'
+import { PackageFlightSection } from './PackageFlightSection'
+import { useCityDestinations, useCreatePackage, useMyPackage, usePublicCategories, useUpdatePackage } from './api'
 
 const packageItemSchema = z
   .object({
@@ -47,6 +49,7 @@ const schema = z.object({
   title: z.string().min(3).max(200),
   description: z.string().min(10),
   destinationId: z.string().min(1, 'Elegí un destino.'),
+  categoryIds: z.array(z.string()),
   conditionsText: z.string().optional().or(z.literal('')),
   durationDays: z.coerce.number().int().min(1).max(90),
   price: z.coerce.number().min(0),
@@ -79,6 +82,7 @@ export function PackageFormPage() {
           title: pkg.title ?? '',
           description: pkg.description ?? '',
           destinationId: pkg.destinationId ?? '',
+          categoryIds: (pkg.categories ?? []).map((category) => category.id!).filter(Boolean),
           conditionsText: pkg.conditionsText ?? '',
           durationDays: pkg.durationDays ?? 1,
           price: pkg.price ?? 0,
@@ -98,6 +102,7 @@ export function PackageFormPage() {
       title: '',
       description: '',
       destinationId: '',
+      categoryIds: [],
       durationDays: 3,
       price: 0,
       currency: 'USD',
@@ -105,6 +110,18 @@ export function PackageFormPage() {
       images: [],
     },
   })
+
+  const { data: categories = [] } = usePublicCategories()
+  const selectedCategoryIds = form.watch('categoryIds') ?? []
+
+  const toggleCategory = (categoryId: string) => {
+    const current = form.getValues('categoryIds') ?? []
+    form.setValue(
+      'categoryIds',
+      current.includes(categoryId) ? current.filter((id) => id !== categoryId) : [...current, categoryId],
+      { shouldDirty: true },
+    )
+  }
 
   const itemsArray = useFieldArray({ control: form.control, name: 'items' })
   const imagesArray = useFieldArray({ control: form.control, name: 'images' })
@@ -125,7 +142,7 @@ export function PackageFormPage() {
       title: values.title,
       description: values.description,
       destinationId: values.destinationId,
-      categoryIds: [] as string[],
+      categoryIds: values.categoryIds ?? [],
       conditionsText: values.conditionsText || undefined,
       durationDays: values.durationDays,
       price: values.price,
@@ -160,11 +177,8 @@ export function PackageFormPage() {
     <div className="max-w-3xl">
       <PageHeader
         title={isEdit ? 'Editar paquete' : 'Nuevo paquete'}
-        description="UC-P-07/08 — datos generales, itinerario día a día, galería. La disponibilidad se configura aparte."
+        description="Datos generales, itinerario día a día, fotos y vuelo. Las fechas de salida se cargan aparte."
       />
-      <Alert variant="info" className="mb-6">
-        Las categorías todavía no están disponibles desde el Backoffice — se crea/edita sin categorías (mismo criterio que Experiencias).
-      </Alert>
 
       <form className="flex flex-col gap-6" onSubmit={form.handleSubmit(onSubmit)} noValidate>
         {/* ---- Sección 1: Datos generales ---- */}
@@ -256,6 +270,37 @@ export function PackageFormPage() {
                 </Select>
               </div>
             </div>
+
+            {categories.length > 0 && (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="text-label font-medium text-foreground">Categorías</legend>
+                <p className="text-label text-ink-muted">
+                  Con qué intereses se encuentra este paquete cuando alguien explora o le pide un viaje al
+                  asistente.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {categories.map((category) => {
+                    const active = selectedCategoryIds.includes(category.id!)
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => toggleCategory(category.id!)}
+                        className={cn(
+                          'h-9 rounded-sm border px-3 text-label transition-colors',
+                          active
+                            ? 'border-primary bg-primary/10 font-medium text-primary'
+                            : 'border-border-control text-ink-muted hover:bg-muted',
+                        )}
+                      >
+                        {category.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+            )}
           </CardContent>
         </Card>
 
@@ -327,6 +372,9 @@ export function PackageFormPage() {
         </Card>
 
         {submitError && <Alert variant="destructive">{submitError}</Alert>}
+        {/* ---- Sección 4: Vuelo ---- */}
+        <PackageFlightSection packageId={id} />
+
         <Button type="submit" disabled={form.formState.isSubmitting} className="self-start">
           {isEdit ? 'Guardar cambios' : 'Crear paquete'}
         </Button>

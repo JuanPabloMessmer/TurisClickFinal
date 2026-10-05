@@ -23,6 +23,18 @@ public class PackageResponse
     /// (POST /api/packages/{id}/flight-quotes), porque hasta no cotizar no existe.
     /// </summary>
     public bool IncludesFlight { get; set; }
+
+    /// <summary>Aeropuerto al que vuela el paquete. Nulo si no incluye vuelo.</summary>
+    public string? FlightDestinationIata { get; set; }
+    public string? FlightDestinationLabel { get; set; }
+
+    /// <summary>
+    /// Desde dónde acepta salir el operador. Es lo único de la regla que el turista necesita ver: los
+    /// desfases de fecha son configuración interna y no salen al catálogo público.
+    /// </summary>
+    public List<FlightOriginResponse> FlightOrigins { get; set; } = [];
+
+    public bool? FlightRoundTrip { get; set; }
     public List<CategoryResponse> Categories { get; set; } = [];
     public List<PackageImageResponse> Images { get; set; } = [];
 
@@ -51,4 +63,11 @@ public class PackageItemResponse
     /// <summary>Si Kind = EXPERIENCE_REFERENCE y no se pisó Title, muestra el título real de la Experience.</summary>
     public string? Title { get; set; }
     public string? Description { get; set; }
+}
+
+/// <summary>Un aeropuerto de salida habilitado, con su etiqueta legible.</summary>
+public class FlightOriginResponse
+{
+    public string Iata { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
 }

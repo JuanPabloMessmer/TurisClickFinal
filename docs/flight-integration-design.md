@@ -1,8 +1,13 @@
 # Vuelos en TurisClick — propuesta técnica
 
-Estado: **abstracción y adapter implementados y probados contra una API real; dominio persistido todavía no**.
-Lo que existe hoy en código: `IFlightProvider`, `DuffelFlightProvider`, `FakeFlightProvider` y el spike
-que los ejercita. Lo que sigue en propuesta: las entidades, la migración y la orquestación de reserva.
+Estado: **dominio, cotización y revalidación implementados; la reserva del vuelo todavía no**.
+
+| Implementado | Pendiente |
+|---|---|
+| `IFlightProvider`, `DuffelFlightProvider`, `FakeFlightProvider` | Orquestación de reserva (§9) |
+| `PackageFlightRule`, `FlightQuote`, `FlightBooking` + migración 0010 | Escritura de `FlightBooking` |
+| Cotizar un paquete con vuelo y revalidar la cotización | Datos de pasajeros y creación de la orden |
+| Configuración de la regla en el Backoffice y búsqueda en Tourist Mobile | Integración con el agente de IA (§14) |
 
 **Proveedor elegido: Duffel, en modo de prueba.** La evidencia de que funciona —búsqueda, revalidación,
 orden y cancelación reales— está en [`duffel-test-results.md`](duffel-test-results.md).
@@ -266,19 +271,35 @@ Cero cambios destructivos, cero columnas renombradas, cero `ReservationItem` toc
 
 ## 6. Endpoints potenciales
 
-| Método | Ruta | Para quién |
-|---|---|---|
-| `PUT` | `/api/packages/{id}/flight-rule` | Provider: configurar el vuelo |
-| `DELETE` | `/api/packages/{id}/flight-rule` | Provider: dejar de incluirlo |
-| `GET` | `/api/packages/{id}/flight-quotes?availabilityId&origin&travelers` | Turista: cotizar (crea `FlightQuote`) |
-| `POST` | `/api/flight-quotes/{id}/revalidate` | Turista: precio confirmado antes de pagar |
-| `GET` | `/api/flight-quotes/{id}/booking-requirements` | Qué datos pedirle a cada pasajero |
-| `POST` | `/api/reservations` (extendido) | Suma `flightQuoteId` + `travelers[]`, con `Idempotency-Key` |
-| `GET` | `/api/reservations/{id}` (extendido) | Devuelve el bloque de vuelo con su estado y localizador |
+| Método | Ruta | Para quién | Estado |
+|---|---|---|---|
+| `PUT` | `/api/packages/{id}/flight-rule` | Operador: configurar el vuelo | ✅ |
+| `DELETE` | `/api/packages/{id}/flight-rule` | Operador: dejar de incluirlo | ✅ |
+| `GET` | `/api/packages/{id}/flight-rule` | Operador (los suyos) o Admin (todos) | ✅ |
+| `POST` | `/api/packages/{id}/flight-quotes` | Público: cotizar (crea `FlightQuote`) | ✅ |
+| `POST` | `/api/flight-quotes/{id}/revalidate` | Público: precio vigente antes de comprar | ✅ |
+| `GET` | `/api/airports` | Catálogo de aeropuertos conocidos | ✅ |
+| `POST` | `/api/reservations` (extendido) | Sumaría `flightQuoteId` + pasajeros | ⏳ |
+| `GET` | `/api/reservations/{id}` (extendido) | Devolvería el bloque de vuelo | ⏳ |
+
+`GET /api/packages/{id}` suma `includesFlight`, el destino del vuelo y los orígenes habilitados: es lo
+único de la regla que el catálogo público necesita. Los desfases de fecha son configuración interna y
+no salen.
 
 Ningún endpoint existente cambia de forma: `CreateReservationRequest` suma campos **opcionales**, y su validación actual (exactamente uno entre experiencia y paquete) se mantiene.
 
 ---
+
+## 6.1 Casos de uso
+
+| Caso | Quién | Estado |
+|---|---|---|
+| **Configurar las reglas de vuelo de un paquete** | Operador | ✅ implementado |
+| **Inspeccionar las reglas de vuelo de cualquier paquete** | Admin | ✅ implementado |
+| **Cotizar el vuelo de un paquete** | Turista (público) | ✅ implementado |
+| **Revalidar una cotización antes de comprar** | Turista (público) | ✅ implementado |
+| **Reservar paquete + vuelo** | Turista | ⏳ próxima oleada |
+| **Pedir un vuelo desde el asistente** | Turista | ⏳ próxima oleada (§14) |
 
 ## 7. Flujo del Provider
 
@@ -385,3 +406,24 @@ La regla no cambia: **el modelo no inventa nada**. Lo que cambia es de dónde sa
 - El modelo solo puede referirse a una `FlightQuote` que nosotros creamos. Igual que hoy con los productos, una cotización que el modelo "nombre" y no exista en el conjunto ofrecido se descarta en la capa de validación (mismo lugar donde hoy se filtran los ids inventados).
 - Un itinerario de IA podría llevar un vuelo asociado con el mismo criterio que la reserva: referencia a `FlightQuote`, no un ítem más.
 - El precio del vuelo en un itinerario es **estimado** por definición, y se revalida al reservar — que es exactamente lo que ya hace `ItineraryRevalidationService` con el resto.
+
+### El punto de integración exacto (pendiente, a propósito)
+
+No se implementó en esta oleada para no mezclar dos cambios grandes, pero el lugar ya está identificado
+y es uno solo:
+
+1. `PreferenceExtractionResult` suma un campo opcional `OriginAirportIata`. El modelo ya extrae destino
+   y fechas; reconocer "salgo desde Santa Cruz" es el mismo tipo de señal, sobre el mismo vocabulario
+   cerrado (los códigos de `AirportCatalog`).
+2. `AiConversationService`, donde hoy llama a `RetrievalService`, suma: si el paquete candidato tiene
+   `IncludesFlight` y la conversación trae un origen válido, llamar a `IPackageFlightService.QuoteAsync`
+   y adjuntar las opciones como contexto de candidatos.
+3. El prompt recibe esas opciones **como datos**, igual que los productos del catálogo. El modelo puede
+   explicarlas y elegir entre ellas; no puede inventar una.
+4. La validación posterior ya existe conceptualmente: igual que hoy se descarta un `productId` que no
+   estaba entre los candidatos ofrecidos, se descarta un `quoteId` que no salga de la cotización que el
+   backend acaba de hacer.
+
+Lo que **no** cambia: el LLM sigue sin poder inventar aerolínea, horario, precio, disponibilidad,
+equipaje ni localizador. El inventario aéreo entra por `IFlightProvider`, nunca por RAG ni por
+generación.

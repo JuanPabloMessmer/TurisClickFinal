@@ -927,6 +927,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/airports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    country?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AirportResponse"][];
+                        "application/json": components["schemas"]["AirportResponse"][];
+                        "text/json": components["schemas"]["AirportResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/register": {
         parameters: {
             query?: never;
@@ -2325,6 +2364,177 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/packages/{packageId}/flight-quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    packageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["PackageFlightQuoteRequest"];
+                    "text/json": components["schemas"]["PackageFlightQuoteRequest"];
+                    "application/*+json": components["schemas"]["PackageFlightQuoteRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageFlightQuoteResponse"];
+                        "application/json": components["schemas"]["PackageFlightQuoteResponse"];
+                        "text/json": components["schemas"]["PackageFlightQuoteResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flight-quotes/{quoteId}/revalidate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    quoteId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["FlightQuoteRevalidationResponse"];
+                        "application/json": components["schemas"]["FlightQuoteRevalidationResponse"];
+                        "text/json": components["schemas"]["FlightQuoteRevalidationResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/packages/{packageId}/flight-rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    packageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageFlightRuleResponse"];
+                        "application/json": components["schemas"]["PackageFlightRuleResponse"];
+                        "text/json": components["schemas"]["PackageFlightRuleResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    packageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["PackageFlightRuleRequest"];
+                    "text/json": components["schemas"]["PackageFlightRuleRequest"];
+                    "application/*+json": components["schemas"]["PackageFlightRuleRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PackageFlightRuleResponse"];
+                        "application/json": components["schemas"]["PackageFlightRuleResponse"];
+                        "text/json": components["schemas"]["PackageFlightRuleResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    packageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/packages": {
         parameters: {
             query?: never;
@@ -3102,6 +3312,10 @@ export interface components {
             /** Format: int32 */
             readonly totalPages?: number;
         };
+        AirportResponse: {
+            iata?: string | null;
+            label?: string | null;
+        };
         AuthResultResponse: {
             accessToken?: string | null;
             refreshToken?: string | null;
@@ -3406,6 +3620,55 @@ export interface components {
             /** Format: int32 */
             readonly totalPages?: number;
         };
+        FlightOriginResponse: {
+            iata?: string | null;
+            label?: string | null;
+        };
+        FlightQuoteOptionResponse: {
+            /** Format: uuid */
+            quoteId?: string;
+            flightPrice?: components["schemas"]["MoneyResponse"];
+            combinedTotal?: components["schemas"]["MoneyResponse"];
+            carrierName?: string | null;
+            carrierIata?: string | null;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            slices?: components["schemas"]["FlightSliceResponse"][] | null;
+        };
+        FlightQuoteRevalidationResponse: {
+            /** Format: uuid */
+            quoteId?: string;
+            outcome?: string | null;
+            previousPrice?: components["schemas"]["MoneyResponse"];
+            currentPrice?: components["schemas"]["MoneyResponse"];
+            combinedTotal?: components["schemas"]["MoneyResponse"];
+            /** Format: date-time */
+            expiresAt?: string | null;
+            message?: string | null;
+            requiresAcceptance?: boolean;
+        };
+        FlightSegmentResponse: {
+            originIata?: string | null;
+            destinationIata?: string | null;
+            /** Format: date-time */
+            departingAt?: string;
+            /** Format: date-time */
+            arrivingAt?: string;
+            carrierIata?: string | null;
+            carrierName?: string | null;
+            flightNumber?: string | null;
+            /** Format: int32 */
+            checkedBags?: number | null;
+        };
+        FlightSliceResponse: {
+            originIata?: string | null;
+            destinationIata?: string | null;
+            /** Format: int32 */
+            durationMinutes?: number | null;
+            /** Format: int32 */
+            stops?: number;
+            segments?: components["schemas"]["FlightSegmentResponse"][] | null;
+        };
         ItemExplanationResponse: {
             /** Format: uuid */
             itineraryId?: string;
@@ -3499,6 +3762,11 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        MoneyResponse: {
+            /** Format: double */
+            amount?: number;
+            currency?: string | null;
+        };
         PackageAvailabilityResponse: {
             /** Format: uuid */
             id?: string;
@@ -3513,6 +3781,57 @@ export interface components {
             /** Format: int32 */
             availableSlots?: number;
             status?: string | null;
+        };
+        PackageFlightQuoteRequest: {
+            originIata: string;
+            /** Format: uuid */
+            packageAvailabilityId: string;
+            /** Format: int32 */
+            travelers?: number;
+        };
+        PackageFlightQuoteResponse: {
+            /** Format: uuid */
+            packageId?: string;
+            packageTitle?: string | null;
+            /** Format: int32 */
+            travelers?: number;
+            packagePrice?: components["schemas"]["MoneyResponse"];
+            originIata?: string | null;
+            originLabel?: string | null;
+            destinationIata?: string | null;
+            destinationLabel?: string | null;
+            /** Format: date */
+            outboundDate?: string;
+            /** Format: date */
+            inboundDate?: string | null;
+            cabinClass?: string | null;
+            options?: components["schemas"]["FlightQuoteOptionResponse"][] | null;
+            notice?: string | null;
+            testMode?: boolean;
+        };
+        PackageFlightRuleRequest: {
+            destinationIata: string;
+            allowedOriginIatas: string[];
+            /** Format: Enumeration */
+            cabinClass: string;
+            /** Format: int32 */
+            outboundOffsetDays?: number;
+            /** Format: int32 */
+            inboundOffsetDays?: number;
+            roundTrip?: boolean;
+        };
+        PackageFlightRuleResponse: {
+            /** Format: uuid */
+            packageId?: string;
+            destinationIata?: string | null;
+            destinationLabel?: string | null;
+            allowedOrigins?: components["schemas"]["AirportResponse"][] | null;
+            cabinClass?: string | null;
+            /** Format: int32 */
+            outboundOffsetDays?: number;
+            /** Format: int32 */
+            inboundOffsetDays?: number;
+            roundTrip?: boolean;
         };
         PackageImageRequest: {
             /** Format: uri */
@@ -3570,6 +3889,11 @@ export interface components {
             price?: number;
             currency?: string | null;
             status?: string | null;
+            includesFlight?: boolean;
+            flightDestinationIata?: string | null;
+            flightDestinationLabel?: string | null;
+            flightOrigins?: components["schemas"]["FlightOriginResponse"][] | null;
+            flightRoundTrip?: boolean | null;
             categories?: components["schemas"]["CategoryResponse"][] | null;
             images?: components["schemas"]["PackageImageResponse"][] | null;
             items?: components["schemas"]["PackageItemResponse"][] | null;

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
@@ -21,6 +21,7 @@ public class PackageRepository(TurisClickDbContext db) : IPackageRepository
             .Include(p => p.Images)
             .Include(p => p.Items).ThenInclude(i => i.Experience)
             .Include(p => p.Availabilities)
+            .Include(p => p.FlightRule)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
 
     public Task<Package?> GetByIdForUpdateAsync(Guid id, CancellationToken ct) =>

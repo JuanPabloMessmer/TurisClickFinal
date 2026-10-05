@@ -12,6 +12,7 @@ import {
   Gallery,
   TagRow,
 } from '@/features/catalog/detail'
+import { PackageFlightSection } from '@/features/flights/PackageFlightSection'
 import { coverImageUrl } from '@/features/catalog/images'
 import { usePackage, usePackageAvailability } from '@/features/catalog/queries'
 import { toApiError } from '@/lib/errors'
@@ -66,6 +67,8 @@ export default function PackageDetailScreen() {
             {pkg.data.conditionsText ? <DetailBlock title="Condiciones" body={pkg.data.conditionsText} /> : null}
 
             <Gallery images={pkg.data.images} />
+
+            <PackageFlightSection pkg={pkg.data} availabilities={availability.data ?? []} />
 
             <AvailabilitySection
               isLoading={availability.isPending}

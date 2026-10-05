@@ -9,6 +9,7 @@ using TurisClick.Api.Modules.Destinations.Entities;
 using TurisClick.Api.Modules.Destinations.Repositories;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Experiences.Repositories;
+using TurisClick.Api.Modules.Flights.Services;
 using TurisClick.Api.Modules.Packages.Dtos;
 using TurisClick.Api.Modules.Packages.Entities;
 using TurisClick.Api.Modules.Packages.Repositories;
@@ -330,6 +331,12 @@ public class PackageService(
     {
         Id = package.Id,
         IncludesFlight = package.IncludesFlight,
+        FlightDestinationIata = package.FlightRule?.DestinationIata,
+        FlightDestinationLabel = package.FlightRule is null ? null : AirportCatalog.Describe(package.FlightRule.DestinationIata),
+        FlightOrigins = package.FlightRule is null
+            ? []
+            : [.. package.FlightRule.Origins().Select(o => new FlightOriginResponse { Iata = o, Label = AirportCatalog.Describe(o) })],
+        FlightRoundTrip = package.FlightRule?.RoundTrip,
         CompanyId = package.CompanyId,
         CompanyName = package.Company!.Name,
         DestinationId = package.DestinationId,

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  catalogApi,
   destinationsApi,
   packagesApi,
   type CreatePackageRequest,
@@ -25,6 +26,15 @@ export function useMyPackage(id: string | undefined) {
 }
 
 /** Destinos tipo CITY — únicos válidos para asociar a un Package (regla de negocio del backend). */
+/** Categorías del catálogo público: el endpoint de admin exige rol ADMIN y un operador no lo puede llamar. */
+export function usePublicCategories() {
+  return useQuery({
+    queryKey: ['publicCategories'],
+    queryFn: () => catalogApi.listCategories(httpClient),
+    staleTime: 30 * 60_000,
+  })
+}
+
 export function useCityDestinations() {
   return useQuery({
     queryKey: ['publicDestinations', 'CITY'],

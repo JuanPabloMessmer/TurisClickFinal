@@ -735,6 +735,23 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 | 6 | IA — iteración y persistencia | UC-T-15, UC-AI-05, UC-AI-06, UC-T-16, UC-T-17 |
 | 7 | IA — de propuesta a reserva | UC-T-18, UC-SYS-05, UC-SYS-09 |
 | 8 | Moderación, cancelaciones, gestión de usuarios | UC-A-06, UC-A-07, UC-A-08, UC-T-11, UC-P-14, UC-SYS-08 |
-| Backlog | Multi-usuario por empresa, reseñas, favoritos, pagos reales | UC-P-03 y otros |
+| 10 | Vuelos en paquetes de proveedor | UC-P-15, UC-A-09, UC-T-19, UC-T-20 |
+| Backlog | Multi-usuario por empresa, reseñas, favoritos, pagos reales, reserva de paquete + vuelo | UC-P-03, UC-T-21 y otros |
 
 Cada oleada solo introduce las entidades estrictamente necesarias para los casos de uso que la componen (consistente con "no construir entidades sin un caso de uso que las necesite").
+
+---
+
+## Oleada 10 — vuelos en paquetes
+
+| Código | Caso | Quién | Estado |
+|---|---|---|---|
+| **UC-P-15** | Configurar las reglas de vuelo de un paquete (destino, orígenes permitidos, cabina, desfases de fecha) | Operador | implementado |
+| **UC-A-09** | Inspeccionar las reglas de vuelo de cualquier paquete de la plataforma | Admin | implementado |
+| **UC-T-19** | Cotizar el vuelo de un paquete desde un origen permitido, con precios reales del proveedor | Turista (público) | implementado |
+| **UC-T-20** | Revalidar la cotización antes de comprar y ver si sigue igual, cambió, venció o ya no está | Turista (público) | implementado |
+| **UC-T-21** | Reservar paquete + vuelo en una sola operación | Turista | próxima oleada |
+
+La regla que ordena los cuatro: **el operador configura cómo se busca el vuelo, no cuál es el vuelo**.
+El pasaje concreto y su precio salen del proveedor en el momento de cotizar, y no se consideran
+garantizados hasta revalidarlos.
