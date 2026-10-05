@@ -25,7 +25,9 @@ export const getCompanyReservationById = (http: AxiosInstance, id: string) =>
  * de `experienceAvailabilityId` / `packageAvailabilityId`. El precio lo congela el backend con el valor
  * vigente: el cliente nunca lo envía.
  *
- * Sin idempotencia en el backend: cada llamada exitosa retiene cupo. No reintentar a ciegas.
+ * Para un paquete con vuelo se manda además `flightQuoteId`: la opción de vuelo que la persona eligió. Ese
+ * caso **sí** es idempotente —una cotización produce una sola reserva, y repetir la llamada devuelve la que
+ * ya existe—; una reserva sin vuelo sigue sin clave de idempotencia, así que ahí no se reintenta a ciegas.
  */
 export const createReservation = (http: AxiosInstance, body: CreateReservationRequest) =>
   http.post<ReservationResponse>('/api/reservations', body).then((r) => r.data)
@@ -39,9 +41,13 @@ export const getMyReservation = (http: AxiosInstance, id: string) =>
   http.get<ReservationResponse>(`/api/reservations/${id}`).then((r) => r.data)
 
 /**
- * UC-T-19 — paga una reserva PENDING_PAYMENT con el gateway simulado. Un 200 puede significar tres cosas
- * distintas: `requiresPriceAcceptance` (no se cobró nada), `paymentApproved: false` (rechazo, sigue
- * pendiente) o `paymentApproved: true` (CONFIRMED).
+ * UC-T-19 — paga una reserva PENDING_PAYMENT con el gateway simulado. Un 200 puede significar varias cosas
+ * distintas: `requiresPriceAcceptance` (no se cobró nada), `requiresFlightPriceAcceptance` (cambió el
+ * precio del pasaje y hace falta aceptar `flightCurrentPrice` reenviando ese mismo importe en
+ * `acceptedFlightPrice`), `paymentApproved: false` (rechazo, sigue pendiente) o `paymentApproved: true`.
+ *
+ * Con vuelo hay un desenlace más: `flight.inProgress` significa que la emisión quedó sin resolver y el
+ * backend la está reconciliando con la aerolínea. Ahí NO se reintenta el pago: se vuelve a leer la reserva.
  */
 export const payReservation = (http: AxiosInstance, id: string, body: PayReservationRequest) =>
   http.post<ReservationResponse>(`/api/reservations/${id}/pay`, body).then((r) => r.data)

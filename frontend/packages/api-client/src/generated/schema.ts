@@ -3523,6 +3523,8 @@ export interface components {
             packageAvailabilityId?: string | null;
             /** Format: int32 */
             travelers?: number;
+            /** Format: uuid */
+            flightQuoteId?: string | null;
         };
         DestinationResponse: {
             /** Format: uuid */
@@ -3620,6 +3622,36 @@ export interface components {
             /** Format: int32 */
             readonly totalPages?: number;
         };
+        FlightBookingResponse: {
+            status?: string | null;
+            originIata?: string | null;
+            originLabel?: string | null;
+            destinationIata?: string | null;
+            destinationLabel?: string | null;
+            /** Format: date */
+            outboundDate?: string;
+            /** Format: date */
+            inboundDate?: string | null;
+            /** Format: int32 */
+            travelers?: number;
+            carrierIata?: string | null;
+            carrierName?: string | null;
+            /** Format: date-time */
+            outboundDepartureAt?: string | null;
+            /** Format: date-time */
+            outboundArrivalAt?: string | null;
+            outboundFlightNumber?: string | null;
+            /** Format: date-time */
+            inboundDepartureAt?: string | null;
+            /** Format: date-time */
+            inboundArrivalAt?: string | null;
+            inboundFlightNumber?: string | null;
+            bookingReference?: string | null;
+            price?: components["schemas"]["MoneyResponse"];
+            itinerarySummary?: string | null;
+            statusMessage?: string | null;
+            inProgress?: boolean;
+        };
         FlightOriginResponse: {
             iata?: string | null;
             label?: string | null;
@@ -3668,6 +3700,17 @@ export interface components {
             /** Format: int32 */
             stops?: number;
             segments?: components["schemas"]["FlightSegmentResponse"][] | null;
+        };
+        FlightTravelerRequest: {
+            givenName: string;
+            familyName: string;
+            /** Format: date */
+            bornOn: string;
+            gender: string;
+            title: string;
+            /** Format: email */
+            email: string;
+            phoneNumber: string;
         };
         ItemExplanationResponse: {
             /** Format: uuid */
@@ -3761,6 +3804,11 @@ export interface components {
             content?: string | null;
             /** Format: date-time */
             createdAt?: string;
+        };
+        MoneyRequest: {
+            /** Format: double */
+            amount?: number;
+            currency: string;
         };
         MoneyResponse: {
             /** Format: double */
@@ -3930,6 +3978,8 @@ export interface components {
         PayReservationRequest: {
             success?: boolean;
             acceptPriceChanges?: boolean;
+            travelers?: components["schemas"]["FlightTravelerRequest"][] | null;
+            acceptedFlightPrice?: components["schemas"]["MoneyRequest"];
         };
         PreferencesResponse: {
             /** Format: uuid */
@@ -4075,6 +4125,11 @@ export interface components {
             requiresPriceAcceptance?: boolean;
             paymentApproved?: boolean | null;
             paymentFailureReason?: string | null;
+            flight?: components["schemas"]["FlightBookingResponse"];
+            requiresFlightPriceAcceptance?: boolean;
+            flightPreviousPrice?: components["schemas"]["MoneyResponse"];
+            flightCurrentPrice?: components["schemas"]["MoneyResponse"];
+            flightMessage?: string | null;
         };
         ReservationResponsePagedResult: {
             items?: components["schemas"]["ReservationResponse"][] | null;

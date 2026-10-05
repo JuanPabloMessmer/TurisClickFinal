@@ -28,6 +28,7 @@ export default function BookPackageScreen() {
         productQuery={pkg}
         slots={slots}
         availabilityQuery={availability}
+        flightPackage={pkg.data?.includesFlight ? pkg.data : null}
       />
     </>
   )

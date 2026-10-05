@@ -187,6 +187,11 @@ export function TripCard({
           <Text className="text-sm text-[#5B7285]">
             {extraCount > 0 ? `${items.length} servicios` : travelersLabel(first?.travelers)}
           </Text>
+          {reservation.flight ? (
+            <Text className="text-sm text-[#5B7285]">
+              Vuelo {reservation.flight.originIata}–{reservation.flight.destinationIata}
+            </Text>
+          ) : null}
         </View>
 
         <View className="mt-3">

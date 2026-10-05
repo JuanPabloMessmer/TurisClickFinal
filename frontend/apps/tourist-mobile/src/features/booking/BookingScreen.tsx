@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSession } from '@/auth/session'
 import { AvailabilityCalendar } from '@/features/booking/AvailabilityCalendar'
+import { FlightPicker, type FlightSelection } from '@/features/flights/FlightPicker'
 import { slotsByDate } from '@/features/booking/calendarModel'
 import { estimatedTotal, type BookableSlot } from '@/features/booking/selection'
 import { useBookingSelection } from '@/features/booking/useBookingSelection'
@@ -29,6 +30,9 @@ export interface BookingProduct {
   currency?: string | null
 }
 
+/** El paquete completo, sólo cuando incluye vuelo: el selector necesita sus orígenes habilitados. */
+type FlightPackage = import('@turisclick/api-client').PackageResponse
+
 /**
  * Selección de fecha y viajeros antes de reservar. La pantalla es pública: cualquiera puede elegir. Crear
  * la reserva exige sesión — el invitado pasa por login y vuelve acá con su selección; la reserva NO se
@@ -41,6 +45,7 @@ export function BookingScreen({
   productQuery,
   slots,
   availabilityQuery,
+  flightPackage,
   today,
 }: {
   productType: 'EXPERIENCE' | 'PACKAGE'
@@ -49,6 +54,8 @@ export function BookingScreen({
   productQuery: QueryState
   slots: BookableSlot[]
   availabilityQuery: QueryState
+  /** Presente sólo si el paquete incluye vuelo: habilita el paso de elegir el pasaje. */
+  flightPackage?: FlightPackage | null
   /** Solo tests: fija "hoy" para que el calendario sea determinístico. */
   today?: IsoDate
 }) {
@@ -60,6 +67,11 @@ export function BookingScreen({
   const byDate = useMemo(() => slotsByDate(slots), [slots])
   const [selectedDate, setSelectedDate] = useState<IsoDate | null>(null)
   const daySlots = selectedDate ? byDate.get(selectedDate) ?? [] : []
+  const [flight, setFlight] = useState<FlightSelection | null>(null)
+
+  // Un paquete con vuelo no se reserva sin elegir el pasaje: el backend lo rechaza, y ofrecer el botón
+  // igual sería prometer algo que no va a pasar.
+  const needsFlight = Boolean(flightPackage?.includesFlight)
 
   const onSelectDate = (date: IsoDate) => {
     setFailure(null)
@@ -95,7 +107,7 @@ export function BookingScreen({
     const travelers = selection.travelers
     create.mutate(
       isPackage
-        ? { packageAvailabilityId: slot.id, travelers }
+        ? { packageAvailabilityId: slot.id, travelers, flightQuoteId: flight?.quoteId }
         : { experienceAvailabilityId: slot.id, travelers },
       {
         onSuccess: (reservation) => {
@@ -207,6 +219,16 @@ export function BookingScreen({
           </Text>
         ) : null}
 
+        {needsFlight && flightPackage ? (
+          <FlightPicker
+            pkg={flightPackage}
+            availabilityId={selection.selectedId ?? null}
+            travelers={selection.travelers}
+            selection={flight}
+            onSelect={setFlight}
+          />
+        ) : null}
+
         {failure ? (
           <View className="mt-6 gap-3">
             <FormError message={failure.message} />
@@ -224,16 +246,31 @@ export function BookingScreen({
         <View className="mb-3 flex-row items-baseline justify-between">
           <View className="flex-1 pr-3">
             <Text className="text-sm text-[#5B7285]">Estimado para {selection.travelers} {selection.travelers === 1 ? 'viajero' : 'viajeros'}</Text>
-            <Text className="text-xs text-[#5B7285]">Estimado: se confirma al reservar</Text>
+            <Text className="text-xs text-[#5B7285]">
+              {flight ? 'Paquete + vuelo: se confirma al reservar' : 'Estimado: se confirma al reservar'}
+            </Text>
           </View>
-          <Price amount={estimate} currency={product?.currency} size="lg" />
+          {flight?.combinedTotal ? (
+            <Price amount={flight.combinedTotal.amount} currency={flight.combinedTotal.currency} size="lg" />
+          ) : flight ? (
+            // Monedas distintas: dos importes, nunca una suma inventada.
+            <View className="items-end">
+              <Price amount={estimate} currency={product?.currency} />
+              <Price amount={flight.flightPrice.amount} currency={flight.flightPrice.currency} />
+            </View>
+          ) : (
+            <Price amount={estimate} currency={product?.currency} size="lg" />
+          )}
         </View>
         <Button
           label="Continuar"
           loading={create.isPending}
-          disabled={!selection.selected || sessionUnknown}
+          disabled={!selection.selected || sessionUnknown || (needsFlight && !flight)}
           onPress={onContinue}
         />
+        {needsFlight && !flight && selection.selected ? (
+          <Text className="mt-2 text-center text-xs text-[#5B7285]">Elegí un vuelo para continuar.</Text>
+        ) : null}
         {!isAuthenticated && !sessionUnknown ? (
           <Text className="mt-2 text-center text-xs text-[#5B7285]">Vas a iniciar sesión antes de reservar.</Text>
         ) : null}

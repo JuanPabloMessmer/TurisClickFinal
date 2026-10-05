@@ -72,6 +72,10 @@ export type ReservationResponse = Schemas['ReservationResponse']
 export type ReservationResponsePagedResult = Schemas['ReservationResponsePagedResult']
 export type ReservationTotalResponse = Schemas['ReservationTotalResponse']
 
+export type FlightBookingResponse = Schemas['FlightBookingResponse']
+export type FlightTravelerRequest = Schemas['FlightTravelerRequest']
+export type MoneyRequest = Schemas['MoneyRequest']
+
 export type TouristPreferencesResponse = Schemas['TouristPreferencesResponse']
 export type UpdateTouristPreferencesRequest = Schemas['UpdateTouristPreferencesRequest']
 
@@ -109,6 +113,21 @@ export type ReservationStatusValue = (typeof ReservationStatuses)[number]
 
 export const ReservationItemStatuses = ['PENDING_PAYMENT', 'CONFIRMED', 'CANCELLED', 'EXPIRED'] as const
 export type ReservationItemStatusValue = (typeof ReservationItemStatuses)[number]
+
+/**
+ * Valores reales de `FlightBookingResponse.status`. ORDERING y RECONCILIATION_REQUIRED son estados "en
+ * curso": la app no ofrece reintentar en ninguno de los dos — reintentar una emisión es lo que duplica un
+ * pasaje. Para saber si hay algo en curso alcanza con `flight.inProgress`, que lo decide el backend.
+ */
+export const FlightBookingStatuses = [
+  'PENDING',
+  'ORDERING',
+  'CONFIRMED',
+  'FAILED',
+  'RECONCILIATION_REQUIRED',
+  'CANCELLED',
+] as const
+export type FlightBookingStatusValue = (typeof FlightBookingStatuses)[number]
 
 /** Valores reales devueltos por el backend (DTOs los exponen como string, no como enum numérico). */
 export const DestinationTypes = ['COUNTRY', 'REGION', 'CITY'] as const

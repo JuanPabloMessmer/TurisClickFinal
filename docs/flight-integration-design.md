@@ -1,13 +1,14 @@
 # Vuelos en TurisClick — propuesta técnica
 
-Estado: **dominio, cotización y revalidación implementados; la reserva del vuelo todavía no**.
+Estado: **el flujo completo está implementado**, de la configuración del operador a la emisión del pasaje.
+Probado de punta a punta contra Duffel en modo de prueba (ver `docs/package-flight-e2e-results.md`).
 
 | Implementado | Pendiente |
 |---|---|
-| `IFlightProvider`, `DuffelFlightProvider`, `FakeFlightProvider` | Orquestación de reserva (§9) |
-| `PackageFlightRule`, `FlightQuote`, `FlightBooking` + migración 0010 | Escritura de `FlightBooking` |
-| Cotizar un paquete con vuelo y revalidar la cotización | Datos de pasajeros y creación de la orden |
-| Configuración de la regla en el Backoffice y búsqueda en Tourist Mobile | Integración con el agente de IA (§14) |
+| `IFlightProvider`, `DuffelFlightProvider`, `FakeFlightProvider` | Pago real (hoy el cobro es simulado) |
+| `PackageFlightRule`, `FlightQuote`, `FlightBooking` + migraciones 0010 y 0011 | Cancelación de una reserva ya confirmada (política de reembolso) |
+| Cotizar, revalidar, reservar, emitir y reconciliar | Ofertas que exigen documento de identidad |
+| Regla en el Backoffice, búsqueda y checkout en Tourist Mobile | Integración con el agente de IA (§14) |
 
 **Proveedor elegido: Duffel, en modo de prueba.** La evidencia de que funciona —búsqueda, revalidación,
 orden y cancelación reales— está en [`duffel-test-results.md`](duffel-test-results.md).
@@ -279,8 +280,9 @@ Cero cambios destructivos, cero columnas renombradas, cero `ReservationItem` toc
 | `POST` | `/api/packages/{id}/flight-quotes` | Público: cotizar (crea `FlightQuote`) | ✅ |
 | `POST` | `/api/flight-quotes/{id}/revalidate` | Público: precio vigente antes de comprar | ✅ |
 | `GET` | `/api/airports` | Catálogo de aeropuertos conocidos | ✅ |
-| `POST` | `/api/reservations` (extendido) | Sumaría `flightQuoteId` + pasajeros | ⏳ |
-| `GET` | `/api/reservations/{id}` (extendido) | Devolvería el bloque de vuelo | ⏳ |
+| `POST` | `/api/reservations` | Suma `flightQuoteId`; retiene cupo y registra la intención de vuelo | ✅ |
+| `POST` | `/api/reservations/{id}/pay` | Suma `travelers[]` y `acceptedFlightPrice`; revalida, cobra y emite | ✅ |
+| `GET` | `/api/reservations/{id}` y `/me` | Devuelven el bloque `flight` con su estado y localizador | ✅ |
 
 `GET /api/packages/{id}` suma `includesFlight`, el destino del vuelo y los orígenes habilitados: es lo
 único de la regla que el catálogo público necesita. Los desfases de fecha son configuración interna y
@@ -298,8 +300,8 @@ Ningún endpoint existente cambia de forma: `CreateReservationRequest` suma camp
 | **Inspeccionar las reglas de vuelo de cualquier paquete** | Admin | ✅ implementado |
 | **Cotizar el vuelo de un paquete** | Turista (público) | ✅ implementado |
 | **Revalidar una cotización antes de comprar** | Turista (público) | ✅ implementado |
-| **Reservar paquete + vuelo** | Turista | ⏳ próxima oleada |
-| **Pedir un vuelo desde el asistente** | Turista | ⏳ próxima oleada (§14) |
+| **Reservar paquete + vuelo en una sola operación** | Turista | ✅ implementado |
+| **Pedir un vuelo desde el asistente** | Turista | ⏳ pendiente (§14) |
 
 ## 7. Flujo del Provider
 
@@ -330,23 +332,94 @@ Ningún endpoint existente cambia de forma: `CreateReservationRequest` suma camp
 
 El problema central: nuestra base es transaccional y el proveedor aéreo no. No se puede meter una llamada HTTP dentro de una transacción de Postgres y pretender atomicidad.
 
-**Orden propuesto:**
+**Orden implementado.** El pasaje se emite en el PAGO, no al crear la reserva, y ese orden es el único
+defendible: emitir antes de cobrar deja un pasaje comprado para alguien que puede no pagar nunca, y cobrar
+antes de confirmar que el vuelo existe deja a alguien pagando algo que no se le puede dar.
 
-1. **Transacción 1** — tomar el cupo del paquete con el `UPDATE` condicional que ya existe (`ReservationBookingService.HoldAndBuildAsync`), crear la `Reservation` en `PENDING_PAYMENT` y escribir `FlightBooking` en estado `PENDING` con su `IdempotencyKey`. Commit.
-2. **Fuera de transacción** — revalidar y crear la orden en el proveedor.
-3. **Transacción 2** — pasar `FlightBooking` a `CONFIRMED` con el localizador, o a `FAILED` con el motivo.
+1. **Crear la reserva** (`POST /api/reservations` con `flightQuoteId`) — una transacción local: valida la
+   cotización, toma el cupo con el `UPDATE` condicional que ya existía y escribe `FlightBooking` en
+   `PENDING` con su clave de correlación y el snapshot de ruta y fechas. No se llama al proveedor.
+2. **Pagar** (`POST /api/reservations/{id}/pay`):
+   1. revalidar la oferta contra el proveedor — si cambió el precio, se corta acá y se pide aceptación;
+   2. validar los datos de los pasajeros;
+   3. autorizar el pago (hoy simulado);
+   4. `PENDING → ORDERING` con un `UPDATE` condicional, **commiteado antes de llamar**;
+   5. crear la orden en el proveedor, sin ninguna transacción abierta;
+   6. una **única** transacción local escribe el desenlace del vuelo y el destino de la reserva.
 
-Escribir la intención **antes** de llamar al proveedor es lo que hace recuperable el peor caso: si el proceso se cae entre el paso 2 y el 3, queda una fila `PENDING` con su clave, y un trabajo de reconciliación puede preguntarle al proveedor (`GetBookingAsync`) si esa orden existe, para adjuntarla o cancelarla. Sin esa fila previa, una orden creada en el proveedor sin rastro nuestro es dinero de alguien perdido en el aire.
+El paso 4 es el que hace recuperable el peor caso. Si el proceso muere entre la llamada y la escritura,
+queda una fila en `ORDERING` con su clave, y el reconciliador le pregunta al proveedor si la orden existe.
+Sin esa fila, una orden creada sin rastro nuestro es el pasaje de alguien perdido en el aire.
 
-| Falla | Qué pasa |
+El paso 6 es una sola escritura por una razón concreta: si el vuelo se confirmara en una transacción y la
+reserva en otra, una caída en el medio dejaría un pasaje emitido con una reserva sin confirmar.
+
+### 9.1 Máquina de estados de `FlightBooking`
+
+```
+                ┌───────────── el turista cancela / la reserva expira ──────────► CANCELLED
+                │
+  (crear) ─► PENDING ─► ORDERING ─┬─► CONFIRMED                 el proveedor confirmó la orden
+                                  ├─► PENDING                   la conexión nunca salió: se reintenta
+                                  ├─► FAILED                    rechazo definitivo: se libera el cupo
+                                  └─► RECONCILIATION_REQUIRED ─┬─► CONFIRMED   la orden existía
+                                                               ├─► FAILED      no existe ninguna
+                                                               └─► CANCELLED   existía pero sin reserva
+```
+
+Ninguna transición la escribe el cliente: cada una la gana el servidor con un `UPDATE` condicional, igual
+que las de `Reservation`. Un vuelo en `ORDERING` o `RECONCILIATION_REQUIRED` **bloquea** el reintento del
+pago, la cancelación y la expiración de la reserva: reintentar una emisión sin saber si ocurrió es
+exactamente lo que compra dos pasajes.
+
+### 9.2 Qué pasa en cada falla
+
+| Falla | Qué hace el sistema |
 |---|---|
-| No hay cupo en el paquete | Nada se reserva, no se llama al proveedor |
-| El vuelo falla tras tomar el cupo | `FlightBooking = FAILED`, se liberan los holds (`ReleaseHoldsAsync`, ya existe) y la reserva se cancela; el turista ve por qué |
-| El vuelo sale bien y nuestra escritura falla | Fila `PENDING` + reconciliación; `ticketingAgreement: DELAY_TO_CANCEL` como red de seguridad adicional |
-| El turista reintenta | Misma `Idempotency-Key` → se devuelve la reserva existente, no se crea otra |
-| El precio cambió entre cotizar y reservar | Se frena y se pide aceptación; nunca se cobra un precio que no se mostró |
+| No hay cupo en el paquete | Nada se reserva y no se llama al proveedor |
+| La cotización venció o es de otra persona | Se rechaza al crear la reserva; no se toca el cupo |
+| El precio cambió | Se frena ANTES de cobrar y se exige aceptar el importe vigente |
+| La oferta ya no existe al revalidar | 410 con el motivo; el cupo sigue retenido para que la persona decida |
+| La oferta exige documento de identidad | No se vende: se dice que esa opción todavía no se puede emitir |
+| El proveedor rechaza la emisión (4xx) | `FAILED`, se libera el cupo, se cancela la reserva y se revierte el cobro |
+| La conexión nunca se abrió | Vuelve a `PENDING`: no hay nada emitido y el cupo se mantiene para reintentar |
+| **Desenlace desconocido** (timeout) | `RECONCILIATION_REQUIRED`: no se libera cupo ni se reintenta; decide el reconciliador |
+| La orden sale bien y la reserva ya no es confirmable | `RECONCILIATION_REQUIRED` con el localizador: el reconciliador cancela el pasaje huérfano |
+| El turista toca dos veces | La cotización ya reservada devuelve la reserva existente (índice único) |
 
-**Concurrencia:** dos turistas sobre la misma salida compiten por el cupo con el `UPDATE` condicional existente, que ya es la autoridad. El vuelo no agrega una carrera nueva: cada uno reserva su propia oferta, y si el inventario aéreo se agotó, el proveedor rechaza y cae en el caso "el vuelo falla tras tomar el cupo".
+### 9.3 Idempotencia
+
+Duffel **no documenta** un mecanismo de idempotencia para `POST /air/orders`, así que no se finge que lo
+tenga. La idempotencia es nuestra y tiene tres capas:
+
+1. **Una cotización se reserva una vez.** `ux_flight_bookings_flight_quote_id` lo garantiza en la base: el
+   doble toque y el reintento del cliente tras un timeout devuelven la reserva que ya existe en vez de
+   retener cupo otra vez.
+2. **Una reserva emite una vez.** La transición condicional `PENDING → ORDERING` es el candado: de dos
+   pagos simultáneos, sólo uno sale con permiso para emitir.
+3. **Una clave de correlación propia** (`idempotency_key`), escrita antes de llamar y enviada como
+   `metadata` de la orden — un campo libre que Duffel guarda y devuelve sin usarlo. Es lo que permite
+   reconocer la orden cuando se perdió su respuesta.
+
+### 9.4 Reconciliación
+
+`FlightReconciliationService`, invocado por un `BackgroundService` cada 60 s (apagable por configuración,
+y apagado en los tests). Procesa sólo lo que no se puede resolver de otra forma: `RECONCILIATION_REQUIRED`
+con su espera cumplida, y `ORDERING` abandonado más de 5 minutos —el proceso que se cayó en el peor
+momento—.
+
+Para cada caso le pregunta al proveedor si la orden existe: con el id, `GetOrderAsync`; sin él,
+`FindOrderByOfferAsync`, que lista las órdenes recientes de la cuenta y empareja por `offer_id` o por
+nuestra clave en `metadata` (los dos campos los devuelve el objeto orden; `GET /air/orders` acepta
+`limit` hasta 200). **Nunca reintenta la compra para averiguar qué pasó.**
+
+- **Existe y la reserva sigue pendiente** → se confirman el vuelo y la reserva en una transacción.
+- **Existe y la reserva ya no está vigente** → se cancela la orden en el proveedor y queda el rastro.
+- **No existe** → hasta 4 consultas con espera creciente (1, 5 y 15 minutos) antes de declararla
+  inexistente. Recién entonces: `FAILED`, se libera el cupo y se cancela la reserva. Decir "no existe" de
+  más es liberar un cupo que sí se vendió.
+
+**Concurrencia:** dos turistas sobre la misma salida compiten por el cupo con el `UPDATE` condicional existente, que ya es la autoridad. El vuelo no agrega una carrera nueva: cada uno reserva su propia oferta, y si el inventario aéreo se agotó, el proveedor rechaza y cae en el caso "el proveedor rechaza la emisión".
 
 ---
 

@@ -836,3 +836,28 @@ Tres decisiones que el esquema materializa:
    en lugar de pedirle a la persona que recuerde el precio.
 3. **`idempotency_key` se escribe antes de llamar al proveedor.** Si el proveedor crea la orden y
    nuestra escritura falla, queda rastro para reconciliar en vez de una reserva huérfana.
+
+## Oleada 11 — reserva coordinada de paquete + vuelo (migración 0011, aditiva)
+
+La migración toca **una sola tabla**, `flight_bookings`, que hasta esta oleada estaba vacía: no agrega ni
+quita ninguna otra, y lo único que elimina es el índice no único que EF había creado para la FK
+`flight_quote_id`, reemplazado por uno único sobre la misma columna.
+
+| Cambio | Para qué |
+|---|---|
+| `status` pasa de `varchar(20)` a `varchar(40)` | `RECONCILIATION_REQUIRED` no entra en veinte caracteres, y recortar el nombre de un estado para que quepa sería dejar que el almacenamiento decida el vocabulario del dominio. Ampliar un `varchar` en Postgres es un cambio de metadatos, sin reescritura |
+| `origin_iata`, `destination_iata`, `outbound_date`, `inbound_date`, `travelers`, `itinerary_summary` | Snapshot de la compra escrito al crear la intención |
+| `carrier_iata`, `carrier_name`, `outbound_*`, `inbound_*` | Snapshot del itinerario emitido, escrito al confirmar la orden |
+| `reconciliation_attempts`, `next_reconciliation_at`, `last_reconciliation_at` | Estado del reconciliador: intentos acotados y espera creciente |
+| `ux_flight_bookings_flight_quote_id` (único) | Una cotización se reserva UNA vez. Es la idempotencia real del checkout |
+| `ix_flight_bookings_reconciliation` sobre (`status`, `next_reconciliation_at`) | Lo que lee el proceso de fondo: las pocas filas sin resolver |
+
+Dos decisiones que conviene no perder:
+
+1. **No existe una tabla de pasajeros, y es deliberado.** Los nombres, la fecha de nacimiento y el contacto
+   se validan, se envían al proveedor y se descartan. TurisClick no los necesita después de emitir —la
+   aerolínea ya los tiene y el localizador es el puntero—, así que guardarlos sería acumular datos
+   personales sin un uso que los justifique. Hay un test que verifica que ninguna de esas tablas exista.
+2. **El snapshot se escribe en dos momentos y no se recalcula.** Ruta y fechas al crear la intención;
+   aerolínea, números de vuelo y horarios al confirmar. Una `flight_quote` vence, y una oferta vencida no
+   puede ser el único registro de lo que alguien compró.

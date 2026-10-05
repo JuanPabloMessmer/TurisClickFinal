@@ -20,6 +20,9 @@ import { httpClient } from '@/lib/httpClient'
 
 export const TRIPS_PAGE_SIZE = 20
 
+/** Cada cuánto se vuelve a leer una reserva cuyo vuelo todavía se está confirmando. */
+export const FLIGHT_POLL_INTERVAL_MS = 15_000
+
 function useTouristId(): string | null {
   const { isAuthenticated, user } = useSession()
   return isAuthenticated && user?.id ? user.id : null
@@ -57,6 +60,10 @@ export function useReservation(id: string) {
     enabled: userId !== null && Boolean(id),
     staleTime: 0,
     refetchInterval: (query) => {
+      // Mientras la emisión del pasaje esté sin resolver se vuelve a leer sola: la respuesta llega de la
+      // reconciliación del backend, no de otro intento de la app.
+      if (query.state.data?.flight?.inProgress) return FLIGHT_POLL_INTERVAL_MS
+
       const decision = nextExpiryPoll(
         { data: query.state.data, dataUpdatedAt: query.state.dataUpdatedAt },
         Date.now(),

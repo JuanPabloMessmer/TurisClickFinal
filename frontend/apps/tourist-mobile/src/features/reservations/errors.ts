@@ -55,7 +55,52 @@ export function describeCreateFailure(error: unknown, travelers: number): Failur
   }
 }
 
-export type PayFailureKind = 'EXPIRED' | 'STALE' | 'NOT_FOUND' | 'SESSION' | 'NETWORK' | 'UNKNOWN'
+export type PayFailureKind =
+  | 'EXPIRED'
+  | 'STALE'
+  | 'NOT_FOUND'
+  | 'SESSION'
+  | 'NETWORK'
+  | 'UNKNOWN'
+  /** El vuelo dejó de estar disponible o no se pudo emitir: hay que volver a armar la reserva. */
+  | 'FLIGHT_GONE'
+  /** La emisión quedó sin resolver: el backend la está reconciliando y reintentar duplicaría el pasaje. */
+  | 'FLIGHT_IN_PROGRESS'
+  /** No se pudo contactar a la aerolínea y nada salió: se puede reintentar tal cual. */
+  | 'FLIGHT_RETRYABLE'
+
+/**
+ * Los códigos de vuelo se distinguen de los demás porque la acción que corresponde es distinta en cada
+ * caso, y confundirlas es caro: reintentar cuando la emisión quedó en curso puede comprar dos pasajes.
+ */
+const FLIGHT_FAILURES: Record<string, Failure<PayFailureKind>> = {
+  FLIGHT_BOOKING_IN_PROGRESS: {
+    kind: 'FLIGHT_IN_PROGRESS',
+    message:
+      'Estamos confirmando tu vuelo con la aerolínea. No hace falta volver a intentar: vas a ver el resultado acá en unos minutos.',
+  },
+  FLIGHT_PROVIDER_UNREACHABLE: {
+    kind: 'FLIGHT_RETRYABLE',
+    message: 'No pudimos contactar a la aerolínea. Tu lugar sigue reservado: probá de nuevo en unos minutos.',
+  },
+  FLIGHT_BOOKING_FAILED: {
+    kind: 'FLIGHT_GONE',
+    message: 'La aerolínea no pudo emitir el pasaje. No se te cobró nada y liberamos la salida del paquete.',
+  },
+  FLIGHT_UNAVAILABLE: {
+    kind: 'FLIGHT_GONE',
+    message: 'Ese vuelo dejó de estar disponible. Volvé a buscar vuelos para armar la reserva con otra opción.',
+  },
+  FLIGHT_QUOTE_EXPIRED: {
+    kind: 'FLIGHT_GONE',
+    message: 'La cotización del vuelo venció. Volvé a buscar vuelos para ver el precio actual.',
+  },
+  FLIGHT_REQUIREMENTS_UNSUPPORTED: {
+    kind: 'FLIGHT_GONE',
+    message:
+      'Ese vuelo exige documento de identidad de cada pasajero y todavía no lo pedimos en la app. Elegí otra opción de vuelo.',
+  },
+}
 
 export function describePayFailure(error: unknown): Failure<PayFailureKind> {
   const apiError = toApiError(error)
@@ -66,6 +111,8 @@ export function describePayFailure(error: unknown): Failure<PayFailureKind> {
       message: 'No pudimos confirmar el pago por un problema de conexión. Estamos revisando el estado de tu reserva.',
     }
   }
+
+  if (apiError.code && FLIGHT_FAILURES[apiError.code]) return FLIGHT_FAILURES[apiError.code]
 
   switch (apiError.status) {
     // Dos formas reales: con RESERVATION_NO_LONGER_PAYABLE (ya EXPIRED o carrera perdida) y SIN código
@@ -105,6 +152,15 @@ export function describeCancelFailure(error: unknown): Failure<CancelFailureKind
     return {
       kind: 'REFUND_POLICY_REQUIRED',
       message: 'Las reservas confirmadas todavía no se pueden cancelar desde la app.',
+    }
+  }
+
+  // Cancelar mientras se emite liberaría un cupo que puede estar comprado: el backend lo bloquea y acá se
+  // explica por qué, en vez de mostrar un conflicto sin sentido.
+  if (apiError.code === 'FLIGHT_BOOKING_IN_PROGRESS') {
+    return {
+      kind: 'NOT_CANCELLABLE',
+      message: 'Estamos confirmando el vuelo de esta reserva. Vas a poder cancelarla en unos minutos.',
     }
   }
 

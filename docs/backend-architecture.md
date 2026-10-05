@@ -382,6 +382,34 @@ Arquitectura documentada y lista para bootstrap. Continúo con **FASE 5 — boot
 
 **El proceso de fondo es deliberadamente tonto.** `ReservationExpirationBackgroundService` solo despierta cada N segundos y llama a `IReservationExpirationService`; no tiene ninguna regla de negocio. Así los tests ejercitan la lógica invocando el servicio y nunca esperan un timer real (en el entorno de tests el proceso se apaga por configuración).
 
+### Reserva coordinada con un proveedor externo (Oleada 11)
+
+PostgreSQL y el proveedor aéreo **no comparten transacción**, y el módulo de vuelos no finge que la
+compartan. El reparto de responsabilidades es el que mantiene cada regla en su lugar:
+`FlightBookingOrchestrator` decide **qué pasó con el proveedor** y escribe `FlightBooking`;
+`ReservationService` decide **qué pasa con la reserva y el cupo**. Así ninguno de los dos módulos
+reimplementa al otro, y la compensación sigue viviendo donde vive el cupo.
+
+Tres reglas que gobiernan el flujo, todas con el mismo patrón que ya usaba la expiración:
+
+- **El estado se commitea antes de la llamada externa.** `PENDING → ORDERING` es un `UPDATE` condicional
+  que se guarda *antes* de pedirle la orden al proveedor. Es lo único que convierte una caída del proceso
+  a mitad de camino en un caso resoluble en vez de una compra fantasma; y como es condicional, de dos
+  pagos simultáneos sólo uno obtiene permiso para emitir.
+- **Ninguna transacción queda abierta durante la llamada.** La emisión puede tardar segundos y lo que está
+  en juego es el cupo del paquete.
+- **El desenlace y el destino de la reserva se escriben juntos.** Una sola transacción local después de la
+  llamada: si el vuelo se confirmara en una y la reserva en otra, una caída en el medio dejaría un pasaje
+  emitido con una reserva sin confirmar.
+
+**Lo desconocido se trata como desconocido.** Un timeout no es un fallo: la solicitud salió y la respuesta
+no llegó, así que la orden puede existir. `FlightProviderUnavailableException.RequestMayHaveBeenSent`
+distingue ese caso de una conexión que nunca se abrió —donde reintentar es seguro—, y el primero termina en
+`RECONCILIATION_REQUIRED`, que bloquea el reintento del pago, la cancelación y la expiración de la reserva
+hasta resolverse. `FlightReconciliationBackgroundService` es igual de tonto que el de expiración: despierta,
+delega y nada más. El flujo completo y la máquina de estados están en
+`docs/flight-integration-design.md` §9.
+
 **Sanciones administrativas: aplicarlas, no solo registrarlas.** Cambiar un enum en la base no es una sanción. `SUSPENDED` en un usuario ya bloqueaba login y refresh; en contenido, además de sacarlo del catálogo, ahora impide que el proveedor lo republique (antes podía anular la sanción llamando a `publish`); y en una empresa actúa como **filtro de visibilidad y de operación** —catálogo público, retrieval de la IA, creación de reservas y publicación— **sin cascada** sobre el estado de sus productos, para que reactivarla no tenga que "restaurar" nada.
 
 ---
@@ -392,7 +420,7 @@ Se documenta sin corregir: Fase 2 adapta el frontend a los contratos reales y no
 
 | Tema | Situación actual | Impacto | Mitigación hoy |
 |---|---|---|---|
-| **Idempotencia de `POST /api/reservations`** | No acepta clave de idempotencia. Solo el booking de itinerarios IA es idempotente (índice único parcial sobre `ai_itinerary_id`). | Un reintento tras perder la respuesta puede crear una segunda reserva que retiene cupo hasta cancelarse o expirar (30 min). | Tourist Mobile no reintenta automáticamente, bloquea el botón durante la request y ante un corte de red manda a revisar "Mis viajes". |
+| **Idempotencia de `POST /api/reservations`** | No acepta clave de idempotencia **para una reserva sin vuelo**. Las que sí son idempotentes por construcción: el booking de itinerarios IA (índice único parcial sobre `ai_itinerary_id`) y, desde la Oleada 11, cualquier reserva con vuelo (índice único sobre `flight_bookings.flight_quote_id`: una cotización se reserva una vez). | Un reintento tras perder la respuesta puede crear una segunda reserva de paquete o experiencia que retiene cupo hasta cancelarse o expirar (30 min). | Tourist Mobile no reintenta automáticamente, bloquea el botón durante la request y ante un corte de red manda a revisar "Mis viajes". |
 | **`detail` de los 500** | `GlobalExceptionHandler` pone `exception.Message` en `ProblemDetails.detail` también para errores no controlados. | Un cliente que muestre `detail` puede exponer mensajes técnicos (EF, Npgsql, nombres de tablas). | Tourist Mobile nunca muestra `detail` en respuestas 5xx. |
 | **Fechas en UTC** | "Hoy" se calcula con `DateTime.UtcNow` en disponibilidad pública y al crear reservas; el chequeo es por fecha, no por `StartTime`. | En Bolivia (UTC-4), desde las 20:00 locales los slots del mismo día local desaparecen y crear responde 410; un slot de hoy puede reservarse después de su hora de inicio. | Ninguna desde el frontend (no se corrige solo en mobile). |
 | **Dos formas de 410 al pagar** | Con `errorCode: RESERVATION_NO_LONGER_PAYABLE` (reserva `EXPIRED` o carrera perdida) y sin código (`PENDING_PAYMENT` con `ExpiresAt` vencido). | Un cliente que dependa solo del código no reconoce el segundo caso. | Tourist Mobile trata cualquier 410 al pagar como expiración. |

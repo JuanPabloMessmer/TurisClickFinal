@@ -1,6 +1,7 @@
 import { useRouter, type Href } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, ScrollView, Text, View } from 'react-native'
+import { FlightBookingCard } from '@/features/flights/components'
 import { useCancelReservation, useInvalidateReservation, useReservation } from '@/features/reservations/api'
 import {
   CountdownBanner,
@@ -98,8 +99,18 @@ export function ReservationDetail({ id }: { id: string }) {
         ))}
       </View>
 
+      {reservation.flight ? <FlightBookingCard flight={reservation.flight} /> : null}
+
       <View className="rounded-2xl bg-surface p-4" style={{ elevation: 1 }}>
-        <TotalsList totals={reservation.totals} />
+        <TotalsList totals={reservation.totals} label={reservation.flight ? 'Paquete' : 'Total'} />
+        {reservation.flight ? (
+          <View className="mt-3 flex-row items-baseline justify-between border-t border-[#E2E8F0] pt-3">
+            <Text className="text-sm text-[#5B7285]">Vuelo</Text>
+            <Text className="text-sm font-semibold text-ink">
+              {reservation.flight.price?.currency} {(reservation.flight.price?.amount ?? 0).toFixed(2)}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       <FormError message={cancelError} />
@@ -108,7 +119,7 @@ export function ReservationDetail({ id }: { id: string }) {
         <Button label="Pagar" onPress={() => router.push(`/checkout/${id}` as Href)} disabled={cancel.isPending} />
       ) : null}
 
-      {canCancel(reservation) ? (
+      {canCancel(reservation) && !reservation.flight?.inProgress ? (
         <Button label="Cancelar reserva" variant="outline" loading={cancel.isPending} onPress={onCancel} />
       ) : null}
     </ScrollView>

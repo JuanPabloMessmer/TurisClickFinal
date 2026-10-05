@@ -1,4 +1,4 @@
-import type { ReservationItemResponse, ReservationResponse } from '@turisclick/api-client'
+import type { FlightBookingResponse, ReservationItemResponse, ReservationResponse } from '@turisclick/api-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError, AxiosHeaders } from 'axios'
 import type { useSession } from '@/auth/session'
@@ -120,6 +120,40 @@ export function reservationFixture(overrides: Partial<ReservationResponse> = {})
     requiresPriceAcceptance: false,
     paymentApproved: null,
     paymentFailureReason: null,
+    // undefined y no null: el esquema generado declara estos campos como opcionales, no anulables.
+    flight: undefined,
+    requiresFlightPriceAcceptance: false,
+    flightPreviousPrice: undefined,
+    flightCurrentPrice: undefined,
+    flightMessage: null,
+    ...overrides,
+  }
+}
+
+/** Un vuelo de reserva ya emitido. Los overrides sirven para ejercitar los estados en curso y fallidos. */
+export function flightFixture(overrides: Partial<FlightBookingResponse> = {}): FlightBookingResponse {
+  return {
+    status: 'PENDING',
+    originIata: 'VVI',
+    originLabel: 'Santa Cruz de la Sierra (VVI)',
+    destinationIata: 'UYU',
+    destinationLabel: 'Uyuni (UYU)',
+    outboundDate: '2026-11-20',
+    inboundDate: '2026-11-24',
+    travelers: 1,
+    carrierIata: null,
+    carrierName: null,
+    outboundDepartureAt: null,
+    outboundArrivalAt: null,
+    outboundFlightNumber: null,
+    inboundDepartureAt: null,
+    inboundArrivalAt: null,
+    inboundFlightNumber: null,
+    bookingReference: null,
+    price: { amount: 155, currency: 'USD' },
+    itinerarySummary: 'VVI→UYU 20/11 08:15 (directo)',
+    statusMessage: 'Falta confirmar el pasaje. Se emite cuando confirmás la reserva.',
+    inProgress: false,
     ...overrides,
   }
 }
