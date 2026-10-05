@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TurisClick.Api.Modules.Categories.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
@@ -37,6 +37,9 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
             .HasMaxLength(20)
             .IsRequired()
             .HasDefaultValue(PublicationStatus.DRAFT);
+
+        // Columna aditiva con default: los paquetes que ya existen quedan sin vuelo, como estaban.
+        builder.Property(p => p.IncludesFlight).HasColumnName("includes_flight").HasDefaultValue(false).IsRequired();
 
         builder.Property(p => p.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
         builder.Property(p => p.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");

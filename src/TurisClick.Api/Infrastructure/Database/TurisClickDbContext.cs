@@ -1,10 +1,11 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Modules.Ai.Entities;
 using TurisClick.Api.Modules.Auth.Entities;
 using TurisClick.Api.Modules.Categories.Entities;
 using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Destinations.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
+using TurisClick.Api.Modules.Flights.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
 using TurisClick.Api.Modules.Preferences.Entities;
 using TurisClick.Api.Modules.Reservations.Entities;
@@ -36,6 +37,9 @@ public class TurisClickDbContext(DbContextOptions<TurisClickDbContext> options) 
     public DbSet<AiItinerary> AiItineraries => Set<AiItinerary>();
     public DbSet<AiItineraryItem> AiItineraryItems => Set<AiItineraryItem>();
     public DbSet<TouristPreference> TouristPreferences => Set<TouristPreference>();
+    public DbSet<PackageFlightRule> PackageFlightRules => Set<PackageFlightRule>();
+    public DbSet<FlightQuote> FlightQuotes => Set<FlightQuote>();
+    public DbSet<FlightBooking> FlightBookings => Set<FlightBooking>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -30,6 +30,8 @@ public static class FlightsModuleExtensions
             services.AddScoped<IFlightProvider>(_ => new FakeFlightProvider());
         }
 
+        services.AddScoped<IPackageFlightService, PackageFlightService>();
+
         return services;
     }
 }

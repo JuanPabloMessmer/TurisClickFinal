@@ -101,6 +101,9 @@ try
         options.AddPolicy("RequireAdmin", p => p.RequireRole("ADMIN"));
         options.AddPolicy("RequireProvider", p => p.RequireRole("PROVIDER"));
         options.AddPolicy("RequireTourist", p => p.RequireRole("TOURIST"));
+        // Lecturas donde el operador ve lo suyo y el ADMIN ve todo: la autorización fina (de quién es
+        // el recurso) la resuelve el Service, que es el único que sabe a qué empresa pertenece.
+        options.AddPolicy("RequireProviderOrAdmin", p => p.RequireRole("PROVIDER", "ADMIN"));
     });
 
     // ---- Infraestructura + módulos ----

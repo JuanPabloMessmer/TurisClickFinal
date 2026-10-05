@@ -1,4 +1,4 @@
-using TurisClick.Api.Infrastructure.Database;
+﻿using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Categories.Dtos;
 using TurisClick.Api.Modules.Categories.Entities;
@@ -329,6 +329,7 @@ public class PackageService(
     private static PackageResponse ToResponse(Package package) => new()
     {
         Id = package.Id,
+        IncludesFlight = package.IncludesFlight,
         CompanyId = package.CompanyId,
         CompanyName = package.Company!.Name,
         DestinationId = package.DestinationId,

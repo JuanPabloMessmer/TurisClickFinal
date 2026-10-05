@@ -1,4 +1,4 @@
-using TurisClick.Api.Modules.Categories.Dtos;
+﻿using TurisClick.Api.Modules.Categories.Dtos;
 
 namespace TurisClick.Api.Modules.Packages.Dtos;
 
@@ -17,6 +17,12 @@ public class PackageResponse
     public decimal Price { get; set; }
     public string Currency { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Si el paquete incluye aéreo. El precio del vuelo NO viene acá: es dinámico y se pide aparte
+    /// (POST /api/packages/{id}/flight-quotes), porque hasta no cotizar no existe.
+    /// </summary>
+    public bool IncludesFlight { get; set; }
     public List<CategoryResponse> Categories { get; set; } = [];
     public List<PackageImageResponse> Images { get; set; } = [];
 

@@ -1,7 +1,8 @@
-using TurisClick.Api.Modules.Categories.Entities;
+﻿using TurisClick.Api.Modules.Categories.Entities;
 using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Destinations.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
+using TurisClick.Api.Modules.Flights.Entities;
 
 namespace TurisClick.Api.Modules.Packages.Entities;
 
@@ -28,6 +29,15 @@ public class Package
     public string Currency { get; set; } = string.Empty;
 
     public PublicationStatus Status { get; set; } = PublicationStatus.DRAFT;
+
+    /// <summary>
+    /// Si el paquete incluye el aéreo. El precio del vuelo NO se guarda acá: es dinámico y se cotiza
+    /// contra el proveedor cada vez (ver PackageFlightRule y docs/flight-integration-design.md).
+    /// </summary>
+    public bool IncludesFlight { get; set; }
+
+    /// <summary>Regla con la que se busca el vuelo. Existe si y sólo si IncludesFlight es true.</summary>
+    public PackageFlightRule? FlightRule { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
