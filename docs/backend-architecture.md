@@ -410,6 +410,30 @@ hasta resolverse. `FlightReconciliationBackgroundService` es igual de tonto que 
 delega y nada más. El flujo completo y la máquina de estados están en
 `docs/flight-integration-design.md` §9.
 
+### Cancelación con reembolso (Oleada 12)
+
+Tres sistemas que no comparten transacción —la base, la pasarela y la aerolínea— y un orden elegido por lo que
+queda roto si algo falla en el medio:
+
+- **La aceptación se commitea antes de tocar la aerolínea.** `CONFIRMED → CANCELLING` es un `UPDATE`
+  condicional; si el proceso muere después, queda un estado visible en lugar de una reserva que parece vigente
+  con un pasaje ya cancelado. Y como es condicional, el doble toque no cancela dos veces.
+- **La aerolínea va primero, el cupo después.** Liberar el cupo antes y que la aerolínea rechace sería regalarle
+  el lugar a otra persona mientras esta sigue con un pasaje: irreversible. Al revés es visible y resoluble.
+- **Los reembolsos van al final, con clave idempotente.** Si fallan, lo cancelado sigue cancelado y la
+  cancelación queda `REFUND_PENDING`. No se finge que la plata volvió.
+
+**El dinero se registra en un libro, no en un estado.** `payment_transactions` se agrega y no se modifica, así
+que un cobro y su reembolso son dos filas y un intento fallido también queda. El libro no es un decorador del
+gateway a propósito: un decorador tendría que guardar la fila fuera de la transacción del caller, y acá hace
+falta lo contrario —que el movimiento y el cambio de estado que lo justifica se commiteen juntos—.
+
+**La política de cancelación se congela en la reserva.** Es un snapshot, igual que el precio: cambiarla en el
+paquete no puede cambiar lo que alguien ya aceptó. Sin política, una reserva confirmada no se cancela desde la
+app, y eso se dice con esas palabras en lugar de suponer 0% o 100%.
+
+Detalle completo en [`payments-and-cancellation.md`](payments-and-cancellation.md).
+
 **Sanciones administrativas: aplicarlas, no solo registrarlas.** Cambiar un enum en la base no es una sanción. `SUSPENDED` en un usuario ya bloqueaba login y refresh; en contenido, además de sacarlo del catálogo, ahora impide que el proveedor lo republique (antes podía anular la sanción llamando a `publish`); y en una empresa actúa como **filtro de visibilidad y de operación** —catálogo público, retrieval de la IA, creación de reservas y publicación— **sin cascada** sobre el estado de sus productos, para que reactivarla no tenga que "restaurar" nada.
 
 ---

@@ -6,9 +6,10 @@ Probado de punta a punta contra Duffel en modo de prueba (ver `docs/package-flig
 | Implementado | Pendiente |
 |---|---|
 | `IFlightProvider`, `DuffelFlightProvider`, `FakeFlightProvider` | Pago real (hoy el cobro es simulado) |
-| `PackageFlightRule`, `FlightQuote`, `FlightBooking` + migraciones 0010 y 0011 | Cancelación de una reserva ya confirmada (política de reembolso) |
-| Cotizar, revalidar, reservar, emitir y reconciliar | Ofertas que exigen documento de identidad |
-| Regla en el Backoffice, búsqueda y checkout en Tourist Mobile | Integración con el agente de IA (§14) |
+| `PackageFlightRule`, `FlightQuote`, `FlightBooking` + migraciones 0010 a 0013 | Ofertas que exigen documento de identidad |
+| Cotizar, revalidar, reservar, emitir y reconciliar | Cambios de itinerario (`order_changes`) |
+| **Cancelar el pasaje con reembolso por componente** (Oleada 12) | Integración con el agente de IA (§14) |
+| Regla en el Backoffice, búsqueda, checkout y cancelación en Tourist Mobile | |
 
 **Proveedor elegido: Duffel, en modo de prueba.** La evidencia de que funciona —búsqueda, revalidación,
 orden y cancelación reales— está en [`duffel-test-results.md`](duffel-test-results.md).
@@ -69,7 +70,7 @@ construido acá se pierde si algún día se suma: entraría como un `AmadeusFlig
 | Orden | `POST /air/orders` con `selected_offers`, `passengers` y `payments` |
 | Pago en prueba | El saldo de la cuenta es **ilimitado** en modo de prueba y el pago se declara como `type: "balance"` — sin tarjeta y sin dinero |
 | Modo de prueba | Las ofertas y órdenes vienen con `live_mode: false` |
-| Cancelación | Dos pasos: `POST /air/order_cancellations` y luego `.../actions/confirm` |
+| Cancelación | Dos pasos: `POST /air/order_cancellations` (presupuesto **no vinculante**, con `refund_amount` y `expires_at`) y luego `.../actions/confirm`. Sólo se puede confirmar la cancelación más reciente de una orden |
 | Límites | Las respuestas traen `ratelimit-limit` y `ratelimit-reset`; la búsqueda en vivo ronda 10 pedidos por 60 s |
 | Idempotencia | **No encontré** un mecanismo de clave de idempotencia documentado para crear órdenes. Se marca como no verificado y el diseño no se apoya en él (§9) |
 
@@ -301,6 +302,7 @@ Ningún endpoint existente cambia de forma: `CreateReservationRequest` suma camp
 | **Cotizar el vuelo de un paquete** | Turista (público) | ✅ implementado |
 | **Revalidar una cotización antes de comprar** | Turista (público) | ✅ implementado |
 | **Reservar paquete + vuelo en una sola operación** | Turista | ✅ implementado |
+| **Cancelar el pasaje y ver cuánto devuelve la aerolínea** | Turista | ✅ implementado |
 | **Pedir un vuelo desde el asistente** | Turista | ⏳ pendiente (§14) |
 
 ## 7. Flujo del Provider

@@ -737,6 +737,7 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 | 8 | Moderación, cancelaciones, gestión de usuarios | UC-A-06, UC-A-07, UC-A-08, UC-T-11, UC-P-14, UC-SYS-08 |
 | 10 | Vuelos en paquetes de proveedor | UC-P-15, UC-A-09, UC-T-19, UC-T-20 |
 | 11 | Reserva coordinada de paquete + vuelo | UC-T-21 |
+| 12 | Libro de pagos y cancelación con reembolso | UC-P-16, UC-T-22, UC-A-10 |
 | Backlog | Multi-usuario por empresa, reseñas, favoritos, pagos reales, cancelación con reembolso | UC-P-03 y otros |
 
 Cada oleada solo introduce las entidades estrictamente necesarias para los casos de uso que la componen (consistente con "no construir entidades sin un caso de uso que las necesite").
@@ -752,6 +753,9 @@ Cada oleada solo introduce las entidades estrictamente necesarias para los casos
 | **UC-T-19** | Cotizar el vuelo de un paquete desde un origen permitido, con precios reales del proveedor | Turista (público) | implementado |
 | **UC-T-20** | Revalidar la cotización antes de comprar y ver si sigue igual, cambió, venció o ya no está | Turista (público) | implementado |
 | **UC-T-21** | Reservar paquete + vuelo en una sola operación, con datos de pasajeros y emisión del pasaje | Turista | implementado |
+| **UC-P-16** | Configurar la política de cancelación de un paquete por tramos de anticipación | Operador | implementado |
+| **UC-T-22** | Ver el reembolso que corresponde por cada componente, aceptarlo y cancelar la reserva | Turista | implementado |
+| **UC-A-10** | Inspeccionar el libro de pagos de una reserva y las cancelaciones que quedaron a medias | Admin | implementado |
 
 La regla que ordena los cuatro: **el operador configura cómo se busca el vuelo, no cuál es el vuelo**.
 El pasaje concreto y su precio salen del proveedor en el momento de cotizar, y no se consideran

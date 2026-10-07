@@ -2,15 +2,22 @@ import { useRouter, type Href } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, ScrollView, Text, View } from 'react-native'
 import { FlightBookingCard } from '@/features/flights/components'
-import { useCancelReservation, useInvalidateReservation, useReservation } from '@/features/reservations/api'
 import {
+  useCancellationQuote,
+  useCancelReservation,
+  useInvalidateReservation,
+  useReservation,
+} from '@/features/reservations/api'
+import { CancellationPreview } from '@/features/reservations/CancellationSheet'
+import {
+  CancellationOutcome,
   CountdownBanner,
   ReservationItemCard,
   StatusBadge,
   TotalsList,
 } from '@/features/reservations/components'
 import { describeCancelFailure, isReservationNotFound } from '@/features/reservations/errors'
-import { canCancel, canPay, displayStatus } from '@/features/reservations/model'
+import { canCancel, canPay, displayStatus, isCancelling, needsCancellationQuote } from '@/features/reservations/model'
 import { useCountdown } from '@/features/reservations/useCountdown'
 import { toApiError } from '@/lib/errors'
 import { Button, EmptyState, ErrorState, FormError, Skeleton } from '@/ui'
@@ -37,8 +44,13 @@ export function ReservationDetail({ id }: { id: string }) {
   const reread = useInvalidateReservation(id)
 
   const cancel = useCancelReservation(id)
+  const quote = useCancellationQuote(id)
   const cancelling = useRef(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
+
+  // Cuando hay plata de por medio no se cancela con un Alert: se muestra el desglose y se acepta ese
+  // presupuesto en concreto.
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   // Al llegar a 00:00 se re-lee una vez; si el backend todavía no la expiró, useReservation hace el
   // polling limitado. El frontend nunca cambia el estado por su cuenta.
@@ -67,6 +79,28 @@ export function ReservationDetail({ id }: { id: string }) {
   }
 
   const status = displayStatus(reservation, countdown.now)
+
+  /** Cancelar una reserva pagada: primero el presupuesto, después la confirmación explícita. */
+  const onCancelWithRefund = () => {
+    if (quote.isPending) return
+    setCancelError(null)
+    setPreviewOpen(true)
+    quote.mutate()
+  }
+
+  const onConfirmCancellation = () => {
+    if (cancelling.current || cancel.isPending) return
+    cancelling.current = true
+    setCancelError(null)
+
+    cancel.mutate(quote.data?.quoteId ?? undefined, {
+      onSuccess: () => setPreviewOpen(false),
+      onError: (error) => setCancelError(describeCancelFailure(error).message),
+      onSettled: () => {
+        cancelling.current = false
+      },
+    })
+  }
 
   const onCancel = () =>
     confirmCancellation(() => {
@@ -119,8 +153,26 @@ export function ReservationDetail({ id }: { id: string }) {
         <Button label="Pagar" onPress={() => router.push(`/checkout/${id}` as Href)} disabled={cancel.isPending} />
       ) : null}
 
-      {canCancel(reservation) && !reservation.flight?.inProgress ? (
-        <Button label="Cancelar reserva" variant="outline" loading={cancel.isPending} onPress={onCancel} />
+      {reservation.cancellation ? <CancellationOutcome cancellation={reservation.cancellation} /> : null}
+
+      {previewOpen ? (
+        <CancellationPreview
+          quote={quote.data}
+          loading={quote.isPending}
+          // El mensaje se traduce con el mismo mapa que el resto de las fallas de cancelación: un código como
+          // CANCELLATION_POLICY_MISSING tiene una explicación concreta, no el texto crudo del backend.
+          error={quote.isError ? describeCancelFailure(quote.error).message : cancelError}
+          submitting={cancel.isPending}
+          onConfirm={onConfirmCancellation}
+          onBack={() => setPreviewOpen(false)}
+        />
+      ) : canCancel(reservation) && !reservation.flight?.inProgress && !isCancelling(reservation) ? (
+        <Button
+          label="Cancelar reserva"
+          variant="outline"
+          loading={cancel.isPending || quote.isPending}
+          onPress={needsCancellationQuote(reservation) ? onCancelWithRefund : onCancel}
+        />
       ) : null}
     </ScrollView>
   )

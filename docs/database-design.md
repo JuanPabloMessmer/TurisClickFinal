@@ -861,3 +861,32 @@ Dos decisiones que conviene no perder:
 2. **El snapshot se escribe en dos momentos y no se recalcula.** Ruta y fechas al crear la intención;
    aerolínea, números de vuelo y horarios al confirmar. Una `flight_quote` vence, y una oferta vencida no
    puede ser el único registro de lo que alguien compró.
+
+## Oleada 12 — libro de pagos y cancelación con reembolso (migraciones 0012 y 0013, aditivas)
+
+| Cambio | Para qué |
+|---|---|
+| `payment_transactions` | Libro de movimientos de dinero de una reserva: cobros, reversos y reembolsos. **Se agrega, no se modifica** |
+| `reservation_cancellations` | El presupuesto de cancelación y, después, el registro de lo que efectivamente pasó |
+| `reservation_cancellation_lines` | Una línea por componente: el reembolso del paquete y el del pasaje son eventos distintos |
+| `packages.cancellation_policy` | La política del operador, serializada por tramos (`"30:100;15:50;0:0"`) |
+| `reservation_items.cancellation_policy` | **Copia** de esa política al momento de reservar |
+| `reservations.status` suma `CANCELLING` | Estado transitorio visible mientras hay una llamada externa de por medio (no requirió cambio de columna: entra en los 20 caracteres) |
+
+Cuatro decisiones que el esquema materializa:
+
+1. **El libro es inmutable.** Un cobro de 548.91 y un reembolso de 480 son dos filas, no una fila editada. Es
+   lo que permite responder cuánto se cobró, cuánto se devolvió, qué queda pagado y qué intento falló.
+2. **`ck_payment_transactions_component`**: un reembolso no puede existir sin saber de qué componente salió. Un
+   cobro sí, porque es una sola operación de pago sobre la reserva entera en una moneda.
+3. **`ux_payment_transactions_refund_key`** es único sobre `idempotency_key` **filtrado por
+   `type = 'REFUND' AND status = 'SUCCEEDED'`**. La migración 0013 existe por esto: el índice original filtraba
+   sólo por tipo, y eso prohibía dos cosas necesarias —guardar un intento fallido y reintentarlo después—.
+   Convertía un reembolso rechazado en un reembolso imposible de reintentar. Su única DDL es reemplazar ese
+   índice por el correcto.
+4. **La política se guarda como texto y se copia a la reserva.** Mismo criterio que
+   `package_flight_rules.allowed_origin_iatas`: son dos a seis tramos y una tabla agregaría un join a cada
+   lectura sin agregar una garantía. Lo que sí agrega una garantía es la copia: cambiar la política del paquete
+   no puede cambiar lo que una persona ya aceptó.
+
+Detalle del dominio y de la orquestación en [`payments-and-cancellation.md`](payments-and-cancellation.md).

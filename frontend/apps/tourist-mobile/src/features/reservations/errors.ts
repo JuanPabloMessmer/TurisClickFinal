@@ -140,6 +140,33 @@ export type CancelFailureKind =
   | 'SESSION'
   | 'NETWORK'
   | 'UNKNOWN'
+  /** El presupuesto venció o quedó obsoleto: hay que pedir uno nuevo porque el reembolso puede haber cambiado. */
+  | 'QUOTE_STALE'
+
+/** Lo que corresponde hacer con cada código de cancelación es distinto, así que se distinguen. */
+const CANCEL_FAILURES: Record<string, Failure<CancelFailureKind>> = {
+  CANCELLATION_POLICY_MISSING: {
+    kind: 'REFUND_POLICY_REQUIRED',
+    message:
+      'Este viaje no se puede cancelar desde la app porque el operador no publicó una política de cancelación. Escribile para resolverlo.',
+  },
+  CANCELLATION_QUOTE_EXPIRED: {
+    kind: 'QUOTE_STALE',
+    message: 'El cálculo del reembolso venció. Volvé a pedirlo: el importe puede haber cambiado.',
+  },
+  CANCELLATION_QUOTE_INVALID: {
+    kind: 'QUOTE_STALE',
+    message: 'Ese cálculo de reembolso ya no está vigente. Pedí uno nuevo para ver el importe actual.',
+  },
+  CANCELLATION_QUOTE_REQUIRED: {
+    kind: 'QUOTE_STALE',
+    message: 'Antes de cancelar hay que ver y aceptar el reembolso.',
+  },
+  CANCELLATION_IN_PROGRESS: {
+    kind: 'NOT_CANCELLABLE',
+    message: 'Ya estamos procesando la cancelación de esta reserva. Te avisamos en cuanto termine.',
+  },
+}
 
 export function describeCancelFailure(error: unknown): Failure<CancelFailureKind> {
   const apiError = toApiError(error)
@@ -147,6 +174,8 @@ export function describeCancelFailure(error: unknown): Failure<CancelFailureKind
   if (apiError.isNetworkError) {
     return { kind: 'NETWORK', message: 'No pudimos cancelar por un problema de conexión. Intentá de nuevo.' }
   }
+
+  if (apiError.code && CANCEL_FAILURES[apiError.code]) return CANCEL_FAILURES[apiError.code]
 
   if (apiError.code === 'REFUND_POLICY_REQUIRED') {
     return {

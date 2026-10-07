@@ -19,6 +19,7 @@ import { KNOWN_CURRENCIES } from '@/modules/experiences/currencies'
 import { useMyExperiences } from '@/modules/experiences/api'
 import { getErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
+import { CancellationPolicySection } from './CancellationPolicySection'
 import { PackageFlightSection } from './PackageFlightSection'
 import { useCityDestinations, useCreatePackage, useMyPackage, usePublicCategories, useUpdatePackage } from './api'
 
@@ -45,6 +46,13 @@ const packageImageSchema = z.object({
   isCover: z.boolean(),
 })
 
+const cancellationTierSchema = z.object({
+  // Sin z.coerce a propósito: estos valores los produce la sección como números, y el coerce dejaría el
+  // tipo de entrada del formulario en `unknown`.
+  minDaysBefore: z.number().int().min(0).max(365),
+  refundPercentage: z.number().int().min(0).max(100),
+})
+
 const schema = z.object({
   title: z.string().min(3).max(200),
   description: z.string().min(10),
@@ -56,6 +64,8 @@ const schema = z.object({
   currency: z.string().min(1, 'Elegí una moneda.'),
   items: z.array(packageItemSchema),
   images: z.array(packageImageSchema),
+  // Lista vacía = el operador no ofrece cancelación, que es una opción válida y no un formulario incompleto.
+  cancellationPolicy: z.array(cancellationTierSchema),
 })
 // z.coerce hace que el tipo de entrada (lo que RHF maneja en los inputs) difiera del de salida
 // (lo que recibe el submit ya validado) — RHF necesita los dos generics para no chocar de tipos.
@@ -96,6 +106,10 @@ export function PackageFormPage() {
             description: item.description ?? '',
           })),
           images: (pkg.images ?? []).map((image) => ({ url: image.url ?? '', isCover: !!image.isCover })),
+          cancellationPolicy: (pkg.cancellationPolicy ?? []).map((tier) => ({
+            minDaysBefore: tier.minDaysBefore ?? 0,
+            refundPercentage: tier.refundPercentage ?? 0,
+          })),
         }
       : undefined,
     defaultValues: {
@@ -108,6 +122,7 @@ export function PackageFormPage() {
       currency: 'USD',
       items: [],
       images: [],
+      cancellationPolicy: [],
     },
   })
 
@@ -156,6 +171,8 @@ export function PackageFormPage() {
         description: item.description || undefined,
       })),
       images: values.images.map((image) => ({ url: image.url, isCover: image.isCover })),
+      // Sin tramos se manda undefined y el backend lo guarda como "sin política".
+      cancellationPolicy: values.cancellationPolicy.length > 0 ? values.cancellationPolicy : undefined,
     }
     try {
       if (isEdit) {
@@ -373,6 +390,22 @@ export function PackageFormPage() {
 
         {submitError && <Alert variant="destructive">{submitError}</Alert>}
         {/* ---- Sección 4: Vuelo ---- */}
+        <CancellationPolicySection
+          tiers={form.watch('cancellationPolicy') ?? []}
+          // El DTO generado declara los campos opcionales; el formulario los quiere concretos. Se normaliza
+          // en la frontera en vez de aflojar el esquema.
+          onChange={(tiers) =>
+            form.setValue(
+              'cancellationPolicy',
+              tiers.map((tier) => ({
+                minDaysBefore: tier.minDaysBefore ?? 0,
+                refundPercentage: tier.refundPercentage ?? 0,
+              })),
+              { shouldDirty: true },
+            )
+          }
+        />
+
         <PackageFlightSection packageId={id} />
 
         <Button type="submit" disabled={form.formState.isSubmitting} className="self-start">

@@ -1,5 +1,6 @@
 import type { AxiosInstance } from 'axios'
 import type {
+  CancellationQuoteResponse,
   CreateReservationRequest,
   PayReservationRequest,
   ReservationItemResponse,
@@ -52,6 +53,24 @@ export const getMyReservation = (http: AxiosInstance, id: string) =>
 export const payReservation = (http: AxiosInstance, id: string, body: PayReservationRequest) =>
   http.post<ReservationResponse>(`/api/reservations/${id}/pay`, body).then((r) => r.data)
 
-/** UC-T-11 — cancela la reserva completa. Solo PENDING_PAYMENT; una CONFIRMED responde 409 `REFUND_POLICY_REQUIRED`. */
-export const cancelReservation = (http: AxiosInstance, id: string) =>
-  http.post<ReservationResponse>(`/api/reservations/${id}/cancel`).then((r) => r.data)
+/**
+ * UC-T-22 — qué pasaría si se cancelara: cuánto devuelve el operador por cada producto según la política que
+ * la reserva congeló, y cuánto devuelve la aerolínea según lo que ella informa. **No cancela nada.**
+ *
+ * El presupuesto vence y pedir uno nuevo invalida el anterior. El cliente nunca manda importes: para ejecutar
+ * sólo reenvía `quoteId`.
+ */
+export const quoteCancellation = (http: AxiosInstance, id: string) =>
+  http.post<CancellationQuoteResponse>(`/api/reservations/${id}/cancellation-quote`).then((r) => r.data)
+
+/**
+ * UC-T-11 / UC-T-22 — cancela la reserva completa.
+ *
+ * Sin pagar todavía se cancela sin presupuesto. Ya confirmada hace falta el id del presupuesto aceptado, y el
+ * resultado puede ser parcial: `cancellation.status` distingue `COMPLETED` de `REFUND_PENDING`,
+ * `REQUIRES_REVIEW` y `FAILED` (no se canceló nada). La app no anuncia éxito sin leer ese estado.
+ */
+export const cancelReservation = (http: AxiosInstance, id: string, cancellationQuoteId?: string) =>
+  http
+    .post<ReservationResponse>(`/api/reservations/${id}/cancel`, { cancellationQuoteId: cancellationQuoteId ?? null })
+    .then((r) => r.data)

@@ -12,6 +12,8 @@ import type {
 /** Cómo se presenta una reserva. Combina `status`, `expiresAt` y el estado de sus ítems. */
 export type ReservationDisplayKind =
   | 'PENDING'
+  /** Cancelación en curso: hay una llamada externa de por medio y la app no ofrece reintentar. */
+  | 'CANCELLING'
   /** PENDING_PAYMENT con ExpiresAt vencido: el backend todavía no corrió la expiración (job cada ~60s). */
   | 'PENDING_TIME_UP'
   | 'CONFIRMED'
@@ -70,6 +72,9 @@ export function displayStatus(reservation: ReservationResponse, now: number): Re
       return { kind: 'CONFIRMED', label: 'Confirmada', tone: 'success' }
     }
 
+    case 'CANCELLING':
+      return { kind: 'CANCELLING', label: 'Cancelación en proceso', tone: 'warning' }
+
     case 'EXPIRED':
       return { kind: 'EXPIRED', label: 'Expirada', tone: 'neutral' }
 
@@ -117,11 +122,28 @@ export function canPay(reservation: ReservationResponse, now: number): boolean {
 }
 
 /**
- * El turista solo puede cancelar PENDING_PAYMENT (UC-T-11). Una CONFIRMED responde 409
- * REFUND_POLICY_REQUIRED, así que ni se ofrece.
+ * Cuándo se ofrece cancelar.
+ *
+ * Sin pagar, siempre: no hay plata de por medio. Ya confirmada, sólo si **todos** los servicios activos
+ * tienen política de cancelación, porque sin política el backend responde 409 y ofrecer el botón sería
+ * prometer algo que no va a pasar. El backend vuelve a validarlo todo: esto sólo evita ofrecer lo imposible.
  */
 export function canCancel(reservation: ReservationResponse): boolean {
-  return reservation.status === 'PENDING_PAYMENT'
+  if (reservation.status === 'PENDING_PAYMENT') return true
+  if (reservation.status !== 'CONFIRMED') return false
+
+  const active = (reservation.items ?? []).filter((item) => item.status === 'CONFIRMED')
+  return active.length > 0 && active.every((item) => (item.cancellationPolicy ?? []).length > 0)
+}
+
+/** Una reserva confirmada se cancela con presupuesto; una pendiente, directo. */
+export function needsCancellationQuote(reservation: ReservationResponse): boolean {
+  return reservation.status === 'CONFIRMED'
+}
+
+/** Mientras la cancelación está en curso no se ofrece nada: ni pagar, ni cancelar de nuevo. */
+export function isCancelling(reservation: ReservationResponse): boolean {
+  return reservation.status === 'CANCELLING' || reservation.cancellation?.status === 'ACCEPTED'
 }
 
 export function secondsLeft(expiresAt: string, now: number): number {

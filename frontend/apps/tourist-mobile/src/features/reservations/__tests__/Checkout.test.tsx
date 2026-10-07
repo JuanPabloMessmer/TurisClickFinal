@@ -335,7 +335,8 @@ describe('cancelación', () => {
 
     await waitFor(() => expect(screen.getByText('Cancelaste esta reserva')).toBeTruthy())
     expect(Alert.alert).toHaveBeenCalled()
-    expect(mockPost).toHaveBeenCalledWith('/api/reservations/r1/cancel')
+    // Una reserva sin pagar se cancela sin presupuesto: no hay plata que devolver, así que el id va nulo.
+  expect(mockPost).toHaveBeenCalledWith('/api/reservations/r1/cancel', { cancellationQuoteId: null })
   })
 
   it('si la persona vuelve atrás en el diálogo no se cancela nada', async () => {

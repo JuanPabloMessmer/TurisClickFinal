@@ -1,4 +1,9 @@
-import type { ReservationItemResponse, ReservationResponse, ReservationTotalResponse } from '@turisclick/api-client'
+import type {
+  CancellationSummaryResponse,
+  ReservationItemResponse,
+  ReservationResponse,
+  ReservationTotalResponse,
+} from '@turisclick/api-client'
 import { formatDate } from '@turisclick/utils'
 import { useRouter, type Href } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
@@ -110,6 +115,73 @@ export function ReservationItemCard({
   )
 }
 
+const CANCELLATION_COPY: Record<string, { title: string; message: string; tone: StatusTone }> = {
+  COMPLETED: {
+    title: 'Cancelación completada',
+    message: 'Se liberó tu lugar y el reembolso quedó registrado.',
+    tone: 'success',
+  },
+  REFUND_PENDING: {
+    title: 'Reembolso en proceso',
+    message: 'La reserva quedó cancelada. Estamos completando la devolución: te avisamos cuando se acredite.',
+    tone: 'warning',
+  },
+  REQUIRES_REVIEW: {
+    title: 'Cancelación en revisión',
+    message: 'Quedó algo por confirmar con la aerolínea. Lo estamos resolviendo y te avisamos.',
+    tone: 'warning',
+  },
+  ACCEPTED: {
+    title: 'Cancelación en proceso',
+    message: 'Estamos ejecutando la cancelación. No hace falta volver a intentar.',
+    tone: 'warning',
+  },
+  FAILED: {
+    title: 'No se pudo cancelar',
+    message: 'No cancelamos nada: tu reserva sigue vigente y no se te devolvió ni se te cobró nada.',
+    tone: 'danger',
+  },
+}
+
+/**
+ * El resultado de una cancelación, con el reembolso que efectivamente se registró.
+ *
+ * Los estados intermedios se muestran como lo que son: `REFUND_PENDING` dice que la plata todavía no volvió y
+ * `FAILED` dice que no se canceló nada. Anunciar "listo" cuando el backend no lo confirmó sería la peor
+ * mentira posible en esta pantalla.
+ */
+export function CancellationOutcome({ cancellation }: { cancellation: CancellationSummaryResponse }) {
+  const copy = CANCELLATION_COPY[cancellation.status ?? '']
+  if (!copy) return null
+
+  const tone = TONE_STYLES[copy.tone]
+  const refunds = (cancellation.lines ?? []).filter((line) => (line.refundAmount ?? 0) > 0 && line.refundKnown !== false)
+
+  return (
+    <View className={`rounded-2xl p-4 ${tone.container}`} accessibilityRole="summary">
+      <Text className={`text-base font-semibold ${tone.text}`}>{copy.title}</Text>
+      <Text className={`mt-1 text-sm leading-5 ${tone.text}`}>{copy.message}</Text>
+
+      {refunds.length > 0 ? (
+        <View className="mt-3 gap-1">
+          {refunds.map((line, index) => (
+            <View key={index} className="flex-row items-baseline justify-between">
+              <Text className={`text-sm ${tone.text}`}>{line.label}</Text>
+              <Text className={`text-sm font-semibold ${tone.text}`}>
+                {line.currency} {(line.refundAmount ?? 0).toFixed(2)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {cancellation.flightCancelled ? (
+        <Text className={`mt-2 text-xs ${tone.text}`}>El pasaje quedó cancelado con la aerolínea.</Text>
+      ) : null}
+    </View>
+  )
+}
+
 /** Aviso del tiempo que queda para pagar. Llegar a 00:00 no cambia el estado: lo decide el backend. */
 export function CountdownBanner({ label, isTimeUp }: { label: string | null; isTimeUp: boolean }) {
   if (isTimeUp) {
@@ -197,6 +269,10 @@ export function TripCard({
         <View className="mt-3">
           <TotalsList totals={reservation.totals} />
         </View>
+
+        {refundSummary(reservation) ? (
+          <Text className="mt-2 text-sm text-[#166534]">Reembolsado: {refundSummary(reservation)}</Text>
+        ) : null}
       </Pressable>
 
       {status.kind === 'PENDING' ? (
@@ -206,6 +282,26 @@ export function TripCard({
       ) : null}
     </View>
   )
+}
+
+/**
+ * Lo reembolsado, por moneda, para la tarjeta de "Mis viajes". Null si no hubo reembolso: una reserva
+ * cancelada sin devolución no debe mostrar una línea que sugiera que volvió plata.
+ */
+function refundSummary(reservation: ReservationResponse): string | null {
+  const lines = (reservation.cancellation?.lines ?? []).filter(
+    (line) => (line.refundAmount ?? 0) > 0 && line.refundKnown !== false,
+  )
+  if (lines.length === 0) return null
+
+  const byCurrency = new Map<string, number>()
+  for (const line of lines) {
+    const currency = line.currency ?? ''
+    byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + (line.refundAmount ?? 0))
+  }
+
+  // Nunca se suman monedas distintas: se listan.
+  return [...byCurrency.entries()].map(([currency, amount]) => `${currency} ${amount.toFixed(2)}`).join(' + ')
 }
 
 export function TripCardSkeleton() {

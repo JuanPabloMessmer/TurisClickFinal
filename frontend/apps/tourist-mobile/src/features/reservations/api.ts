@@ -64,6 +64,10 @@ export function useReservation(id: string) {
       // reconciliación del backend, no de otro intento de la app.
       if (query.state.data?.flight?.inProgress) return FLIGHT_POLL_INTERVAL_MS
 
+      // Lo mismo con una cancelación a medias: la resuelve el backend y la app sólo espera.
+      if (query.state.data?.status === 'CANCELLING') return FLIGHT_POLL_INTERVAL_MS
+      if (query.state.data?.cancellation?.status === 'REFUND_PENDING') return FLIGHT_POLL_INTERVAL_MS
+
       const decision = nextExpiryPoll(
         { data: query.state.data, dataUpdatedAt: query.state.dataUpdatedAt },
         Date.now(),
@@ -152,13 +156,26 @@ export function usePayReservation(id: string) {
   })
 }
 
+/**
+ * UC-T-22 — presupuesto de cancelación. Es una mutation y no una query porque **crea** algo del lado del
+ * servidor: la cancelación pendiente en la aerolínea y la fila que después se acepta. Pedirlo dos veces
+ * invalida el anterior, así que no se cachea ni se re-pide solo.
+ */
+export function useCancellationQuote(id: string) {
+  return useMutation({
+    mutationFn: () => reservationsApi.quoteCancellation(httpClient, id),
+    retry: false,
+  })
+}
+
 /** UC-T-11. Libera cupo, así que también se refresca la disponibilidad del producto. */
 export function useCancelReservation(id: string) {
   const queryClient = useQueryClient()
   const userId = useTouristId()
 
   return useMutation({
-    mutationFn: () => reservationsApi.cancelReservation(httpClient, id),
+    mutationFn: (cancellationQuoteId?: string) =>
+      reservationsApi.cancelReservation(httpClient, id, cancellationQuoteId),
     retry: false,
     onSuccess: (reservation) => {
       if (userId) {

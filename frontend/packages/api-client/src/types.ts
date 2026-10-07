@@ -73,6 +73,15 @@ export type ReservationResponsePagedResult = Schemas['ReservationResponsePagedRe
 export type ReservationTotalResponse = Schemas['ReservationTotalResponse']
 
 export type FlightBookingResponse = Schemas['FlightBookingResponse']
+
+export type CancellationTierDto = Schemas['CancellationTierDto']
+export type CancellationQuoteResponse = Schemas['CancellationQuoteResponse']
+export type CancellationLineResponse = Schemas['CancellationLineResponse']
+export type CancellationSummaryResponse = Schemas['CancellationSummaryResponse']
+export type ConfirmCancellationRequest = Schemas['ConfirmCancellationRequest']
+export type MoneyLineResponse = Schemas['MoneyLineResponse']
+export type ReservationPaymentsResponse = Schemas['ReservationPaymentsResponse']
+export type PaymentTransactionResponse = Schemas['PaymentTransactionResponse']
 export type FlightTravelerRequest = Schemas['FlightTravelerRequest']
 export type MoneyRequest = Schemas['MoneyRequest']
 
@@ -119,6 +128,23 @@ export type ReservationItemStatusValue = (typeof ReservationItemStatuses)[number
  * curso": la app no ofrece reintentar en ninguno de los dos — reintentar una emisión es lo que duplica un
  * pasaje. Para saber si hay algo en curso alcanza con `flight.inProgress`, que lo decide el backend.
  */
+/**
+ * Estados de una cancelación. Los tres del medio son los que la app NO puede mostrar como éxito:
+ * `REFUND_PENDING` significa que lo cancelado está cancelado pero la plata todavía no volvió, y
+ * `REQUIRES_REVIEW` que quedó algo que resuelve una persona. `FAILED` significa que no se canceló nada y la
+ * reserva sigue vigente.
+ */
+export const CancellationStatuses = [
+  'QUOTED',
+  'ACCEPTED',
+  'COMPLETED',
+  'REFUND_PENDING',
+  'REQUIRES_REVIEW',
+  'FAILED',
+  'EXPIRED',
+] as const
+export type CancellationStatusValue = (typeof CancellationStatuses)[number]
+
 export const FlightBookingStatuses = [
   'PENDING',
   'ORDERING',

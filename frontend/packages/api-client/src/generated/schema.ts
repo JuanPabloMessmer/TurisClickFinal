@@ -403,6 +403,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/reservations/{id}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReservationPaymentsResponse"];
+                        "application/json": components["schemas"]["ReservationPaymentsResponse"];
+                        "text/json": components["schemas"]["ReservationPaymentsResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/cancellations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CancellationSummaryResponse"][];
+                        "application/json": components["schemas"]["CancellationSummaryResponse"][];
+                        "text/json": components["schemas"]["CancellationSummaryResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/users": {
         parameters: {
             query?: never;
@@ -3171,7 +3249,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/reservations/{id}/cancel": {
+    "/api/reservations/{id}/cancellation-quote": {
         parameters: {
             query?: never;
             header?: never;
@@ -3190,6 +3268,51 @@ export interface paths {
                 cookie?: never;
             };
             requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CancellationQuoteResponse"];
+                        "application/json": components["schemas"]["CancellationQuoteResponse"];
+                        "text/json": components["schemas"]["CancellationQuoteResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reservations/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ConfirmCancellationRequest"];
+                    "text/json": components["schemas"]["ConfirmCancellationRequest"];
+                    "application/*+json": components["schemas"]["ConfirmCancellationRequest"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -3379,6 +3502,58 @@ export interface components {
         CancelReservationItemRequest: {
             reason: string;
         };
+        CancellationLineResponse: {
+            component?: string | null;
+            label?: string | null;
+            /** Format: double */
+            paidAmount?: number;
+            /** Format: double */
+            refundAmount?: number;
+            /** Format: double */
+            feeAmount?: number;
+            currency?: string | null;
+            /** Format: int32 */
+            refundPercentage?: number | null;
+            refundKnown?: boolean;
+            explanation?: string | null;
+        };
+        CancellationQuoteResponse: {
+            /** Format: uuid */
+            quoteId?: string;
+            /** Format: uuid */
+            reservationId?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            lines?: components["schemas"]["CancellationLineResponse"][] | null;
+            refunds?: components["schemas"]["MoneyLineResponse"][] | null;
+            fees?: components["schemas"]["MoneyLineResponse"][] | null;
+            hasUnknownRefund?: boolean;
+            summary?: string | null;
+        };
+        CancellationSummaryResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            reservationId?: string;
+            status?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: date-time */
+            completedAt?: string | null;
+            flightCancelled?: boolean;
+            failureReason?: string | null;
+            /** Format: int32 */
+            resolutionAttempts?: number;
+            lines?: components["schemas"]["CancellationLineResponse"][] | null;
+        };
+        CancellationTierDto: {
+            /** Format: int32 */
+            minDaysBefore?: number;
+            /** Format: int32 */
+            refundPercentage?: number;
+        };
         CategoryResponse: {
             /** Format: uuid */
             id?: string;
@@ -3421,6 +3596,10 @@ export interface components {
             id?: string;
             name?: string | null;
             status?: string | null;
+        };
+        ConfirmCancellationRequest: {
+            /** Format: uuid */
+            cancellationQuoteId?: string | null;
         };
         ConversationResponse: {
             /** Format: uuid */
@@ -3515,6 +3694,7 @@ export interface components {
             currency: string;
             items?: components["schemas"]["PackageItemRequest"][] | null;
             images?: components["schemas"]["PackageImageRequest"][] | null;
+            cancellationPolicy?: components["schemas"]["CancellationTierDto"][] | null;
         };
         CreateReservationRequest: {
             /** Format: uuid */
@@ -3805,6 +3985,11 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        MoneyLineResponse: {
+            /** Format: double */
+            amount?: number;
+            currency?: string | null;
+        };
         MoneyRequest: {
             /** Format: double */
             amount?: number;
@@ -3941,6 +4126,7 @@ export interface components {
             flightDestinationIata?: string | null;
             flightDestinationLabel?: string | null;
             flightOrigins?: components["schemas"]["FlightOriginResponse"][] | null;
+            cancellationPolicy?: components["schemas"]["CancellationTierDto"][] | null;
             flightRoundTrip?: boolean | null;
             categories?: components["schemas"]["CategoryResponse"][] | null;
             images?: components["schemas"]["PackageImageResponse"][] | null;
@@ -3980,6 +4166,29 @@ export interface components {
             acceptPriceChanges?: boolean;
             travelers?: components["schemas"]["FlightTravelerRequest"][] | null;
             acceptedFlightPrice?: components["schemas"]["MoneyRequest"];
+        };
+        PaymentBalanceResponse: {
+            currency?: string | null;
+            /** Format: double */
+            charged?: number;
+            /** Format: double */
+            refunded?: number;
+            /** Format: double */
+            net?: number;
+        };
+        PaymentTransactionResponse: {
+            /** Format: uuid */
+            id?: string;
+            type?: string | null;
+            status?: string | null;
+            /** Format: double */
+            amount?: number;
+            currency?: string | null;
+            component?: string | null;
+            provider?: string | null;
+            failureReason?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
         };
         PreferencesResponse: {
             /** Format: uuid */
@@ -4096,6 +4305,9 @@ export interface components {
             /** Format: double */
             currentUnitPrice?: number | null;
             currentCurrency?: string | null;
+            cancellationPolicy?: components["schemas"]["CancellationTierDto"][] | null;
+            /** Format: double */
+            refundedAmount?: number | null;
         };
         ReservationItemResponsePagedResult: {
             items?: components["schemas"]["ReservationItemResponse"][] | null;
@@ -4107,6 +4319,14 @@ export interface components {
             totalCount?: number;
             /** Format: int32 */
             readonly totalPages?: number;
+        };
+        ReservationPaymentsResponse: {
+            /** Format: uuid */
+            reservationId?: string;
+            reservationStatus?: string | null;
+            balances?: components["schemas"]["PaymentBalanceResponse"][] | null;
+            transactions?: components["schemas"]["PaymentTransactionResponse"][] | null;
+            cancellations?: components["schemas"]["CancellationSummaryResponse"][] | null;
         };
         ReservationResponse: {
             /** Format: uuid */
@@ -4130,6 +4350,7 @@ export interface components {
             flightPreviousPrice?: components["schemas"]["MoneyResponse"];
             flightCurrentPrice?: components["schemas"]["MoneyResponse"];
             flightMessage?: string | null;
+            cancellation?: components["schemas"]["CancellationSummaryResponse"];
         };
         ReservationResponsePagedResult: {
             items?: components["schemas"]["ReservationResponse"][] | null;
@@ -4261,6 +4482,7 @@ export interface components {
             currency: string;
             items?: components["schemas"]["PackageItemRequest"][] | null;
             images?: components["schemas"]["PackageImageRequest"][] | null;
+            cancellationPolicy?: components["schemas"]["CancellationTierDto"][] | null;
         };
         UpdateTouristPreferencesRequest: {
             categoryIds?: string[] | null;

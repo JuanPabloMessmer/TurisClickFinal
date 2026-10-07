@@ -254,7 +254,7 @@ Soporta UC-T-08/09/10/18/19, UC-SYS-04/05/07/08. Es el mismo tipo de entidad tan
 | Id | — |
 | TouristId | FK a `User` |
 | AiItineraryId | FK opcional a `AiItinerary` — presente únicamente si esta reserva se originó en un itinerario IA (UC-T-18). **Único entre las reservas ACTIVAS** (índice único parcial `WHERE ai_itinerary_id IS NOT NULL AND status NOT IN ('EXPIRED','CANCELLED')`, migración 0008): un itinerario tiene como máximo una reserva reteniendo cupo, y es esa unicidad la que hace idempotente al booking ante dos requests concurrentes. Las reservas terminales se conservan para auditoría, lo que permite volver a reservar un itinerario cuya reserva expiró (Oleada 8). El filtro excluye estados terminales en vez de listar los activos: así cualquier estado nuevo bloquea por defecto, que es el lado seguro |
-| Status | `ReservationStatus`: `PENDING_PAYMENT`, `CONFIRMED`, `PAYMENT_FAILED`, `CANCELLED`, `EXPIRED` — representa el ciclo de vida de la reserva **como un todo** (pago, cancelación explícita del turista, expiración); no cambia automáticamente por una cancelación parcial a nivel de ítem (ver nota más abajo) |
+| Status | `ReservationStatus`: `PENDING_PAYMENT`, `CONFIRMED`, `PAYMENT_FAILED`, `CANCELLING`, `CANCELLED`, `EXPIRED` — representa el ciclo de vida de la reserva **como un todo** (pago, cancelación explícita del turista, expiración); no cambia automáticamente por una cancelación parcial a nivel de ítem (ver nota más abajo). `CANCELLING` (Oleada 12) es transitorio: existe porque cancelar una reserva confirmada implica una llamada externa —cancelar el pasaje en la aerolínea— y una caída a mitad de camino tiene que dejar un estado visible en vez de una reserva que parece vigente con un pasaje ya cancelado |
 | ExpiresAt | Límite del hold de cupo mientras está `PENDING_PAYMENT` (UC-SYS-08) |
 | CreatedAt, ConfirmedAt, CancelledAt | Nulos según corresponda |
 
@@ -267,6 +267,14 @@ Soporta UC-T-08/09/10/18/19, UC-SYS-04/05/07/08. Es el mismo tipo de entidad tan
 > **Expiración y AiItinerary (Oleada 8).** Cuando una `Reservation` `PENDING_PAYMENT` vence sin pago (UC-SYS-08), la reserva pasa a `EXPIRED`, sus líneas activas también, se libera el cupo y —si venía de un itinerario IA— el `AiItinerary` vuelve de `BOOKED` a `SAVED`, todo en la misma transacción. El turista puede volver a reservarlo, pero **siempre pasando de nuevo por toda la revalidación final de UC-T-18**: nunca se reutilizan como verdad los precios ni la disponibilidad anteriores. Qué ocurre al expirar una reserva `CONFIRMED` no aplica: una reserva confirmada no expira.
 
 > **Cancelación parcial (decisión del usuario).** Un proveedor puede cancelar únicamente el `ReservationItem` que le corresponde (UC-P-14); los demás ítems y la `Reservation` padre siguen activos. No se agrega un estado `PARTIALLY_CANCELLED` a `ReservationStatus`: es derivable y barato de calcular — si existe al menos un `ReservationItem` en `CANCELLED` y al menos otro que no lo está, la UI presenta la reserva como "parcialmente cancelada" a partir de un `GROUP BY Status` sobre sus ítems (una reserva rara vez tiene más de una decena de líneas). `Reservation.Status` solo pasa a `CANCELLED` cuando la cancela explícitamente el turista (UC-T-11) o el sistema la cancela por completo (ej. expiración sin pago, UC-SYS-08).
+
+> **Cancelación con reembolso (Oleada 12).** Una `Reservation` `CONFIRMED` sí se puede cancelar, pero nunca sin
+> que la persona haya visto y aceptado cuánto se le devuelve. El cálculo es **por componente**: el paquete según
+> la política que la reserva congeló en `ReservationItem.CancellationPolicy`, y el pasaje según lo que informa la
+> aerolínea. Nunca se mezclan ni se suman entre monedas distintas. El dinero se registra en un libro inmutable
+> (`PaymentTransaction`) y el presupuesto aceptado en `ReservationCancellation` + `ReservationCancellationLine`.
+> Si no hay política configurada, la reserva confirmada **no se cancela desde la app**. Detalle completo en
+> [`payments-and-cancellation.md`](payments-and-cancellation.md).
 
 ### `ReservationItem` (hijo)
 Soporta UC-T-10/18/19, UC-P-12/13/14, UC-SYS-01/02/04/05/06/07/08. Representa **una línea reservable de un solo proveedor**, y es la pieza clave de la decisión 2 (reserva padre + hijas).

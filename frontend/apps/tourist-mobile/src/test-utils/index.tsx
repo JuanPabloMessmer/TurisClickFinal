@@ -103,6 +103,9 @@ export function itemFixture(overrides: Partial<ReservationItemResponse> = {}): R
     priceChanged: false,
     currentUnitPrice: null,
     currentCurrency: null,
+    // Por defecto sin política: es el caso de las experiencias y de los paquetes que no la configuraron.
+    cancellationPolicy: [],
+    refundedAmount: null,
     ...overrides,
   }
 }
@@ -126,6 +129,7 @@ export function reservationFixture(overrides: Partial<ReservationResponse> = {})
     flightPreviousPrice: undefined,
     flightCurrentPrice: undefined,
     flightMessage: null,
+    cancellation: undefined,
     ...overrides,
   }
 }

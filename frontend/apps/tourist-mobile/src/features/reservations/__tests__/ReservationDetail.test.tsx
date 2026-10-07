@@ -118,7 +118,8 @@ it('cancela con confirmación y refleja el estado que devuelve el backend', asyn
   fireEvent.press(screen.getByRole('button', { name: 'Cancelar reserva' }))
 
   await waitFor(() => expect(screen.getByText('Cancelada')).toBeTruthy())
-  expect(mockPost).toHaveBeenCalledWith('/api/reservations/r1/cancel')
+  // Una reserva sin pagar se cancela sin presupuesto: no hay plata que devolver, así que el id va nulo.
+  expect(mockPost).toHaveBeenCalledWith('/api/reservations/r1/cancel', { cancellationQuoteId: null })
   expect(screen.queryByText('Cancelar reserva')).toBeNull()
 })
 
