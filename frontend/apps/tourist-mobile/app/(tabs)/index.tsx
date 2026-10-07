@@ -5,7 +5,7 @@ import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { CardSkeleton, ExperienceCard, PackageCard } from '@/features/catalog/cards'
 import { DestinationCard, DestinationCardSkeleton } from '@/features/catalog/DestinationCard'
-import { byPublishedContent } from '@/features/catalog/destinations'
+import { byPublishedContent, hasPublishedContent } from '@/features/catalog/destinations'
 import { useCities, useExperiences, usePackages } from '@/features/catalog/queries'
 import { toApiError } from '@/lib/errors'
 import { colors } from '@/theme/colors'
@@ -33,7 +33,9 @@ export default function HomeScreen() {
     void packages.refetch()
   }
 
-  const ranked = byPublishedContent(cities.data)
+  // La portada sólo ofrece ciudades donde hay algo que reservar: el carrusel promete eso y tocar una ciudad
+  // vacía lleva a una lista en blanco. El filtro de Explorar sigue teniendo todas.
+  const ranked = byPublishedContent(cities.data).filter(hasPublishedContent)
 
   return (
     <View className="flex-1 bg-background">
@@ -180,7 +182,7 @@ function DestinationsRow({
 
   return (
     <View>
-      <SectionHeader title="Explorá destinos" subtitle="Ciudades con experiencias reales para reservar" />
+      <SectionHeader title="Explorá destinos" subtitle="Ciudades con experiencias y paquetes para reservar hoy" />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

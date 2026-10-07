@@ -97,6 +97,10 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      // Mientras carga, el botón sólo dibuja un spinner: sin este nombre un lector de pantalla anuncia
+      // "botón, ocupado" sin decir cuál, justo en el momento en que importa saberlo. Un `accessibilityLabel`
+      // de quien lo usa sigue ganando porque `rest` se expande después.
+      accessibilityLabel={label}
       accessibilityState={{ disabled: isInactive, busy: loading }}
       disabled={isInactive}
       className={`h-[52px] flex-row items-center justify-center gap-2 rounded-md px-6 ${styles.container} ${
@@ -234,7 +238,15 @@ export function Chip({ label, selected = false, onPress }: { label: string; sele
 
   if (!onPress) return content
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} className="active:opacity-70">
+    // El nombre va explícito: en el árbol de accesibilidad de la web el texto anidado no siempre llega a
+    // nombrar al control, y un lector de pantalla terminaba anunciando "botón" sin decir cuál.
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      className="active:opacity-70"
+    >
       {content}
     </Pressable>
   )

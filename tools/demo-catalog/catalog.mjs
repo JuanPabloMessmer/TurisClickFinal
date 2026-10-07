@@ -884,12 +884,95 @@ export const EXPERIENCES = [
     minutes: 480, label: 'Día completo', price: 320, start: '07:30:00', slots: 12,
     img: ['Cachuela Esperanza'],
   },
+  // ---- Gastronomía: platos y bebidas que faltaban en el catálogo (Oleada 13) ----
+  {
+    key: 'lpz-saltenas', provider: 'altura', city: 'La Paz', cats: ['GA', 'CU'],
+    title: 'Ruta de la salteña paceña',
+    description: 'La salteña se come de pie, antes del mediodía, y se termina antes de que el jugo gane. Recorremos tres salteñerías del centro y Sopocachi para comparar el jugo, el picante y la masa, y entender por qué en La Paz hay fila a las diez de la mañana y a la una ya no queda nada.',
+    includes: 'Guía, tres salteñas y refresco en el recorrido.', excludes: 'Compras adicionales.',
+    minutes: 150, label: '2 h 30 min', price: 150, start: '10:00:00', slots: 12,
+    img: ['Salteña Bolivia', 'Salteñas bolivianas'],
+  },
+  {
+    key: 'lpz-api-pastel', provider: 'altura', city: 'La Paz', cats: ['GA'],
+    title: 'Desayuno paceño: api con pastel en el mercado',
+    description: 'El desayuno más paceño que existe: api de maíz morado bien caliente con un pastel de queso recién frito, en el puesto de un mercado y en vaso de vidrio. Después caminamos entre los puestos de frutas y panes para ver de dónde sale cada cosa.',
+    includes: 'Guía, api y pastel.', excludes: 'Transporte.',
+    minutes: 120, label: '2 horas', price: 110, start: '08:00:00', slots: 10,
+    img: ['Api morado Bolivia', 'Mercado Lanza La Paz'],
+  },
+  {
+    key: 'cop-trucha', provider: 'lagoyungas', city: 'Copacabana', cats: ['GA', 'NA'],
+    title: 'Trucha del Titicaca frente al lago',
+    description: 'Almuerzo de trucha a la plancha en la orilla del Titicaca, con papa, choclo y una ensalada de la zona. Antes pasamos por el muelle para ver cómo llega el pescado y por qué la trucha, que no es originaria del lago, terminó siendo su plato más conocido.',
+    includes: 'Guía, almuerzo completo y bebida sin alcohol.', excludes: 'Bebidas alcohólicas, transporte a Copacabana.',
+    minutes: 180, label: '3 horas', price: 180, start: '12:30:00', slots: 14,
+    img: ['Trucha Copacabana Bolivia', 'Lago Titicaca Copacabana orilla'],
+  },
+  {
+    key: 'cbba-chicha', provider: 'llajta', city: 'Quillacollo', cats: ['GA', 'CU'],
+    title: 'Chicherías del valle: chicha y aperitivos cochabambinos',
+    description: 'Tarde de chichería en el valle bajo, donde la chicha de maíz se sirve en tutuma y se acompaña con habas, choclo y queso. Visitamos dos chicherías familiares y hablamos de la bandera blanca que anuncia que hay chicha nueva.',
+    includes: 'Guía, degustación de chicha y aperitivos.', excludes: 'Transporte desde Cochabamba.',
+    minutes: 210, label: '3 h 30 min', price: 160, start: '15:30:00', slots: 12,
+    files: ['File:Mercado Punata - Cochabamba Bolivia - Mercado Central de Punata 23 - Chichería.jpg'],
+    img: ['Chicha de maíz tutuma', 'Chichería Cochabamba'],
+  },
+  {
+    key: 'cbba-cocina-valluna', provider: 'llajta', city: 'Cochabamba', cats: ['GA'],
+    title: 'Clase de cocina cochabambina: pique y silpancho',
+    description: 'Clase práctica en una cocina del centro: armamos un silpancho de principio a fin —carne apanada, arroz, papa, huevo y la salsa cruda— y preparamos un pique macho para compartir. Se cocina, se come y se vuelve con las recetas escritas.',
+    includes: 'Ingredientes, delantal, clase con cocinero local, almuerzo con lo preparado.', excludes: 'Bebidas alcohólicas.',
+    minutes: 240, label: 'Medio día', price: 320, start: '10:30:00', slots: 8,
+    img: ['Silpancho', 'Pique macho'],
+  },
+  {
+    key: 'suc-chocolate', provider: 'charcas', city: 'Sucre', cats: ['GA', 'CU'],
+    title: 'Chocolate sucrense: del cacao a la tableta',
+    description: 'Sucre hace chocolate desde el siglo XIX y lo sigue vendiendo en las mismas calles. Recorremos una fábrica artesanal para ver el tostado, el molido y el templado, y cerramos con una cata comparando cacao del Beni con cacao del Alto Beni.',
+    includes: 'Guía, visita a la fábrica, cata de chocolates.', excludes: 'Compras en la tienda.',
+    minutes: 150, label: '2 h 30 min', price: 170, start: '16:00:00', slots: 14,
+    img: ['Chocolate Sucre Bolivia', 'Cacao Bolivia'],
+  },
+  {
+    key: 'pot-kalapurka', provider: 'surandino', city: 'Potosí', cats: ['GA', 'CU'],
+    title: "K'alapurka y mercado minero de Potosí",
+    description: "La k'alapurka se sirve con una piedra volcánica al rojo dentro del plato: sigue hirviendo en la mesa, que es justo lo que se necesita a 4.000 metros. La probamos en el mercado central y después recorremos los puestos donde los mineros compran su coca y su merienda.",
+    includes: 'Guía, plato de k\'alapurka y mate de coca.', excludes: 'Compras personales.',
+    minutes: 180, label: '3 horas', price: 150, start: '11:00:00', slots: 12,
+    img: ['Mercado central Potosí', 'Potosí comida tradicional'],
+  },
+  {
+    key: 'scz-chocolate-cacao', provider: 'curichi', city: 'Santa Cruz de la Sierra', cats: ['GA'],
+    title: 'Cacao amazónico: cata de chocolate cruceño',
+    description: 'Bolivia tiene cacao silvestre en la Amazonía y hace años que produce chocolate de origen. Cata guiada de tabletas de distintas regiones —Beni, Alto Beni, Chiquitania— con la diferencia entre cacao silvestre y cultivado explicada con los granos en la mano.',
+    includes: 'Cata de cinco chocolates de origen, guía.', excludes: 'Compras en la tienda.',
+    minutes: 120, label: '2 horas', price: 190, start: '17:00:00', slots: 12,
+    img: ['Cacao Bolivia', 'Chocolate boliviano'],
+  },
+  {
+    key: 'rur-sabores-amazonia', provider: 'jichi', city: 'Rurrenabaque', cats: ['GA', 'NA'],
+    title: 'Sabores de la Amazonía beniana',
+    description: 'Almuerzo amazónico junto al río Beni: pescado de río a la parrilla envuelto en hoja de patujú, majadito de charque, plátano frito y jugo de copoazú. Antes pasamos por el mercado de Rurrenabaque a ver las frutas que sólo existen acá.',
+    includes: 'Guía, almuerzo completo y jugos de fruta amazónica.', excludes: 'Bebidas alcohólicas.',
+    minutes: 210, label: '3 h 30 min', price: 200, start: '12:00:00', slots: 12,
+    img: ['Majadito Bolivia', 'Mercado Rurrenabaque'],
+  },
+  {
+    key: 'vmt-pescado-pilcomayo', provider: 'chapaca', city: 'Villamontes', cats: ['GA', 'NA'],
+    title: 'Pescado del Pilcomayo en Villamontes',
+    description: 'Villamontes vive del Pilcomayo y lo demuestra en la mesa: sábalo y surubí a la parrilla con yuca y ensalada, en un comedor a orillas del río. Hablamos de la temporada de pesca y de por qué el sábalo marca el calendario del pueblo.',
+    includes: 'Guía, almuerzo de pescado y bebida sin alcohol.', excludes: 'Transporte desde Tarija.',
+    minutes: 180, label: '3 horas', price: 170, start: '12:30:00', slots: 12,
+    img: ['Río Pilcomayo Villamontes', 'Surubí pescado'],
+  },
+
 ]
 
 // items: e = key de experiencia del MISMO proveedor; d = ítem descriptivo [título, descripción].
 export const PACKAGES = [
   {
-    key: 'pkg-bolivia-esencial', provider: 'altura', city: 'La Paz', cats: ['NA', 'CU'],
+    key: 'pkg-bolivia-esencial', cancellation: 'expedicion', provider: 'altura', city: 'La Paz', cats: ['NA', 'CU'],
     title: 'Bolivia esencial: La Paz y el Salar (4 días)', // paquete demo previo, reutilizado
     description: 'Cuatro días para conocer lo esencial del altiplano: La Paz desde el aire y el Valle de la Luna, el sitio arqueológico de Tiwanaku y un día completo en el Salar de Uyuni con la Isla Incahuasi.',
     conditions: 'Cupos limitados. Incluye bus cama La Paz–Uyuni. Cancelación sin costo hasta 72 horas antes de la salida.',
@@ -903,7 +986,7 @@ export const PACKAGES = [
     imgFrom: ['uyu-atardecer', 'lpz-tiwanaku'],
   },
   {
-    key: 'pkg-altiplano', provider: 'altura', city: 'La Paz', cats: ['AV', 'HI'],
+    key: 'pkg-altiplano', cancellation: 'estandar', provider: 'altura', city: 'La Paz', cats: ['AV', 'HI'],
     title: 'Altiplano de altura: Chacaltaya, Tiwanaku y Oruro (3 días)',
     description: 'Un recorrido por el altiplano paceño y orureño: la cumbre del Chacaltaya, las ruinas de Tiwanaku y el Santuario del Socavón en Oruro, con traslado por carretera.',
     conditions: 'Requiere al menos dos noches previas de aclimatación en La Paz. Cancelación sin costo hasta 72 horas antes.',
@@ -917,7 +1000,7 @@ export const PACKAGES = [
     imgFrom: ['lpz-chacaltaya', 'oru-socavon'],
   },
   {
-    key: 'pkg-uyuni', provider: 'altura', city: 'Uyuni', cats: ['NA'],
+    key: 'pkg-uyuni', cancellation: 'expedicion', provider: 'altura', city: 'Uyuni', cats: ['NA'],
     title: 'Salar de Uyuni de día y de noche (2 días)',
     description: 'Dos días en Uyuni: el cementerio de trenes, el atardecer y el cielo estrellado del salar, y al día siguiente el cruce completo hasta la Isla Incahuasi.',
     conditions: 'Incluye una noche de alojamiento en Uyuni. En temporada de lluvias el acceso a Incahuasi puede reemplazarse por otra ruta del salar.',
@@ -929,7 +1012,7 @@ export const PACKAGES = [
     imgFrom: ['uyu-incahuasi', 'uyu-trenes'],
   },
   {
-    key: 'pkg-titicaca-yungas', provider: 'lagoyungas', city: 'Copacabana', cats: ['NA', 'CU'],
+    key: 'pkg-titicaca-yungas', cancellation: 'estandar', provider: 'lagoyungas', city: 'Copacabana', cats: ['NA', 'CU'],
     title: 'Del Titicaca a los Yungas (4 días)',
     description: 'Del lago sagrado de los Andes a la selva de montaña: Copacabana y la Isla del Sol, y después Coroico, con su cerro Uchumachi y la comunidad afroboliviana de Tocaña.',
     conditions: 'Incluye alojamiento y traslados Copacabana → La Paz → Coroico. Cancelación sin costo hasta 72 horas antes.',
@@ -943,7 +1026,7 @@ export const PACKAGES = [
     imgFrom: ['cop-isla-sol', 'cor-uchumachi'],
   },
   {
-    key: 'pkg-potosi-tupiza', provider: 'surandino', city: 'Potosí', cats: ['HI', 'NA'],
+    key: 'pkg-potosi-tupiza', cancellation: 'estandar', provider: 'surandino', city: 'Potosí', cats: ['HI', 'NA'],
     title: 'Villa Imperial y quebradas de Tupiza (4 días)',
     description: 'La historia de la plata en Potosí y los paisajes rojos de Tupiza: Casa de Moneda, Cerro Rico, el Cañón del Duende y la Quebrada de Palala.',
     conditions: 'Incluye alojamiento y traslado Potosí → Tupiza. La visita a la mina es opcional y puede reemplazarse por el Ojo del Inca.',
@@ -958,7 +1041,7 @@ export const PACKAGES = [
     imgFrom: ['pot-moneda', 'tup-palala'],
   },
   {
-    key: 'pkg-cochabamba', provider: 'llajta', city: 'Cochabamba', cats: ['CU', 'GA'],
+    key: 'pkg-cochabamba', cancellation: 'flexible', provider: 'llajta', city: 'Cochabamba', cats: ['CU', 'GA'],
     title: 'Cochabamba: valle, mercado y sabores (3 días)',
     description: 'Tres días en la llajta: el Cristo de la Concordia y el Palacio Portales, La Cancha y la ruta gastronómica, y la subida a las ruinas incas de Inkarakay.',
     conditions: 'Incluye alojamiento en Cochabamba. Cancelación sin costo hasta 48 horas antes.',
@@ -972,7 +1055,7 @@ export const PACKAGES = [
     weekdays: [2, 3, 4],
   },
   {
-    key: 'pkg-torotoro', provider: 'llajta', city: 'Torotoro', cats: ['NA', 'AV'],
+    key: 'pkg-torotoro', cancellation: 'expedicion', provider: 'llajta', city: 'Torotoro', cats: ['NA', 'AV'],
     title: 'Torotoro, tierra de dinosaurios (3 días)',
     description: 'Tres días en el Parque Nacional Torotoro: huellas de dinosaurio, el cañón y El Vergel, la caverna de Umajalanta y la Ciudad de Itas.',
     conditions: 'Incluye traslado Cochabamba ↔ Torotoro y alojamiento. El camino puede demorar en temporada de lluvias.',
@@ -986,7 +1069,7 @@ export const PACKAGES = [
     imgFrom: ['tor-huellas', 'tor-itas'],
   },
   {
-    key: 'pkg-tropico', provider: 'llajta', city: 'Villa Tunari', cats: ['AV', 'NA'],
+    key: 'pkg-tropico', cancellation: 'estandar', provider: 'llajta', city: 'Villa Tunari', cats: ['AV', 'NA'],
     title: 'Trópico de Cochabamba: Villa Tunari (2 días)',
     description: 'Fin de semana en el trópico: rafting en el río Espíritu Santo, los senderos del Parque Machía y las cavernas de los guácharos en el Parque Carrasco.',
     conditions: 'Incluye traslado desde Cochabamba y una noche de alojamiento. Rafting sujeto al nivel del río.',
@@ -999,7 +1082,7 @@ export const PACKAGES = [
     weekdays: [6],
   },
   {
-    key: 'pkg-sucre', provider: 'charcas', city: 'Sucre', cats: ['HI', 'CU'],
+    key: 'pkg-sucre', cancellation: 'flexible', provider: 'charcas', city: 'Sucre', cats: ['HI', 'CU'],
     title: 'Sucre patrimonial y Tarabuco (3 días)',
     description: 'La capital histórica de Bolivia en tres días: la Ciudad Blanca y la Casa de la Libertad, Cal Orck\'o y el mirador de La Recoleta, y el mercado dominical de Tarabuco.',
     conditions: 'Salidas los viernes para llegar a Tarabuco en domingo. Incluye alojamiento en Sucre.',
@@ -1013,7 +1096,7 @@ export const PACKAGES = [
     weekdays: [5],
   },
   {
-    key: 'pkg-tarija', provider: 'chapaca', city: 'Tarija', cats: ['GA', 'NA'],
+    key: 'pkg-tarija', cancellation: 'flexible', provider: 'chapaca', city: 'Tarija', cats: ['GA', 'NA'],
     title: 'Tarija entre viñedos y cascadas (3 días)',
     description: 'La Tarija chapaca en tres días: su centro histórico y su cocina, la ruta del vino de altura del Valle de la Concepción y las pozas de Coimata.',
     conditions: 'Incluye alojamiento. Catas sólo para mayores de 18 años. Cancelación sin costo hasta 72 horas antes.',
@@ -1026,7 +1109,7 @@ export const PACKAGES = [
     imgFrom: ['tja-vino', 'tja-coimata'],
   },
   {
-    key: 'pkg-samaipata', provider: 'curichi', city: 'Samaipata', cats: ['HI', 'NA'],
+    key: 'pkg-samaipata', cancellation: 'estandar', provider: 'curichi', city: 'Samaipata', cats: ['HI', 'NA'],
     title: 'Samaipata y Amboró (3 días)',
     description: 'Los valles cruceños: El Fuerte de Samaipata, los helechos gigantes del Amboró y las cascadas de Las Cuevas, con base en el pueblo de Samaipata.',
     conditions: 'Incluye traslado desde Santa Cruz y alojamiento en Samaipata. Cancelación sin costo hasta 72 horas antes.',
@@ -1040,7 +1123,7 @@ export const PACKAGES = [
     imgFrom: ['sam-fuerte', 'sam-helechos'],
   },
   {
-    key: 'pkg-chiquitos', provider: 'curichi', city: 'San Ignacio de Velasco', cats: ['HI', 'CU'],
+    key: 'pkg-chiquitos', cancellation: 'estandar', provider: 'curichi', city: 'San Ignacio de Velasco', cats: ['HI', 'CU'],
     title: 'Misiones jesuíticas de Chiquitos (3 días)',
     description: 'Las misiones de Velasco, Patrimonio de la Humanidad: San Ignacio, Santa Ana, San Miguel y San Rafael, con la laguna Guapomó al atardecer.',
     conditions: 'Incluye traslado Santa Cruz → San Ignacio y alojamiento. Los templos son lugares de culto activos.',
@@ -1054,7 +1137,7 @@ export const PACKAGES = [
     imgFrom: ['siv-san-miguel', 'siv-santa-ana'],
   },
   {
-    key: 'pkg-rurrenabaque', provider: 'jichi', city: 'Rurrenabaque', cats: ['NA', 'AV'],
+    key: 'pkg-rurrenabaque', cancellation: 'expedicion', provider: 'jichi', city: 'Rurrenabaque', cats: ['NA', 'AV'],
     title: 'Rurrenabaque: selva y pampas (3 días)',
     description: 'La Amazonía boliviana en tres días: el río Beni frente a Rurrenabaque, un día de selva en el Madidi y otro en las pampas del Yacuma.',
     conditions: 'Incluye alojamiento en Rurrenabaque. Vacuna contra la fiebre amarilla recomendada.',
@@ -1068,10 +1151,47 @@ export const PACKAGES = [
   },
 ]
 
-// Fechas: semanal hasta fin de diciembre y quincenal hasta fines de marzo (≈6 meses de catálogo).
+/**
+ * Políticas de cancelación de los paquetes demo.
+ *
+ * Sin una política, un paquete ya pagado no se puede cancelar desde la app: el viajero tiene que escribirle al
+ * operador. Eso es una decisión válida del negocio, pero dejar los 13 paquetes sin política hacía que la
+ * cancelación con reembolso no existiera en la demo.
+ *
+ * Son tres perfiles distintos a propósito, porque no todos los viajes se cancelan igual: un día de ciudad se
+ * libera fácil, una expedición al Salar o a la Amazonía tiene cupos y logística comprometidos con semanas de
+ * anticipación. `flexible` es el que se usa cuando el paquete no pide otra cosa.
+ */
+export const CANCELLATION_POLICIES = {
+  // Salidas urbanas o de valle: el operador reacomoda el cupo sin perder nada.
+  flexible: [
+    { minDaysBefore: 7, refundPercentage: 100 },
+    { minDaysBefore: 3, refundPercentage: 50 },
+    { minDaysBefore: 0, refundPercentage: 0 },
+  ],
+  // Varios días con alojamiento reservado: hay que avisar con más tiempo.
+  estandar: [
+    { minDaysBefore: 21, refundPercentage: 100 },
+    { minDaysBefore: 10, refundPercentage: 50 },
+    { minDaysBefore: 0, refundPercentage: 0 },
+  ],
+  // Salar, Amazonía, Torotoro: transporte y guías contratados con mucha anticipación.
+  expedicion: [
+    { minDaysBefore: 30, refundPercentage: 100 },
+    { minDaysBefore: 15, refundPercentage: 40 },
+    { minDaysBefore: 0, refundPercentage: 0 },
+  ],
+}
+
+// Fechas relativas a hoy, no fijas: un calendario escrito a mano se vence, y el día que se vence el loader
+// falla con "no se puede crear disponibilidad para una fecha pasada" y la demo queda sin salidas. Arranca en
+// unos días —nadie vende para mañana— y cubre medio año: semanal los primeros tres meses, quincenal después.
+const TODAY = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z')
+const fromToday = (days) => new Date(TODAY.getTime() + days * 86_400_000).toISOString().slice(0, 10)
+
 export const SCHEDULE = {
-  from: '2026-09-21',
-  weeklyUntil: '2026-12-31',
-  until: '2027-03-31',
+  from: fromToday(4),
+  weeklyUntil: fromToday(95),
+  until: fromToday(185),
   packageEveryDays: 21,
 }

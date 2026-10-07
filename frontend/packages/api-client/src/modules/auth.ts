@@ -1,6 +1,7 @@
 import type { AxiosInstance } from 'axios'
 import type {
   AuthResultResponse,
+  ChangePasswordRequest,
   LoginRequest,
   LogoutRequest,
   RefreshTokenRequest,
@@ -21,3 +22,12 @@ export const refresh = (http: AxiosInstance, body: RefreshTokenRequest) =>
 
 /** UC-AUTH-04. */
 export const logout = (http: AxiosInstance, body: LogoutRequest) => http.post<void>('/api/auth/logout', body)
+
+/**
+ * Cambia la contraseña de la cuenta autenticada y devuelve una sesión nueva.
+ *
+ * Es el único endpoint que una cuenta con contraseña temporal puede usar: mientras `user.mustChangePassword`
+ * sea true, la API rechaza todo lo demás. El token que devuelve ya no lleva ese bloqueo.
+ */
+export const changePassword = (http: AxiosInstance, body: ChangePasswordRequest) =>
+  http.post<AuthResultResponse>('/api/auth/change-password', body).then((r) => r.data)

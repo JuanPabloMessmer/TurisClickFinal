@@ -25,7 +25,7 @@ export function ProviderReservationsPage() {
 
   return (
     <div>
-      <PageHeader title="Reservas" description="UC-P-12 — reservas recibidas por tu empresa." />
+      <PageHeader title="Reservas" description="Las reservas que recibieron tus experiencias y paquetes." />
 
       <Card>
         <Table>

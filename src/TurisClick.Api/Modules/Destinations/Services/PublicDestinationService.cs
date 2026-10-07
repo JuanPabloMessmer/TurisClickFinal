@@ -14,10 +14,11 @@ public class PublicDestinationService(IDestinationRepository destinationReposito
     {
         var destinations = await destinationRepository.ListAsync(parentId, type, ct);
         var ids = destinations.Select(d => d.Id).ToList();
-        var counts = await GetPublishedCountsAsync(ids, ct);
+        var experienceCounts = await GetPublishedExperienceCountsAsync(ids, ct);
+        var packageCounts = await GetPublishedPackageCountsAsync(ids, ct);
 
         return destinations
-            .Select(d => ToResponse(d, counts.GetValueOrDefault(d.Id)))
+            .Select(d => ToResponse(d, experienceCounts.GetValueOrDefault(d.Id), packageCounts.GetValueOrDefault(d.Id)))
             .ToList();
     }
 
@@ -26,13 +27,14 @@ public class PublicDestinationService(IDestinationRepository destinationReposito
         var destination = await destinationRepository.GetByIdWithParentAsync(id, ct)
             ?? throw new NotFoundAppException("Destino no encontrado.");
 
-        var counts = await GetPublishedCountsAsync([id], ct);
+        var experienceCounts = await GetPublishedExperienceCountsAsync([id], ct);
+        var packageCounts = await GetPublishedPackageCountsAsync([id], ct);
 
-        return ToResponse(destination, counts.GetValueOrDefault(id));
+        return ToResponse(destination, experienceCounts.GetValueOrDefault(id), packageCounts.GetValueOrDefault(id));
     }
 
     /// <summary>Un solo GROUP BY para todos los destinos pedidos — evita N+1 al listar.</summary>
-    private async Task<Dictionary<Guid, int>> GetPublishedCountsAsync(List<Guid> destinationIds, CancellationToken ct)
+    private async Task<Dictionary<Guid, int>> GetPublishedExperienceCountsAsync(List<Guid> destinationIds, CancellationToken ct)
     {
         if (destinationIds.Count == 0)
             return [];
@@ -44,7 +46,23 @@ public class PublicDestinationService(IDestinationRepository destinationReposito
             .ToDictionaryAsync(x => x.DestinationId, x => x.Count, ct);
     }
 
-    private static PublicDestinationResponse ToResponse(Destination destination, int publishedExperienceCount) => new()
+    /// <summary>Lo mismo para paquetes, en una consulta aparte: son dos tablas distintas, no un join.</summary>
+    private async Task<Dictionary<Guid, int>> GetPublishedPackageCountsAsync(List<Guid> destinationIds, CancellationToken ct)
+    {
+        if (destinationIds.Count == 0)
+            return [];
+
+        return await db.Packages
+            .Where(p => p.Status == PublicationStatus.PUBLISHED && destinationIds.Contains(p.DestinationId))
+            .GroupBy(p => p.DestinationId)
+            .Select(g => new { DestinationId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.DestinationId, x => x.Count, ct);
+    }
+
+    private static PublicDestinationResponse ToResponse(
+        Destination destination,
+        int publishedExperienceCount,
+        int publishedPackageCount) => new()
     {
         Id = destination.Id,
         Name = destination.Name,
@@ -52,6 +70,7 @@ public class PublicDestinationService(IDestinationRepository destinationReposito
         ParentId = destination.ParentId,
         ParentName = destination.Parent?.Name,
         ImageUrl = destination.ImageUrl,
-        PublishedExperienceCount = publishedExperienceCount
+        PublishedExperienceCount = publishedExperienceCount,
+        PublishedPackageCount = publishedPackageCount
     };
 }

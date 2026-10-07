@@ -19,9 +19,6 @@ namespace TurisClick.Api.Tests.Modules.Companies;
 public class CompanyServiceTests
 {
     private readonly Mock<ICompanyRepository> _companyRepository = new();
-    private readonly Mock<IUserRepository> _userRepository = new();
-    private readonly Mock<IPasswordHasherService> _passwordHasher = new();
-    private readonly Mock<IAuthService> _authService = new();
     private readonly CompanyService _sut;
 
     public CompanyServiceTests()
@@ -30,59 +27,13 @@ public class CompanyServiceTests
         var db = new Mock<TurisClickDbContext>(options);
         db.Setup(d => d.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        _sut = new CompanyService(_companyRepository.Object, _userRepository.Object, _passwordHasher.Object, _authService.Object, db.Object);
+        _sut = new CompanyService(_companyRepository.Object, db.Object);
     }
 
-    private static RegisterProviderRequest ValidRegisterRequest() => new()
-    {
-        FirstName = "Ana",
-        LastName = "Gómez",
-        Email = "ana@andestravel.dev",
-        Password = "Password123!",
-        CompanyName = "Andes Travel Bolivia",
-        LegalDocument = "NIT-12345",
-        ContactEmail = "contacto@andestravel.dev"
-    };
-
-    [Fact]
-    public async Task RegisterProviderAsync_NewEmailAndDocument_CreatesCompanyAndProviderPendingApproval()
-    {
-        _userRepository.Setup(r => r.EmailExistsAsync("ana@andestravel.dev", It.IsAny<CancellationToken>())).ReturnsAsync(false);
-        _companyRepository.Setup(r => r.LegalDocumentExistsAsync("NIT-12345", It.IsAny<CancellationToken>())).ReturnsAsync(false);
-        _passwordHasher.Setup(p => p.Hash("Password123!")).Returns("hashed");
-        _authService.Setup(a => a.IssueTokensForUserAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AuthResultResponse { AccessToken = "at", RefreshToken = "rt", User = new UserSummaryResponse() });
-
-        var result = await _sut.RegisterProviderAsync(ValidRegisterRequest(), CancellationToken.None);
-
-        Assert.Equal("at", result.AccessToken);
-        Assert.Equal("Andes Travel Bolivia", result.Company.Name);
-        Assert.Equal("PENDING_APPROVAL", result.Company.Status);
-
-        _userRepository.Verify(r => r.AddAsync(
-            It.Is<User>(u => u.Role == UserRole.PROVIDER && u.CompanyId != null), It.IsAny<CancellationToken>()), Times.Once);
-        _companyRepository.Verify(r => r.AddAsync(
-            It.Is<Company>(c => c.Status == CompanyStatus.PENDING_APPROVAL), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task RegisterProviderAsync_DuplicateEmail_ThrowsConflict()
-    {
-        _userRepository.Setup(r => r.EmailExistsAsync("ana@andestravel.dev", It.IsAny<CancellationToken>())).ReturnsAsync(true);
-
-        await Assert.ThrowsAsync<ConflictAppException>(() => _sut.RegisterProviderAsync(ValidRegisterRequest(), CancellationToken.None));
-        _companyRepository.Verify(r => r.AddAsync(It.IsAny<Company>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task RegisterProviderAsync_DuplicateLegalDocument_ThrowsConflict()
-    {
-        _userRepository.Setup(r => r.EmailExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
-        _companyRepository.Setup(r => r.LegalDocumentExistsAsync("NIT-12345", It.IsAny<CancellationToken>())).ReturnsAsync(true);
-
-        await Assert.ThrowsAsync<ConflictAppException>(() => _sut.RegisterProviderAsync(ValidRegisterRequest(), CancellationToken.None));
-        _userRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
+    // Las tres pruebas del autorregistro de operadores se movieron: ese camino se eliminó en la Oleada 13
+    // (una empresa no se da de alta sola) y las mismas garantías —email duplicado, documento legal duplicado y
+    // la cuenta que nace con rol PROVIDER ligada a su empresa— se ejercitan ahora de punta a punta en
+    // AdminPlatformTests, contra el endpoint que las reemplaza.
 
     [Fact]
     public async Task ApproveAsync_FromPendingApproval_SetsApprovedFields()

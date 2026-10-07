@@ -481,6 +481,302 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminOverviewResponse"];
+                        "application/json": components["schemas"]["AdminOverviewResponse"];
+                        "text/json": components["schemas"]["AdminOverviewResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/experiences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                    search?: string;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminExperienceRowResponsePagedResult"];
+                        "application/json": components["schemas"]["AdminExperienceRowResponsePagedResult"];
+                        "text/json": components["schemas"]["AdminExperienceRowResponsePagedResult"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                    search?: string;
+                    withFlight?: boolean;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminPackageRowResponsePagedResult"];
+                        "application/json": components["schemas"]["AdminPackageRowResponsePagedResult"];
+                        "text/json": components["schemas"]["AdminPackageRowResponsePagedResult"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/reservations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                    needsAttention?: boolean;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminReservationRowResponsePagedResult"];
+                        "application/json": components["schemas"]["AdminReservationRowResponsePagedResult"];
+                        "text/json": components["schemas"]["AdminReservationRowResponsePagedResult"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/provider-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateProviderAccountRequest"];
+                    "text/json": components["schemas"]["CreateProviderAccountRequest"];
+                    "application/*+json": components["schemas"]["CreateProviderAccountRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderAccountCreatedResponse"];
+                        "application/json": components["schemas"]["ProviderAccountCreatedResponse"];
+                        "text/json": components["schemas"]["ProviderAccountCreatedResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/provider-accounts/{userId}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ResetProviderPasswordResponse"];
+                        "application/json": components["schemas"]["ResetProviderPasswordResponse"];
+                        "text/json": components["schemas"]["ResetProviderPasswordResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/companies/{companyId}/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    companyId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompanyUserResponse"][];
+                        "application/json": components["schemas"]["CompanyUserResponse"][];
+                        "text/json": components["schemas"]["CompanyUserResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/users": {
         parameters: {
             query?: never;
@@ -1196,6 +1492,49 @@ export interface paths {
                         "text/plain": components["schemas"]["ProblemDetails"];
                         "application/json": components["schemas"]["ProblemDetails"];
                         "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ChangePasswordRequest"];
+                    "text/json": components["schemas"]["ChangePasswordRequest"];
+                    "application/*+json": components["schemas"]["ChangePasswordRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AuthResultResponse"];
+                        "application/json": components["schemas"]["AuthResultResponse"];
+                        "text/json": components["schemas"]["AuthResultResponse"];
                     };
                 };
             };
@@ -2912,60 +3251,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/providers/register": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["RegisterProviderRequest"];
-                    "text/json": components["schemas"]["RegisterProviderRequest"];
-                    "application/*+json": components["schemas"]["RegisterProviderRequest"];
-                };
-            };
-            responses: {
-                /** @description Created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["RegisterProviderResponse"];
-                        "application/json": components["schemas"]["RegisterProviderResponse"];
-                        "text/json": components["schemas"]["RegisterProviderResponse"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/categories": {
         parameters: {
             query?: never;
@@ -3410,6 +3695,149 @@ export interface components {
             /** Format: uuid */
             companyId?: string;
         };
+        AdminExperienceRowResponse: {
+            /** Format: uuid */
+            id?: string;
+            title?: string | null;
+            /** Format: uuid */
+            companyId?: string;
+            companyName?: string | null;
+            companyStatus?: string | null;
+            destinationName?: string | null;
+            /** Format: double */
+            price?: number;
+            currency?: string | null;
+            status?: string | null;
+            /** Format: int32 */
+            categories?: number;
+            /** Format: int32 */
+            futureAvailabilities?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        AdminExperienceRowResponsePagedResult: {
+            items?: components["schemas"]["AdminExperienceRowResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            readonly totalPages?: number;
+        };
+        AdminMoneyResponse: {
+            currency?: string | null;
+            /** Format: double */
+            amount?: number;
+        };
+        AdminOverviewResponse: {
+            /** Format: int32 */
+            companiesApproved?: number;
+            /** Format: int32 */
+            companiesPendingApproval?: number;
+            /** Format: int32 */
+            companiesSuspended?: number;
+            /** Format: int32 */
+            experiencesPublished?: number;
+            /** Format: int32 */
+            experiencesDraft?: number;
+            /** Format: int32 */
+            experiencesSuspended?: number;
+            /** Format: int32 */
+            packagesPublished?: number;
+            /** Format: int32 */
+            packagesDraft?: number;
+            /** Format: int32 */
+            packagesWithFlight?: number;
+            /** Format: int32 */
+            reservationsToday?: number;
+            /** Format: int32 */
+            reservationsLast7Days?: number;
+            /** Format: int32 */
+            reservationsPendingPayment?: number;
+            /** Format: int32 */
+            reservationsConfirmed?: number;
+            /** Format: int32 */
+            providerAccountsPendingFirstLogin?: number;
+            /** Format: int32 */
+            flightsAwaitingReconciliation?: number;
+            /** Format: int32 */
+            cancellationsNeedingReview?: number;
+            chargedByCurrency?: components["schemas"]["AdminMoneyResponse"][] | null;
+            refundedByCurrency?: components["schemas"]["AdminMoneyResponse"][] | null;
+        };
+        AdminPackageRowResponse: {
+            /** Format: uuid */
+            id?: string;
+            title?: string | null;
+            /** Format: uuid */
+            companyId?: string;
+            companyName?: string | null;
+            companyStatus?: string | null;
+            destinationName?: string | null;
+            /** Format: int32 */
+            durationDays?: number;
+            /** Format: double */
+            price?: number;
+            currency?: string | null;
+            status?: string | null;
+            includesFlight?: boolean;
+            flightRoute?: string | null;
+            hasCancellationPolicy?: boolean;
+            /** Format: int32 */
+            categories?: number;
+            /** Format: int32 */
+            futureDepartures?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        AdminPackageRowResponsePagedResult: {
+            items?: components["schemas"]["AdminPackageRowResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            readonly totalPages?: number;
+        };
+        AdminReservationRowResponse: {
+            /** Format: uuid */
+            id?: string;
+            status?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            confirmedAt?: string | null;
+            /** Format: date-time */
+            cancelledAt?: string | null;
+            touristName?: string | null;
+            kind?: string | null;
+            fromAssistant?: boolean;
+            summary?: string | null;
+            companies?: string[] | null;
+            /** Format: int32 */
+            travelers?: number;
+            totals?: components["schemas"]["AdminMoneyResponse"][] | null;
+            flightStatus?: string | null;
+            flightRoute?: string | null;
+            cancellationStatus?: string | null;
+            charged?: components["schemas"]["AdminMoneyResponse"][] | null;
+            refunded?: components["schemas"]["AdminMoneyResponse"][] | null;
+        };
+        AdminReservationRowResponsePagedResult: {
+            items?: components["schemas"]["AdminReservationRowResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            readonly totalPages?: number;
+        };
         AdminUserResponse: {
             /** Format: uuid */
             id?: string;
@@ -3560,6 +3988,10 @@ export interface components {
             name?: string | null;
             description?: string | null;
         };
+        ChangePasswordRequest: {
+            currentPassword: string;
+            newPassword: string;
+        };
         CompanyResponse: {
             /** Format: uuid */
             id?: string;
@@ -3596,6 +4028,16 @@ export interface components {
             id?: string;
             name?: string | null;
             status?: string | null;
+        };
+        CompanyUserResponse: {
+            /** Format: uuid */
+            id?: string;
+            fullName?: string | null;
+            email?: string | null;
+            status?: string | null;
+            mustChangePassword?: boolean;
+            /** Format: date-time */
+            createdAt?: string;
         };
         ConfirmCancellationRequest: {
             /** Format: uuid */
@@ -3695,6 +4137,19 @@ export interface components {
             items?: components["schemas"]["PackageItemRequest"][] | null;
             images?: components["schemas"]["PackageImageRequest"][] | null;
             cancellationPolicy?: components["schemas"]["CancellationTierDto"][] | null;
+        };
+        CreateProviderAccountRequest: {
+            companyName: string;
+            companyDescription?: string | null;
+            legalDocument: string;
+            /** Format: email */
+            contactEmail: string;
+            contactPhone?: string | null;
+            firstName: string;
+            lastName: string;
+            /** Format: email */
+            email: string;
+            approve?: boolean;
         };
         CreateReservationRequest: {
             /** Format: uuid */
@@ -4219,6 +4674,15 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        ProviderAccountCreatedResponse: {
+            company?: components["schemas"]["CompanySummaryResponse"];
+            /** Format: uuid */
+            userId?: string;
+            email?: string | null;
+            fullName?: string | null;
+            temporaryPassword?: string | null;
+            mustChangePassword?: boolean;
+        };
         PublicDestinationResponse: {
             /** Format: uuid */
             id?: string;
@@ -4230,30 +4694,11 @@ export interface components {
             imageUrl?: string | null;
             /** Format: int32 */
             publishedExperienceCount?: number;
+            /** Format: int32 */
+            publishedPackageCount?: number;
         };
         RefreshTokenRequest: {
             refreshToken: string;
-        };
-        RegisterProviderRequest: {
-            firstName: string;
-            lastName: string;
-            /** Format: email */
-            email: string;
-            password: string;
-            companyName: string;
-            companyDescription?: string | null;
-            legalDocument: string;
-            /** Format: email */
-            contactEmail: string;
-            contactPhone?: string | null;
-        };
-        RegisterProviderResponse: {
-            accessToken?: string | null;
-            refreshToken?: string | null;
-            /** Format: date-time */
-            expiresAtUtc?: string;
-            user?: components["schemas"]["UserSummaryResponse"];
-            company?: components["schemas"]["CompanySummaryResponse"];
         };
         RegisterTouristRequest: {
             firstName: string;
@@ -4367,6 +4812,12 @@ export interface components {
             currency?: string | null;
             /** Format: double */
             amount?: number;
+        };
+        ResetProviderPasswordResponse: {
+            /** Format: uuid */
+            userId?: string;
+            email?: string | null;
+            temporaryPassword?: string | null;
         };
         SavedItinerarySummaryResponse: {
             /** Format: uuid */
@@ -4509,6 +4960,7 @@ export interface components {
             fullName?: string | null;
             email?: string | null;
             role?: string | null;
+            mustChangePassword?: boolean;
             /** Format: uuid */
             companyId?: string | null;
         };

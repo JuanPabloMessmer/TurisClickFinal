@@ -1,5 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react-native'
-import { AvailabilityRow, AvailabilitySection, BookingBar, slotsLabel } from '@/features/catalog/detail'
+import {
+  AvailabilityRow,
+  AvailabilitySection,
+  BookingBar,
+  CancellationTerms,
+  cancellationTierLabel,
+  slotsLabel,
+} from '@/features/catalog/detail'
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn() }) }))
 
@@ -106,5 +113,45 @@ describe('AvailabilityRow', () => {
 
     expect(screen.getByText(/09:30/)).toBeTruthy()
     expect(screen.queryByText(/09:30:00/)).toBeNull()
+  })
+})
+
+describe('CancellationTerms', () => {
+  it('dice cuánto se devuelve y con cuánta anticipación, antes de pagar', () => {
+    render(
+      <CancellationTerms
+        tiers={[
+          { minDaysBefore: 0, refundPercentage: 0 },
+          { minDaysBefore: 30, refundPercentage: 100 },
+          { minDaysBefore: 15, refundPercentage: 40 },
+        ]}
+      />,
+    )
+
+    // Se ordenan de mayor a menor anticipación aunque lleguen desordenados.
+    expect(screen.getByText(/30 días o más antes: se devuelve todo/)).toBeTruthy()
+    expect(screen.getByText(/15 días o más antes: se devuelve el 40%/)).toBeTruthy()
+    // El tramo de 0 días nombra el umbral real, no "los días del tramo anterior".
+    expect(screen.getByText(/menos de 15 días: no se devuelve nada/)).toBeTruthy()
+  })
+
+  it('sin política, lo dice en vez de dejar suponer que se puede cancelar', () => {
+    render(<CancellationTerms tiers={[]} />)
+
+    expect(screen.getByText(/no se cancela desde la app/)).toBeTruthy()
+  })
+})
+
+describe('cancellationTierLabel', () => {
+  it('sin un tramo más exigente arriba, el tramo de 0 días cubre cualquier momento', () => {
+    expect(cancellationTierLabel({ minDaysBefore: 0, refundPercentage: 100 })).toBe(
+      'Cancelando en cualquier momento: se devuelve todo',
+    )
+  })
+
+  it('singulariza un solo día', () => {
+    expect(cancellationTierLabel({ minDaysBefore: 1, refundPercentage: 50 })).toBe(
+      'Cancelando 1 día o más antes: se devuelve el 50%',
+    )
   })
 })

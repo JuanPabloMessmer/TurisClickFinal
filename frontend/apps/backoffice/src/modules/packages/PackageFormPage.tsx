@@ -389,7 +389,7 @@ export function PackageFormPage() {
         </Card>
 
         {submitError && <Alert variant="destructive">{submitError}</Alert>}
-        {/* ---- Sección 4: Vuelo ---- */}
+        {/* ---- Sección 4: Política de cancelación ---- */}
         <CancellationPolicySection
           tiers={form.watch('cancellationPolicy') ?? []}
           // El DTO generado declara los campos opcionales; el formulario los quiere concretos. Se normaliza
@@ -406,6 +406,7 @@ export function PackageFormPage() {
           }
         />
 
+        {/* ---- Sección 5: Vuelo ---- */}
         <PackageFlightSection packageId={id} />
 
         <Button type="submit" disabled={form.formState.isSubmitting} className="self-start">

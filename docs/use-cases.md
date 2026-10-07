@@ -359,20 +359,35 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 
 ## PROVIDER
 
-### UC-P-01 — Registrar empresa y solicitar cuenta de Provider
+### UC-P-01 — Alta de una empresa operadora y su primera cuenta
 
-- **Actor principal:** PROVIDER (usuario nuevo)
-- **Actores secundarios:** ADMIN (revisa después)
-- **Objetivo:** Crear la cuenta de usuario + la empresa asociada, quedando pendiente de aprobación.
-- **Precondiciones:** Email no registrado.
+> **Cambio de diseño (Oleada 13).** Este caso de uso se especificó originalmente como un autorregistro
+> público (`POST /api/providers/register`, anónimo). Ese endpoint **se eliminó**, por dos razones: una empresa
+> de turismo no se da de alta sola en un marketplace que responde por ella ante el viajero, y un endpoint
+> anónimo capaz de crear un usuario con rol `PROVIDER` era una escalada de privilegios. El alta ahora la hace
+> un ADMIN. Lo que sigue describe el flujo vigente.
+
+- **Actor principal:** ADMIN
+- **Actores secundarios:** PROVIDER (la persona que recibe la cuenta)
+- **Objetivo:** Crear la empresa y la primera cuenta de su equipo, con una credencial temporal que esa persona
+  tiene que reemplazar antes de poder operar.
+- **Precondiciones:** El email no está registrado y el documento legal no pertenece a otra empresa.
 - **Flujo principal:**
-  1. Usuario envía datos personales + datos de la empresa (nombre, descripción, documento legal, contacto).
-  2. Sistema crea `User` con rol `PROVIDER` y `Company` en estado `PENDING_APPROVAL`.
-  3. Sistema notifica al ADMIN (o queda visible en su bandeja).
-- **Excepciones:** Email ya registrado → 409.
-- **Postcondiciones:** Usuario puede autenticarse, pero no puede publicar hasta aprobación (regla 1 del catálogo de reglas de FASE 1).
+  1. ADMIN carga los datos de la empresa y de la persona de contacto.
+  2. Sistema crea `Company` (`APPROVED` de entrada, salvo que el ADMIN decida dejarla pendiente) y `User` con
+     rol `PROVIDER`, `MustChangePassword = true` y una contraseña temporal **generada por el servidor**.
+  3. Sistema devuelve la contraseña temporal **una sola vez**: no se guarda en claro en ningún lado y no se
+     envía por correo, porque no existe infraestructura de email. El ADMIN la entrega por el canal que ya usan.
+  4. En su primer ingreso, el operador cambia la contraseña. Hasta que lo haga, su token lleva el claim
+     `must_change_password` y las políticas de autorización le rechazan toda operación (403), no sólo la UI.
+- **Excepciones:** Email ya registrado → 409. Documento legal ya usado → 409. Credencial perdida → el ADMIN la
+  regenera desde la ficha de la empresa, lo que además cierra las sesiones abiertas de esa cuenta.
+- **Postcondiciones:** El operador puede autenticarse; publica sólo si su empresa está `APPROVED` (regla 1) y
+  si ya reemplazó la contraseña temporal.
 - **Entidades involucradas:** `User`, `Company`
-- **Endpoints probables:** `POST /api/providers/register`
+- **Endpoints:** `POST /api/admin/provider-accounts`,
+  `POST /api/admin/provider-accounts/{userId}/reset-password`, `GET /api/admin/companies/{companyId}/users`,
+  `POST /api/auth/change-password`
 
 ### UC-P-02 — Gestionar perfil de "Mi Empresa"
 

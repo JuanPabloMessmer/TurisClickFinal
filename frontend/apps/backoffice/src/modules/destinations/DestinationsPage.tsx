@@ -53,7 +53,7 @@ export function DestinationsPage() {
     <div>
       <PageHeader
         title="Destinos"
-        description="UC-A-04 — jerarquía País → Región → Ciudad."
+        description="Los países, regiones y ciudades donde se puede vender en TurisClick. Cada experiencia y cada paquete se publica en una ciudad."
         actions={
           <Button onClick={() => setCreating(true)}>
             <Plus className="h-4 w-4" aria-hidden="true" />

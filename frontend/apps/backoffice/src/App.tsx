@@ -1,8 +1,8 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthBootstrap } from '@/auth/AuthBootstrap'
+import { ChangePasswordPage } from '@/auth/ChangePasswordPage'
 import { LoginPage } from '@/auth/LoginPage'
-import { RegisterProviderPage } from '@/auth/RegisterProviderPage'
 import { RequireRole } from '@/auth/RequireRole'
 import { RootRedirect } from '@/auth/RootRedirect'
 import { AppLayout } from '@/layout/AppLayout'
@@ -12,6 +12,10 @@ import { CategoriesPage } from '@/modules/categories/CategoriesPage'
 import { DashboardPage } from '@/modules/dashboard/DashboardPage'
 import { CompaniesApprovalPage } from '@/modules/companies/CompaniesApprovalPage'
 import { CompanyDetailPage } from '@/modules/companies/CompanyDetailPage'
+import { NewProviderAccountPage } from '@/modules/companies/NewProviderAccountPage'
+import { AdminExperiencesPage, AdminPackagesPage } from '@/modules/platform/AdminCatalogPages'
+import { AdminReservationDetailPage } from '@/modules/platform/AdminReservationDetailPage'
+import { AdminReservationsPage } from '@/modules/platform/AdminReservationsPage'
 import { DestinationsPage } from '@/modules/destinations/DestinationsPage'
 import { ExperienceFormPage } from '@/modules/experiences/ExperienceFormPage'
 import { ExperiencesPage } from '@/modules/experiences/ExperiencesPage'
@@ -30,7 +34,11 @@ export default function App() {
         <AuthBootstrap>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/register-provider" element={<RegisterProviderPage />} />
+
+            {/* Único camino disponible para una cuenta con contraseña temporal: la API bloquea todo lo demás. */}
+            <Route element={<RequireRole roles={['ADMIN', 'PROVIDER']} allowPasswordChangePending />}>
+              <Route path="/cambiar-contrasena" element={<ChangePasswordPage />} />
+            </Route>
 
             {/* "Hoy" es la pantalla de inicio de los dos roles, y no exige empresa aprobada:
                 un operador en revision tambien necesita ver en que estado esta. */}
@@ -45,7 +53,12 @@ export default function App() {
                 <Route path="/admin/destinations" element={<DestinationsPage />} />
                 <Route path="/admin/categories" element={<CategoriesPage />} />
                 <Route path="/admin/companies" element={<CompaniesApprovalPage />} />
+                <Route path="/admin/companies/new" element={<NewProviderAccountPage />} />
                 <Route path="/admin/companies/:id" element={<CompanyDetailPage />} />
+                <Route path="/admin/experiences" element={<AdminExperiencesPage />} />
+                <Route path="/admin/packages" element={<AdminPackagesPage />} />
+                <Route path="/admin/reservations" element={<AdminReservationsPage />} />
+                <Route path="/admin/reservations/:id" element={<AdminReservationDetailPage />} />
               </Route>
             </Route>
 

@@ -76,25 +76,31 @@ public static class Program
         var cityId = await ResolveCityAsync(adminToken!, suffix);
         Check(cityId is not null, "destino disponible para el paquete");
 
+        // El alta de operadores la hace un administrador: el autorregistro público ya no existe. La cuenta nace
+        // con una contraseña temporal que bloquea toda operación hasta cambiarla, así que se recorre el camino
+        // completo igual que lo haría una persona.
         var providerEmail = $"e2e.vuelo.{suffix}@turisclick.dev";
-        var registered = await Post("/api/providers/register", new
+        var created = await Post("/api/admin/provider-accounts", new
         {
-            firstName = "Operador",
-            lastName = "E2E",
-            email = providerEmail,
-            password = "Password123!",
             companyName = $"Operador E2E {suffix}",
             legalDocument = $"DOC-{suffix}",
             contactEmail = providerEmail,
-        });
-        Check(registered.Ok, "operador registrado", registered.Status);
+            firstName = "Operador",
+            lastName = "E2E",
+            email = providerEmail,
+            approve = true,
+        }, adminToken);
+        Check(created.Ok, "operador dado de alta por el admin", created.Status);
 
-        var companyId = registered.Body?["company"]?["id"]?.GetValue<string>();
-        var approved = await Post($"/api/admin/companies/{companyId}/approve", null, adminToken);
-        Check(approved.Ok, "empresa aprobada por el admin", approved.Status);
+        var temporaryPassword = created.Body?["temporaryPassword"]?.GetValue<string>();
+        var temporarySession = await LoginAsync(providerEmail, temporaryPassword!);
 
-        var providerToken = registered.Body?["accessToken"]?.GetValue<string>()
-            ?? await LoginAsync(providerEmail, "Password123!");
+        const string providerPassword = "OperadorTurisClick2026!";
+        var changed = await Post("/api/auth/change-password",
+            new { currentPassword = temporaryPassword, newPassword = providerPassword }, temporarySession);
+        Check(changed.Ok, "contraseña temporal cambiada en el primer ingreso", changed.Status);
+
+        var providerToken = changed.Body?["accessToken"]?.GetValue<string>();
 
         var departure = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(45);
 

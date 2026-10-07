@@ -18,4 +18,11 @@ public class PublicDestinationResponse
     /// Experience solo referencia destinos de tipo CITY.
     /// </summary>
     public int PublishedExperienceCount { get; set; }
+
+    /// <summary>
+    /// Conteo directo de paquetes PUBLISHED cuyo DestinationId es exactamente este nodo. Existe porque una
+    /// ciudad puede tener paquetes sin tener experiencias, y con solo el conteo de experiencias el cliente no
+    /// puede distinguir "no hay nada que reservar acá" de "hay paquetes pero ninguna experiencia suelta".
+    /// </summary>
+    public int PublishedPackageCount { get; set; }
 }

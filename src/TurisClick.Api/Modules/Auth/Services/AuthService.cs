@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Auth.Dtos;
@@ -12,6 +13,7 @@ public class AuthService(
     IRefreshTokenRepository refreshTokenRepository,
     IPasswordHasherService passwordHasher,
     ITokenService tokenService,
+    ICurrentUserContext currentUser,
     TurisClickDbContext db) : IAuthService
 {
     public async Task<AuthResultResponse> RegisterTouristAsync(RegisterTouristRequest request, CancellationToken ct)
@@ -37,6 +39,37 @@ public class AuthService(
         await userRepository.AddAsync(user, ct);
         var result = await IssueTokensForUserAsync(user, ct);
         await db.SaveChangesAsync(ct);
+        return result;
+    }
+
+    public async Task<AuthResultResponse> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct)
+    {
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, ct)
+            ?? throw new UnauthorizedAppException("Sesión inválida.");
+
+        // Se exige la actual incluso si es la temporal: sin esto, un token robado alcanzaría para quedarse
+        // con la cuenta.
+        if (!passwordHasher.Verify(user.PasswordHash, request.CurrentPassword))
+            throw new UnauthorizedAppException("La contraseña actual no es correcta.");
+
+        if (passwordHasher.Verify(user.PasswordHash, request.NewPassword))
+            throw new ValidationAppException("La contraseña nueva tiene que ser distinta de la actual.");
+
+        user.PasswordHash = passwordHasher.Hash(request.NewPassword);
+        user.MustChangePassword = false;
+
+        // Se cortan las demás sesiones: la contraseña anterior pudo haber circulado por fuera del sistema, y
+        // cambiarla sin invalidar lo que ya estaba abierto no cambiaría nada para quien la tuviera.
+        var openTokens = await db.RefreshTokens
+            .Where(t => t.UserId == user.Id && t.RevokedAt == null)
+            .ToListAsync(ct);
+
+        foreach (var token in openTokens) token.RevokedAt = DateTimeOffset.UtcNow;
+
+        // El token nuevo ya no lleva el claim que bloqueaba la operación.
+        var result = await IssueTokensForUserAsync(user, ct);
+        await db.SaveChangesAsync(ct);
+
         return result;
     }
 
@@ -121,6 +154,7 @@ public class AuthService(
                 FullName = user.FullName,
                 Email = user.Email,
                 Role = user.Role.ToString(),
+                MustChangePassword = user.MustChangePassword,
                 CompanyId = user.CompanyId
             }
         };

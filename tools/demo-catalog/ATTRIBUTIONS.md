@@ -529,3 +529,59 @@ Generado por `resolve-images.mjs` a partir de `images.manifest.json`.
 - [Photograph of Cachuela Esperanza.jpg](https://commons.wikimedia.org/wiki/File:Photograph_of_Cachuela_Esperanza.jpg) — Photograph believed to have been taken by Emil Bauler — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
 - [Iglesia de cachuela esperanza.jpg](https://commons.wikimedia.org/wiki/File:Iglesia_de_cachuela_esperanza.jpg) — Martin Kenneth — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
 - [FachadaIglesiaCachuelaEsperanza.jpg](https://commons.wikimedia.org/wiki/File:FachadaIglesiaCachuelaEsperanza.jpg) — LaCris — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+
+## Ruta de la salteña paceña
+
+- [Salteñas (Plaza Mayor)-2011-01.JPG](https://commons.wikimedia.org/wiki/File:Salte%C3%B1as_(Plaza_Mayor)-2011-01.JPG) — Tamorlan — [CC BY 3.0](https://creativecommons.org/licenses/by/3.0)
+- [Salteña puneña.jpg](https://commons.wikimedia.org/wiki/File:Salte%C3%B1a_pune%C3%B1a.jpg) — QM Keen — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Salteñas in Urbarí - Santa Cruz de la Sierra, Bolivia.jpg](https://commons.wikimedia.org/wiki/File:Salte%C3%B1as_in_Urbar%C3%AD_-_Santa_Cruz_de_la_Sierra,_Bolivia.jpg) — Ruditaly — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+
+## Desayuno paceño: api con pastel en el mercado
+
+- [Api de maíz morado.jpg](https://commons.wikimedia.org/wiki/File:Api_de_ma%C3%ADz_morado.jpg) — Patito silvestre — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Api mixto.jpg](https://commons.wikimedia.org/wiki/File:Api_mixto.jpg) — Patito silvestre — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Api y Tojori.jpg](https://commons.wikimedia.org/wiki/File:Api_y_Tojori.jpg) — Q'orikenti — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+
+## Trucha del Titicaca frente al lago
+
+- [Trucha frita con vista al puerto de Copacabana.jpg](https://commons.wikimedia.org/wiki/File:Trucha_frita_con_vista_al_puerto_de_Copacabana.jpg) — Mferjh — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Fresh trout on display at Santa Martha Market in Copacabana, Bolivia.jpg](https://commons.wikimedia.org/wiki/File:Fresh_trout_on_display_at_Santa_Martha_Market_in_Copacabana,_Bolivia.jpg) — H.dav.are — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Vista panorámica de la orilla del Lago Titicaca en Copacabana, Bolivia.jpg](https://commons.wikimedia.org/wiki/File:Vista_panor%C3%A1mica_de_la_orilla_del_Lago_Titicaca_en_Copacabana,_Bolivia.jpg) — Sefamol — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+
+## Chicherías del valle: chicha y aperitivos cochabambinos
+
+- [Mercado Punata - Cochabamba Bolivia - Mercado Central de Punata 23 - Chichería.jpg](https://commons.wikimedia.org/wiki/File:Mercado_Punata_-_Cochabamba_Bolivia_-_Mercado_Central_de_Punata_23_-_Chicher%C3%ADa.jpg) — Mauri777AE — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Corso de Corsos Cochabamba 2024 133.jpg](https://commons.wikimedia.org/wiki/File:Corso_de_Corsos_Cochabamba_2024_133.jpg) — Guillotinado — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+
+## Clase de cocina cochabambina: pique y silpancho
+
+- [Silpancho de Cochabamba.jpg](https://commons.wikimedia.org/wiki/File:Silpancho_de_Cochabamba.jpg) — Búho Turquesa — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Silpancho estilo oreja de elefante.jpg](https://commons.wikimedia.org/wiki/File:Silpancho_estilo_oreja_de_elefante.jpg) — Chacal Indomable — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Silpancho un plato con historia, tradición y sabor. 02.jpg](https://commons.wikimedia.org/wiki/File:Silpancho_un_plato_con_historia,_tradici%C3%B3n_y_sabor._02.jpg) — Albaro2020 — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+
+## Chocolate sucrense: del cacao a la tableta
+
+- [Cacao Guanay4.jpg](https://commons.wikimedia.org/wiki/File:Cacao_Guanay4.jpg) — Das Morton — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [CACAO BOLIVIANO 09.jpg](https://commons.wikimedia.org/wiki/File:CACAO_BOLIVIANO_09.jpg) — Elingesanta — [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+
+## K'alapurka y mercado minero de Potosí
+
+- [El Mercado Central de Potosí.jpg](https://commons.wikimedia.org/wiki/File:El_Mercado_Central_de_Potos%C3%AD.jpg) — Azulazul5 — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [El Mercado Central..JPG](https://commons.wikimedia.org/wiki/File:El_Mercado_Central..JPG) — Jherson Sossa — [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0)
+- [Mercado CentraL..JPG](https://commons.wikimedia.org/wiki/File:Mercado_CentraL..JPG) — Jherson Sossa — [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0)
+
+## Cacao amazónico: cata de chocolate cruceño
+
+- [Chocolate de los Yungas, una delicia.jpg](https://commons.wikimedia.org/wiki/File:Chocolate_de_los_Yungas,_una_delicia.jpg) — Jhumeluvi — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Chocolate de los Yungas, Caranavi.jpg](https://commons.wikimedia.org/wiki/File:Chocolate_de_los_Yungas,_Caranavi.jpg) — Jhumeluvi — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Chocolate de los Yungas.jpg](https://commons.wikimedia.org/wiki/File:Chocolate_de_los_Yungas.jpg) — Jhumeluvi — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+
+## Sabores de la Amazonía beniana
+
+- [Majadito con carne de res.jpg](https://commons.wikimedia.org/wiki/File:Majadito_con_carne_de_res.jpg) — EEJCC — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+
+## Pescado del Pilcomayo en Villamontes
+
+- [Río Pilcomayo, Área natural de manejo integrado Aguaragüe - Bolivia.jpg](https://commons.wikimedia.org/wiki/File:R%C3%ADo_Pilcomayo,_%C3%81rea_natural_de_manejo_integrado_Aguarag%C3%BCe_-_Bolivia.jpg) — Ruditaly — [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+- [Pescadores en el rio pilcomayo villamontes.jpg](https://commons.wikimedia.org/wiki/File:Pescadores_en_el_rio_pilcomayo_villamontes.jpg) — Carlosfiengo — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- [Río Pilcomayo y Ruta 11 en Villa Montes - Gran Chaco, Bolivia.jpg](https://commons.wikimedia.org/wiki/File:R%C3%ADo_Pilcomayo_y_Ruta_11_en_Villa_Montes_-_Gran_Chaco,_Bolivia.jpg) — Ruditaly — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)

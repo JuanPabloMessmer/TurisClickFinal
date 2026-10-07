@@ -1,4 +1,4 @@
-import { Building2, Check, Search, X } from 'lucide-react'
+import { Building2, Check, Plus, Search, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/PageHeader'
@@ -94,7 +94,18 @@ export function CompaniesApprovalPage() {
 
   return (
     <div>
-      <PageHeader title="Empresas" description="UC-A-01/02/03 — revisar, aprobar y rechazar solicitudes de Provider." />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader
+          title="Empresas"
+          description="Las empresas que operan en TurisClick. Desde acá das de alta a un operador nuevo, revisás su estado y gestionás sus accesos."
+        />
+        <Button asChild>
+          <Link to="/admin/companies/new">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Dar de alta un operador
+          </Link>
+        </Button>
+      </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 sm:max-w-sm">

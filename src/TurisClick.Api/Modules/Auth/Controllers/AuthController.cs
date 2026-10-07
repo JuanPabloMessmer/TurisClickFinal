@@ -44,6 +44,17 @@ public class AuthController(IAuthService authService, ICurrentUserContext curren
     }
 
     /// <summary>UC-AUTH-04 — Cerrar sesión (revoca el refresh token indicado).</summary>
+    /// <summary>
+    /// Cambiar la propia contraseña. Es el único endpoint que una cuenta con contraseña temporal puede usar:
+    /// lleva `[Authorize]` sin política, así que no pasa por el requisito que bloquea todo lo demás.
+    /// </summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    [ProducesResponseType(typeof(AuthResultResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<AuthResultResponse>> ChangePassword(
+        [FromBody] ChangePasswordRequest request, CancellationToken ct)
+        => Ok(await authService.ChangePasswordAsync(request, ct));
+
     [HttpPost("logout")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

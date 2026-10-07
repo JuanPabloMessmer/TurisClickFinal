@@ -94,7 +94,7 @@ export function ExperienceFormPage() {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title={isEdit ? 'Editar experiencia' : 'Nueva experiencia'} description="UC-P-04/05." />
+      <PageHeader title={isEdit ? 'Editar experiencia' : 'Nueva experiencia'} description={isEdit ? 'Editá los datos que ve el viajero antes de reservar.' : 'Cargá una actividad de un día: qué incluye, dónde es y cuánto cuesta.'} />
       <Alert variant="info" className="mb-6">
         Las categorías todavía no están disponibles desde el Backoffice — se crea sin categorías (ver reporte de la sesión).
       </Alert>

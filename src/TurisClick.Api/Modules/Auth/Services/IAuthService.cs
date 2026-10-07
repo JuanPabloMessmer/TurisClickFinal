@@ -23,4 +23,14 @@ public interface IAuthService
     /// de emisión/hasheo de refresh token — no llama a SaveChangesAsync, eso queda a cargo del caller.
     /// </summary>
     Task<AuthResultResponse> IssueTokensForUserAsync(User user, CancellationToken ct);
+
+    /// <summary>
+    /// Cambia la contraseña de la cuenta autenticada. Es el único camino para salir del estado de contraseña
+    /// temporal, y por eso la autorización lo deja pasar cuando todo lo demás está cerrado.
+    ///
+    /// Exige la contraseña actual incluso para una temporal: sin eso, un token robado podría quedarse con la
+    /// cuenta cambiando la clave. Y revoca las demás sesiones, que es lo que uno espera al cambiar una
+    /// contraseña que pudo haber circulado por fuera del sistema.
+    /// </summary>
+    Task<AuthResultResponse> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct);
 }

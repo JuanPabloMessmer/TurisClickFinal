@@ -7,7 +7,7 @@
 //
 // Uso: node load-catalog.mjs [--check]     --check valida el catálogo sin llamar a la API
 import { readFile } from 'node:fs/promises'
-import { CAT, EXPERIENCES, LEGACY, NEW_CITIES, PACKAGES, PROVIDERS, SCHEDULE } from './catalog.mjs'
+import { CANCELLATION_POLICIES, CAT, EXPERIENCES, LEGACY, NEW_CITIES, PACKAGES, PROVIDERS, SCHEDULE } from './catalog.mjs'
 
 const API = process.env.TURISCLICK_API ?? 'https://app-turisclick-v2-api.azurewebsites.net'
 const CHECK_ONLY = process.argv.includes('--check')
@@ -161,16 +161,51 @@ const cityId = (name) => {
 }
 
 // ───────────────────────── 2. proveedores ─────────────────────────
+
+/** Primer ingreso: entra con la temporal y la cambia por la contraseña demo. Hasta hacerlo no puede operar. */
+async function firstLogin(email, temporary, password) {
+  const s = await session(email, temporary)
+  must(
+    await s.call('POST', '/api/auth/change-password', { currentPassword: temporary, newPassword: password }),
+    `primer ingreso de ${email}`,
+  )
+}
+
+/** La empresa se busca por documento legal, que es único; el nombre queda como respaldo. */
+function findCompanyId(companies, legalDocument, companyName) {
+  const c = companies.find((x) => x.legalDocument === legalDocument) ?? companies.find((x) => x.name === companyName)
+  if (!c) throw new Error(`no se encontró la empresa ${companyName} (${legalDocument})`)
+  return c.id
+}
+
 const sessions = {}
 for (const p of PROVIDERS) {
   const password = env(p.passwordEnv)
-  const reg = await call('POST', '/api/providers/register', {
-    body: {
-      firstName: p.firstName, lastName: p.lastName, email: p.email, password,
-      companyName: p.companyName, companyDescription: p.description, legalDocument: p.legalDocument, contactEmail: p.contactEmail,
-    },
+
+  // El autorregistro público ya no existe: una empresa de turismo no se da de alta sola. El loader hace lo
+  // mismo que haría una persona —el administrador crea la empresa y la cuenta, y el operador cambia su
+  // contraseña temporal en el primer ingreso—, y sigue siendo idempotente: si la cuenta ya existe, el alta
+  // responde 409 y se entra con la contraseña demo de siempre.
+  const created = await admin.call('POST', '/api/admin/provider-accounts', {
+    companyName: p.companyName, companyDescription: p.description, legalDocument: p.legalDocument,
+    contactEmail: p.contactEmail, firstName: p.firstName, lastName: p.lastName, email: p.email, approve: true,
   })
-  if (![200, 201, 409].includes(reg.status)) must(reg, `registro ${p.email}`)
+  if (![200, 201, 409].includes(created.status)) must(created, `alta de ${p.email}`)
+
+  if (created.status !== 409) {
+    // Cuenta nueva: viene con una contraseña temporal que bloquea toda operación hasta cambiarla.
+    await firstLogin(p.email, created.data.temporaryPassword, password)
+  } else if ((await call('POST', '/api/auth/login', { body: { email: p.email, password } })).status !== 200) {
+    // La cuenta ya existía pero su contraseña no es la demo: o nunca se usó el primer ingreso, o alguien la
+    // cambió. Se regenera la credencial —que es justo lo que haría un administrador— y se vuelve a hacer el
+    // primer ingreso. Sin esto, el loader queda trabado y no es realmente idempotente.
+    const companyId = findCompanyId(await all(admin, '/api/admin/companies'), p.legalDocument, p.companyName)
+    const users = must(await admin.call('GET', `/api/admin/companies/${companyId}/users`), `cuentas de ${p.companyName}`)
+    const user = users.find((u) => u.email === p.email) ?? users[0]
+    const reset = must(await admin.call('POST', `/api/admin/provider-accounts/${user.id}/reset-password`), `regenerar credencial de ${p.email}`)
+    await firstLogin(p.email, reset.temporaryPassword, password)
+    console.log(`proveedor ${p.companyName}: credencial regenerada (la anterior no servía)`)
+  }
 
   let s = await session(p.email, password)
   const company = must(await admin.call('GET', `/api/admin/companies/${s.user.companyId}`), `empresa de ${p.email}`)
@@ -183,7 +218,7 @@ for (const p of PROVIDERS) {
     must(await s.call('PUT', '/api/companies/me', { name: p.companyName, description: p.description, contactEmail: p.contactEmail, contactPhone: mine.contactPhone ?? null }), 'actualizar empresa')
   }
   sessions[p.key] = s
-  console.log(`proveedor ${p.companyName}: ${reg.status === 409 ? 'existente' : 'registrado'}, empresa ${company.status === 'APPROVED' ? 'ya aprobada' : 'aprobada ahora'}`)
+  console.log(`proveedor ${p.companyName}: ${created.status === 409 ? 'existente' : 'dado de alta'}, empresa ${company.status === 'APPROVED' ? 'ya aprobada' : 'aprobada ahora'}`)
 }
 
 // ───────────────────────── 3. experiencias ─────────────────────────
@@ -234,6 +269,9 @@ for (const [index, k] of PACKAGES.entries()) {
         : { dayNumber: it.day, sortOrder, kind: 'DESCRIPTIVE', title: it.d[0], description: it.d[1] }
     }),
     images: imagesOf(k.imgFrom, 3),
+    // Sin política, el paquete no se puede cancelar desde la app y el viajero tiene que escribirle al
+    // operador. Cada paquete declara el perfil que le corresponde; `flexible` es el que menos compromete.
+    cancellationPolicy: CANCELLATION_POLICIES[k.cancellation ?? 'flexible'],
   }
   let pkg = mine.find((m) => m.title === k.title)
   if (pkg) must(await s.call('PUT', `/api/packages/${pkg.id}`, body), `actualizar ${k.key}`)

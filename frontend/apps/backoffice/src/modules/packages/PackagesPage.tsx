@@ -48,7 +48,7 @@ export function PackagesPage() {
     <div>
       <PageHeader
         title="Paquetes"
-        description="UC-P-07/08/09 — paquetes multi-día de tu empresa, combinando experiencias propias e ítems descriptivos."
+        description="Viajes de varios días armados con tus experiencias y actividades propias. Podés incluir el vuelo y definir la política de cancelación."
         actions={
           <Button asChild>
             <Link to="/provider/packages/new">
@@ -129,7 +129,7 @@ export function PackagesPage() {
       {packages.length > 0 && (
         <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
           <MapPinned className="h-3.5 w-3.5" aria-hidden="true" />
-          Publicar exige al menos un ítem y una disponibilidad futura con cupo (UC-P-09).
+          Para publicar hace falta al menos una actividad en el itinerario y una salida futura con cupo.
         </p>
       )}
     </div>

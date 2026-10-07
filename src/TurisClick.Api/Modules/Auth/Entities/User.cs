@@ -17,6 +17,15 @@ public class User
     public Guid? CompanyId { get; set; }
     public Company? Company { get; set; }
 
+    /// <summary>
+    /// true cuando la cuenta se creó con una contraseña temporal y la persona todavía no la cambió.
+    ///
+    /// No es un aviso de pantalla: mientras está en true el token lleva el claim `must_change_password` y la
+    /// autorización **rechaza** cualquier endpoint que no sea cambiar la contraseña o leer el propio perfil.
+    /// Si la puerta viviera sólo en el frontend, una credencial temporal filtrada serviría para operar.
+    /// </summary>
+    public bool MustChangePassword { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();

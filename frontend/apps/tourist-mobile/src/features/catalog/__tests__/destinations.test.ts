@@ -1,4 +1,9 @@
-import { byPublishedContent, experienceCountLabel } from '@/features/catalog/destinations'
+import {
+  byPublishedContent,
+  contentCountLabel,
+  experienceCountLabel,
+  hasPublishedContent,
+} from '@/features/catalog/destinations'
 
 /**
  * El orden viene de `publishedExperienceCount`, un número que calcula el backend. No es una métrica de
@@ -66,5 +71,40 @@ describe('experienceCountLabel', () => {
   it('singulariza el 1', () => {
     expect(experienceCountLabel(1)).toBe('1 experiencia')
     expect(experienceCountLabel(7)).toBe('7 experiencias')
+  })
+})
+
+describe('contentCountLabel', () => {
+  const city = (publishedExperienceCount: number, publishedPackageCount: number) => ({
+    id: 'c1',
+    name: 'Tarija',
+    type: 'CITY',
+    publishedExperienceCount,
+    publishedPackageCount,
+  })
+
+  it('nombra las dos cosas cuando hay de las dos', () => {
+    expect(contentCountLabel(city(8, 2))).toBe('8 experiencias · 2 paquetes')
+  })
+
+  it('nombra sólo lo que existe', () => {
+    expect(contentCountLabel(city(1, 0))).toBe('1 experiencia')
+    expect(contentCountLabel(city(0, 1))).toBe('1 paquete')
+  })
+
+  it('no dice nada cuando no hay nada publicado', () => {
+    // Una ciudad vacía no muestra "0 experiencias": muestra sólo su nombre.
+    expect(contentCountLabel(city(0, 0))).toBeNull()
+  })
+})
+
+describe('hasPublishedContent', () => {
+  it('una ciudad que sólo vende paquetes cuenta como ciudad con contenido', () => {
+    // El contador de experiencias es 0 y aun así hay algo que reservar: antes quedaba fuera del carrusel.
+    expect(hasPublishedContent({ id: 'c1', name: 'Bermejo', type: 'CITY', publishedExperienceCount: 0, publishedPackageCount: 3 })).toBe(true)
+  })
+
+  it('una ciudad sin nada publicado no se ofrece como destino a descubrir', () => {
+    expect(hasPublishedContent({ id: 'c2', name: 'Cabezas', type: 'CITY', publishedExperienceCount: 0, publishedPackageCount: 0 })).toBe(false)
   })
 })

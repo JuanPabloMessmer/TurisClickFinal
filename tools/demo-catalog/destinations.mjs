@@ -34,22 +34,37 @@ export const DESTINATION_IMAGES = {
   Cobija: { q: ['Cobija Pando Bolivia', 'Cobija Bolivia'] },
   Guayaramerín: { q: ['Guayaramerín Bolivia', 'Guayaramerín'] },
   Camiri: { q: ['Camiri Bolivia'] },
-  Caranavi: { q: ['Caranavi pueblo Yungas'] },
+  // Caranavi es el pueblo del café de los Yungas: sus cafetales SON su contexto turístico. La búsqueda libre
+  // había devuelto el espécimen de una polilla recolectada ahí, que no representa nada del destino.
+  Caranavi: { files: ['File:Caranavi field lo (4386253945).jpg', 'File:Caranavi GV lo (4387027164).jpg'], q: [] },
   Montero: { q: ['Montero Santa Cruz Bolivia'] },
   Warnes: { q: ['Warnes Santa Cruz Bolivia'] },
   Yacuiba: { q: ['Yacuiba Bolivia'] },
   Villazón: { q: ['Villazón Bolivia'] },
-  Viacha: { q: [] }, // sin foto representativa con licencia libre: la app muestra el fallback
+  // La iglesia de San Agustín es la referencia de Viacha; la búsqueda libre había devuelto un grupo de
+  // música fotografiado dentro de ella.
+  Viacha: { files: ['File:Puerta principal de la iglesia San Agustín de Viacha.jpg'], q: [] }, // sin foto representativa con licencia libre: la app muestra el fallback
   Mizque: { q: ['Mizque Bolivia'] },
   Sacaba: { q: ['Sacaba Cochabamba Bolivia'] },
   Vinto: { q: ['Vinto Cochabamba Bolivia'] },
-  Colcapirhua: { q: [] }, // sin foto representativa: fallback
-  'Puerto Villarroel': { q: ['Puerto Villarroel Bolivia'] },
-  Ivirgarzama: { q: [] }, // sin foto representativa: fallback
+  // La laguna Ceramil, en vez del cementerio municipal que devolvía la búsqueda.
+  Colcapirhua: { files: ['File:LAGUNA CERAMIL COLCAPIRHUA-CBBA.jpg'], q: [] },
+  // Sin foto: la búsqueda devolvía la misma imagen satelital del INPE que ya se había rechazado para
+  // Ivirgarzama (el municipio de Puerto Villarroel la incluye, y Commons la archiva con los dos nombres).
+  // Una vista satelital de la cuenca del Ichilo no es una foto de destino; el fallback de la app es más honesto.
+  'Puerto Villarroel': { q: [] },
+  // El pueblo visto desde el suelo, en vez de la foto satelital de la cuenca que devolvía la búsqueda.
+  // Sin foto: lo único que hay en Commons es una toma satelital del INPE, que no es una imagen de destino.
+  // La app muestra su fallback, que es más honesto que una vista aérea de una cuenca fluvial.
+  Ivirgarzama: { q: [] },
   Pocoata: { q: ['Pocoata Bolivia'] },
   'San Joaquín': { q: ['San Joaquín Beni Bolivia'] },
+  // Sin foto: 'San Lucas' en Commons devuelve Cabo San Lucas, México. Mejor el fallback que otro país.
   'San Lucas': { q: [] }, // sin foto representativa: fallback
-  Cabezas: { q: [] }, // sin foto representativa: fallback
+  // El monumento del pueblo. La búsqueda libre traía un cementerio de Dos Cabezas, Arizona.
+  // Sin foto: la única imagen del pueblo es un retrato vertical de un monumento, y el filtro de calidad lo
+  // descarta con razón — una foto apaisada es lo que necesita una tarjeta de destino.
+  Cabezas: { q: [] },
   'Villa Yapacaní': { q: ['Yapacaní Bolivia'] },
   Yapacani: { q: ['Yapacaní Santa Cruz'] },
 }

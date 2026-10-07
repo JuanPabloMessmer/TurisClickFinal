@@ -90,14 +90,32 @@ ok(category.status === 201 && renamed.status === 200, 'categorías: alta y edici
 section('PROVIDER')
 const providerEmail = 'qa.proveedor.e2e@turisclick.dev'
 const providerPassword = env('QA_E2E_PROVIDER_PASSWORD')
-const registration = await call('POST', '/api/providers/register', {
+// El autorregistro público ya no existe: el alta la hace un administrador y la cuenta nace con una contraseña
+// temporal que bloquea toda operación hasta cambiarla. Esto recorre ese camino completo.
+const registration = await call('POST', '/api/admin/provider-accounts', {
+  token: adminToken,
   body: {
-    firstName: 'Quimey', lastName: 'Proveedor', email: providerEmail, password: providerPassword,
+    firstName: 'Quimey', lastName: 'Proveedor', email: providerEmail,
     companyName: 'QA E2E Operadora', companyDescription: 'Empresa de prueba automatizada (no aparece en el catálogo).',
-    legalDocument: 'NIT-QA-E2E', contactEmail: 'qa.e2e@turisclick.dev',
+    legalDocument: 'NIT-QA-E2E', contactEmail: 'qa.e2e@turisclick.dev', approve: true,
   },
 })
-ok([201, 409].includes(registration.status), 'registro de proveedor QA (o ya existente)', `${registration.status}`)
+ok([201, 409].includes(registration.status), 'alta de proveedor QA por el admin (o ya existente)', `${registration.status}`)
+
+if (registration.status === 201) {
+  const temporary = registration.data.temporaryPassword
+  const firstLogin = await login(providerEmail, temporary)
+
+  // Con la contraseña temporal no se puede operar: la API lo rechaza, no sólo la pantalla.
+  const blocked = await call('GET', '/api/experiences/mine', { token: firstLogin.accessToken })
+  ok(blocked.status === 403, 'la contraseña temporal no permite operar', `${blocked.status}`)
+
+  const changed = await call('POST', '/api/auth/change-password', {
+    token: firstLogin.accessToken,
+    body: { currentPassword: temporary, newPassword: providerPassword },
+  })
+  ok(changed.status === 200 && changed.data.user.mustChangePassword === false, 'cambio de contraseña en el primer ingreso')
+}
 
 let provider = await login(providerEmail, providerPassword)
 const company = await call('GET', `/api/admin/companies/${provider.user.companyId}`, { token: adminToken })

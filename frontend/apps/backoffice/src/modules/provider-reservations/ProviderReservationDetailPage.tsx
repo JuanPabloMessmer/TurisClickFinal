@@ -50,7 +50,7 @@ export function ProviderReservationDetailPage() {
         <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
         Volver a Reservas
       </Link>
-      <PageHeader title="Detalle de la reserva" description="UC-P-13." />
+      <PageHeader title="Detalle de la reserva" description="Qué se reservó, quién viaja y en qué estado está." />
 
       <Card>
         <CardContent className="grid grid-cols-1 gap-5 pt-6 text-sm sm:grid-cols-2">

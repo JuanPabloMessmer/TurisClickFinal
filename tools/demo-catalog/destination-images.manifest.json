@@ -20,6 +20,9 @@
     ],
     "Cabezas": [
       "File:Dos Cabezas-Dos Cabezas Pioneer Cemetery-1.jpg"
+    ],
+    "Puerto Villarroel": [
+      "File:Ivirgarzama, Bolívia´s Puerto Villarroel county.jpg"
     ]
   },
   "source": "Wikimedia Commons",
@@ -304,14 +307,6 @@
       "license": "CC BY-SA 3.0",
       "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
     },
-    "Puerto Villarroel": {
-      "file": "File:Ivirgarzama, Bolívia´s Puerto Villarroel county.jpg",
-      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Ivirgarzama%2C_Bol%C3%ADvia%C2%B4s_Puerto_Villarroel_county.jpg/1280px-Ivirgarzama%2C_Bol%C3%ADvia%C2%B4s_Puerto_Villarroel_county.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
-      "pageUrl": "https://commons.wikimedia.org/wiki/File:Ivirgarzama,_Bol%C3%ADvia%C2%B4s_Puerto_Villarroel_county.jpg",
-      "author": "Coordenação-Geral de Observação da Terra/INPE",
-      "license": "CC BY-SA 2.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
-    },
     "Pocoata": {
       "file": "File:Plaza de Pocoata.jpg",
       "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Plaza_de_Pocoata.jpg/1280px-Plaza_de_Pocoata.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
@@ -351,6 +346,30 @@
       "author": "Huangercito41",
       "license": "CC0",
       "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+    },
+    "Caranavi": {
+      "file": "File:Caranavi field lo (4386253945).jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/Caranavi_field_lo_%284386253945%29.jpg/1280px-Caranavi_field_lo_%284386253945%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Caranavi_field_lo_(4386253945).jpg",
+      "author": "CIAT",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
+    },
+    "Viacha": {
+      "file": "File:Puerta principal de la iglesia San Agustín de Viacha.jpg",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Puerta_principal_de_la_iglesia_San_Agust%C3%ADn_de_Viacha.jpg/1280px-Puerta_principal_de_la_iglesia_San_Agust%C3%ADn_de_Viacha.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:Puerta_principal_de_la_iglesia_San_Agust%C3%ADn_de_Viacha.jpg",
+      "author": "Qhanaaru",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+    },
+    "Colcapirhua": {
+      "file": "File:LAGUNA CERAMIL COLCAPIRHUA-CBBA.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/7/73/LAGUNA_CERAMIL_COLCAPIRHUA-CBBA.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "pageUrl": "https://commons.wikimedia.org/wiki/File:LAGUNA_CERAMIL_COLCAPIRHUA-CBBA.jpg",
+      "author": "Jhesus aguirre umss.practica I-B",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
     }
   }
 }

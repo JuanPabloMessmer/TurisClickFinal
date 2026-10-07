@@ -105,7 +105,9 @@ export function CancellationPolicySection({
                     </div>
                   </div>
 
-                  <p className="flex-1 pb-2 text-label text-ink-muted">{describe(tier)}</p>
+                  <p className="flex-1 pb-2 text-label text-ink-muted">
+                    {describe(tier, thresholdAbove(tiers, tier.minDaysBefore ?? 0))}
+                  </p>
 
                   {tiers.length > 1 && (
                     <Button
@@ -146,7 +148,7 @@ export function CancellationPolicySection({
                   .sort((a, b) => (b.minDaysBefore ?? 0) - (a.minDaysBefore ?? 0))
                   .map((tier, index) => (
                     <li key={index} className="text-label text-ink-muted">
-                      {describe(tier)}
+                      {describe(tier, thresholdAbove(tiers, tier.minDaysBefore ?? 0))}
                     </li>
                   ))}
               </ul>
@@ -162,16 +164,32 @@ export function CancellationPolicySection({
   )
 }
 
-/** La frase que el viajero lee. Se arma acá para que el preview y la app digan lo mismo. */
-function describe(tier: CancellationTierDto): string {
+/**
+ * La frase que el viajero lee. Se arma acá para que el preview y la app digan lo mismo.
+ *
+ * El tramo de 0 días necesita saber dónde empieza el anterior: "menos de los días del tramo anterior" obliga
+ * a resolver un acertijo, y "menos de 15 días antes" se entiende de una.
+ */
+function describe(tier: CancellationTierDto, nextThreshold?: number): string {
   const days = tier.minDaysBefore ?? 0
   const percentage = tier.refundPercentage ?? 0
 
-  const when = days === 0 ? 'Menos de los días del tramo anterior' : `${days} ${days === 1 ? 'día' : 'días'} o más antes`
+  const when =
+    days > 0
+      ? `${days} ${days === 1 ? 'día' : 'días'} o más antes`
+      : nextThreshold && nextThreshold > 0
+        ? `Menos de ${nextThreshold} ${nextThreshold === 1 ? 'día' : 'días'} antes`
+        : 'En cualquier momento'
 
-  if (percentage === 0) return `${when}: no reembolsable`
-  if (percentage === 100) return `${when}: reembolso completo`
-  return `${when}: ${percentage}% reembolsable`
+  if (percentage === 0) return `${when}: no se devuelve nada`
+  if (percentage === 100) return `${when}: se devuelve todo`
+  return `${when}: se devuelve el ${percentage}%`
+}
+
+/** El umbral del tramo inmediatamente anterior, para redactar el tramo de 0 días. */
+function thresholdAbove(tiers: CancellationTierDto[], days: number): number | undefined {
+  const above = tiers.map((t) => t.minDaysBefore ?? 0).filter((d) => d > days)
+  return above.length > 0 ? Math.min(...above) : undefined
 }
 
 /**

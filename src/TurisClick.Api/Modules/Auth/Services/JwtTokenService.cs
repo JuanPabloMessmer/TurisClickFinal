@@ -27,6 +27,10 @@ public class JwtTokenService(IOptions<JwtSettings> jwtOptions) : ITokenService
         if (user.CompanyId is { } companyId)
             claims.Add(new Claim("company_id", companyId.ToString()));
 
+        // Mientras la contraseña temporal siga vigente el token lo dice, y la autorización lo hace cumplir.
+        if (user.MustChangePassword)
+            claims.Add(new Claim(ClaimNames.MustChangePassword, "true"));
+
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Key));
         var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 

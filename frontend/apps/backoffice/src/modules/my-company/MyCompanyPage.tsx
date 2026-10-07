@@ -73,7 +73,7 @@ export function MyCompanyPage() {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Mi Empresa" description="UC-P-02 — perfil de tu empresa." />
+      <PageHeader title="Mi Empresa" description="Los datos con los que tu empresa aparece en TurisClick." />
 
       <Card className="mb-6">
         <CardHeader className="flex-row items-center justify-between">

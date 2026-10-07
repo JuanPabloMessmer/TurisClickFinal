@@ -42,6 +42,9 @@ public class AuthServiceTests
             _refreshTokenRepository.Object,
             _passwordHasher.Object,
             _tokenService.Object,
+            // Cambiar la propia contraseña necesita saber quién está autenticado; estas pruebas son de
+            // registro, login y refresh, así que el contexto no se usa.
+            Mock.Of<ICurrentUserContext>(),
             _db.Object);
     }
 

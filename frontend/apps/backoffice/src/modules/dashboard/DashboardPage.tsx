@@ -1,5 +1,5 @@
 import { formatCurrency, formatDate } from '@turisclick/utils'
-import { Building2, CalendarClock, ClipboardList, Compass, MapPinned, Package, Tags } from 'lucide-react'
+import { Building2, CalendarClock, ClipboardList, Compass, MapPinned, Package, Plane, Tags, TriangleAlert } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
@@ -15,8 +15,8 @@ import { useMyExperiences } from '@/modules/experiences/api'
 import { useMyCompany } from '@/modules/my-company/api'
 import { useMyPackages } from '@/modules/packages/api'
 import { useCompanyReservations } from '@/modules/provider-reservations/api'
+import { useAdminOverview } from '@/modules/platform/api'
 import {
-  useApprovedCompaniesCount,
   useCategoriesCount,
   useDestinationsCount,
   usePendingCompanies,
@@ -100,15 +100,66 @@ function SectionCard({
 
 function AdminToday() {
   const pending = usePendingCompanies()
-  const approved = useApprovedCompaniesCount()
   const destinations = useDestinationsCount()
   const categories = useCategoriesCount()
+  const overview = useAdminOverview()
 
   const pendingItems = pending.data?.items ?? []
   const pendingCount = pending.data?.totalCount ?? 0
+  const summary = overview.data
+
+  // Lo que pide acción va PRIMERO y sólo aparece si existe: una fila que siempre dice "0 pendientes" deja de
+  // leerse a la semana.
+  const attention = [
+    summary?.cancellationsNeedingReview
+      ? {
+          label:
+            summary.cancellationsNeedingReview === 1
+              ? '1 cancelación esperando resolución'
+              : `${summary.cancellationsNeedingReview} cancelaciones esperando resolución`,
+          to: '/admin/reservations?attention=1',
+        }
+      : null,
+    summary?.flightsAwaitingReconciliation
+      ? {
+          label:
+            summary.flightsAwaitingReconciliation === 1
+              ? '1 pasaje sin confirmar con la aerolínea'
+              : `${summary.flightsAwaitingReconciliation} pasajes sin confirmar con la aerolínea`,
+          to: '/admin/reservations?attention=1',
+        }
+      : null,
+    summary?.providerAccountsPendingFirstLogin
+      ? {
+          label:
+            summary.providerAccountsPendingFirstLogin === 1
+              ? '1 operador que todavía no entró por primera vez'
+              : `${summary.providerAccountsPendingFirstLogin} operadores que todavía no entraron por primera vez`,
+          to: '/admin/companies',
+        }
+      : null,
+  ].filter((item): item is { label: string; to: string } => item !== null)
 
   return (
     <div className="flex flex-col gap-6">
+      {attention.length > 0 && (
+        <Card className="border-warning-fg/30 bg-warning-bg p-5">
+          <h2 className="flex items-center gap-2 text-heading font-semibold text-warning-fg">
+            <TriangleAlert className="h-4 w-4" aria-hidden="true" />
+            Esperando resolución
+          </h2>
+          <ul className="mt-2 flex flex-col gap-1">
+            {attention.map((item) => (
+              <li key={item.label}>
+                <Link to={item.to} className="text-body text-warning-fg underline-offset-4 hover:underline">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       <SectionCard
         title="Empresas esperando aprobación"
         hint="Mientras no se aprueben, su catálogo no es visible para ningún turista."
@@ -128,7 +179,7 @@ function AdminToday() {
           <EmptyState
             icon={Building2}
             title="No hay solicitudes esperando"
-            description="Cuando un operador registre su empresa, va a aparecer acá."
+            description="Las empresas que das de alta quedan aprobadas directamente; acá sólo aparecen las que dejaste pendientes."
           />
         ) : (
           <ul className="divide-y divide-border">
@@ -150,13 +201,85 @@ function AdminToday() {
         )}
       </SectionCard>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <CountTile
           icon={Building2}
-          label="Empresas aprobadas"
-          value={approved.data?.totalCount}
+          label="Empresas operando"
+          value={summary?.companiesApproved}
           to="/admin/companies?status=APPROVED"
         />
+        <CountTile
+          icon={Compass}
+          label="Experiencias publicadas"
+          value={summary?.experiencesPublished}
+          to="/admin/experiences?status=PUBLISHED"
+        />
+        <CountTile
+          icon={Package}
+          label="Paquetes publicados"
+          value={summary?.packagesPublished}
+          to="/admin/packages?status=PUBLISHED"
+        />
+        <CountTile
+          icon={Plane}
+          label="Paquetes con vuelo"
+          value={summary?.packagesWithFlight}
+          to="/admin/packages?flight=YES"
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <CountTile
+          icon={ClipboardList}
+          label="Reservas de hoy"
+          value={summary?.reservationsToday}
+          to="/admin/reservations"
+        />
+        <CountTile
+          icon={CalendarClock}
+          label="Reservas de los últimos 7 días"
+          value={summary?.reservationsLast7Days}
+          to="/admin/reservations"
+        />
+        <CountTile
+          icon={ClipboardList}
+          label="Confirmadas"
+          value={summary?.reservationsConfirmed}
+          to="/admin/reservations?status=CONFIRMED"
+        />
+        <CountTile
+          icon={ClipboardList}
+          label="Esperando pago"
+          value={summary?.reservationsPendingPayment}
+          to="/admin/reservations?status=PENDING_PAYMENT"
+        />
+      </div>
+
+      {(summary?.chargedByCurrency ?? []).length > 0 && (
+        <SectionCard
+          title="Cobrado y devuelto"
+          hint="Del libro de pagos, por moneda. No se suman monedas distintas: no existe conversión en TurisClick."
+        >
+          <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
+            {(summary?.chargedByCurrency ?? []).map((money) => {
+              const refunded = (summary?.refundedByCurrency ?? []).find((r) => r.currency === money.currency)
+              return (
+                <div key={money.currency} className="rounded-sm border border-border p-3">
+                  <p className="text-label font-medium text-foreground">{money.currency}</p>
+                  <p className="mt-1 text-title font-semibold text-foreground tabular-nums">
+                    {formatCurrency(money.amount ?? 0, money.currency ?? 'USD')}
+                  </p>
+                  <p className="text-label text-ink-muted">
+                    Devuelto: {formatCurrency(refunded?.amount ?? 0, money.currency ?? 'USD')}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        </SectionCard>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-2">
         <CountTile icon={MapPinned} label="Destinos" value={destinations.data?.length} to="/admin/destinations" />
         <CountTile icon={Tags} label="Categorías" value={categories.data?.length} to="/admin/categories" />
       </div>
@@ -267,7 +390,8 @@ function ProviderToday() {
         )}
         {departures.notInspected > 0 && (
           <p className="border-t border-border px-5 py-2 text-caption text-ink-muted">
-            Se revisaron las primeras 20 experiencias publicadas; quedan {departures.notInspected} sin revisar acá.
+            Este resumen mira tus 20 experiencias publicadas más recientes. Las otras{' '}
+            {departures.notInspected} están en Experiencias.
           </p>
         )}
       </SectionCard>

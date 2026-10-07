@@ -7,6 +7,7 @@ import {
   BackButton,
   BookingBar,
   DETAIL_DATES_PREVIEW,
+  CancellationTerms,
   DetailBlock,
   DetailSkeleton,
   Gallery,
@@ -65,6 +66,8 @@ export default function PackageDetailScreen() {
             <Itinerary items={pkg.data.items} />
 
             {pkg.data.conditionsText ? <DetailBlock title="Condiciones" body={pkg.data.conditionsText} /> : null}
+
+            <CancellationTerms tiers={pkg.data.cancellationPolicy} />
 
             <Gallery images={pkg.data.images} />
 

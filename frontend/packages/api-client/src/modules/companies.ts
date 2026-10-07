@@ -2,15 +2,12 @@ import type { AxiosInstance } from 'axios'
 import type {
   CompanyResponse,
   CompanyResponsePagedResult,
-  RegisterProviderRequest,
-  RegisterProviderResponse,
   RejectCompanyRequest,
   UpdateCompanyRequest,
 } from '../types'
 
-/** UC-P-01 — público, sin auth. */
-export const registerProvider = (http: AxiosInstance, body: RegisterProviderRequest) =>
-  http.post<RegisterProviderResponse>('/api/providers/register', body).then((r) => r.data)
+// El autorregistro público de operadores se eliminó: una empresa de turismo no se da de alta sola en
+// TurisClick. El alta la hace un administrador — ver `adminApi.createProviderAccount`.
 
 /**
  * UC-A-01 — exclusivo ADMIN. status es opcional (sin filtro trae todas). search es opcional (coincidencia

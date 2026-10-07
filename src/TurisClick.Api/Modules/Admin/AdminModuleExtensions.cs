@@ -13,6 +13,9 @@ public static class AdminModuleExtensions
     {
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IAdminContentService, AdminContentService>();
+        services.AddScoped<IAdminOnboardingService, AdminOnboardingService>();
+        services.AddScoped<IAdminPlatformService, AdminPlatformService>();
+
         return services;
     }
 }

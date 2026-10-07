@@ -54,7 +54,13 @@ export function AuthScreenShell({
 /** Enlace de texto para saltar entre login y registro. */
 export function AuthSwitchLink({ prompt, action, onPress }: { prompt: string; action: string; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="link" onPress={onPress} className="h-11 justify-center px-2 active:opacity-60">
+    // El nombre va explícito: el texto está partido en dos <Text> anidados y el control quedaba sin nombre.
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`${prompt} ${action}`}
+      onPress={onPress}
+      className="h-11 justify-center px-2 active:opacity-60"
+    >
       <Text className="text-base text-[#5B7285]">
         {prompt} <Text className="font-semibold text-primary">{action}</Text>
       </Text>

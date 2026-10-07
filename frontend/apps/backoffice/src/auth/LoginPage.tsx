@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { z } from 'zod'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -34,7 +34,7 @@ export function LoginPage() {
         // El Backoffice es exclusivo ADMIN/PROVIDER — RequireRole también bloquearía esto,
         // pero acá damos un mensaje explícito en vez de un simple rebote silencioso.
         await logout()
-        setSubmitError('Esta cuenta es de Tourist. El Backoffice es exclusivo para ADMIN y PROVIDER.')
+        setSubmitError('Esta cuenta es de viajero. Este panel es para empresas operadoras y para el equipo de TurisClick; para reservar, usá la app.')
       }
     } catch (error) {
       setSubmitError(getErrorMessage(error))
@@ -42,8 +42,14 @@ export function LoginPage() {
   }
 
   if (status === 'authenticated' && user && user.role !== 'TOURIST') {
-    const home = user.role === 'ADMIN' ? '/admin/destinations' : '/provider/company'
-    const target = (location.state as { from?: string } | null)?.from ?? home
+    // Una cuenta recién creada no puede ir a ninguna otra parte hasta reemplazar su contraseña temporal, ni
+    // siquiera a la pantalla que pidió antes de entrar.
+    if (user.mustChangePassword) return <Navigate to="/cambiar-contrasena" replace />
+
+    // Los dos roles aterrizan en "Hoy", igual que al abrir la raíz: es la pantalla que muestra el trabajo
+    // pendiente. Antes el administrador caía en la tabla de destinos y el operador en el formulario de su
+    // empresa, y ninguno de los dos veía lo que tenía que resolver.
+    const target = (location.state as { from?: string } | null)?.from ?? '/dashboard'
     return <Navigate to={target} replace />
   }
 
@@ -57,7 +63,7 @@ export function LoginPage() {
         <CardContent className="pt-6">
           <div className="mb-5">
             <h1 className="text-lg font-semibold text-foreground">Iniciar sesión</h1>
-            <p className="text-sm text-muted-foreground">Entrá con la cuenta con la que registraste tu empresa.</p>
+            <p className="text-sm text-muted-foreground">Ingresá a tu cuenta de TurisClick.</p>
           </div>
           <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
             <div className="flex flex-col gap-1.5">
@@ -80,10 +86,7 @@ export function LoginPage() {
             </Button>
           </form>
           <p className="mt-5 text-center text-sm text-muted-foreground">
-            ¿Sos un Provider nuevo?{' '}
-            <Link to="/register-provider" className="font-medium text-primary underline-offset-4 hover:underline">
-              Registrá tu empresa
-            </Link>
+            ¿Querés operar en TurisClick? Escribinos y damos de alta a tu empresa.
           </p>
         </CardContent>
       </Card>

@@ -21,6 +21,13 @@ public class UserSummaryResponse
     public string Email { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
 
+    /// <summary>
+    /// true si la cuenta sigue con la contraseña temporal que le creó un administrador. Mientras lo esté, la
+    /// API rechaza cualquier otra operación: el frontend lo usa para llevar directo a cambiarla, no para
+    /// decidir si puede o no operar — eso lo decide el servidor.
+    /// </summary>
+    public bool MustChangePassword { get; set; }
+
     /// <summary>Solo tiene valor si Role = PROVIDER.</summary>
     public Guid? CompanyId { get; set; }
 }

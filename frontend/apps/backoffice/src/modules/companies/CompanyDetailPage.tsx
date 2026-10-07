@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FullScreenSpinner } from '@/components/FullScreenSpinner'
 import { PageHeader } from '@/components/PageHeader'
+import { CompanyAccountsCard } from './CompanyAccountsCard'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -42,7 +43,7 @@ export function CompanyDetailPage() {
       </Link>
 
       <div className="mb-6 flex items-center justify-between">
-        <PageHeader title={company.name ?? 'Empresa'} description="UC-A-01." />
+        <PageHeader title={company.name ?? 'Empresa'} description="Datos de la empresa, estado de su habilitación y accesos de su equipo." />
         <Badge variant={statusVariant[company.status ?? ''] ?? 'neutral'}>{statusLabel[company.status ?? ''] ?? company.status}</Badge>
       </div>
 
@@ -66,6 +67,8 @@ export function CompanyDetailPage() {
         </CardContent>
       </Card>
 
+      {id && <CompanyAccountsCard companyId={id} />}
+
       {company.status === 'REJECTED' && company.rejectionReason && (
         <Alert variant="destructive" className="mb-6">
           <span className="font-medium">Motivo del rechazo:</span> {company.rejectionReason}
@@ -88,8 +91,8 @@ export function CompanyDetailPage() {
       {(company.status === 'APPROVED' || company.status === 'SUSPENDED') && (
         <Alert variant="info">
           {company.status === 'APPROVED'
-            ? 'Suspender una empresa (UC-A-08) todavía no está implementado — está planificado para una oleada futura.'
-            : 'Reactivar una empresa suspendida no tiene un caso de uso definido todavía en docs/use-cases.md.'}
+            ? 'Suspender una empresa saca su catálogo de circulación. Todavía no se puede hacer desde acá.'
+            : 'Reactivar una empresa suspendida todavía no se puede hacer desde acá.'}
         </Alert>
       )}
 

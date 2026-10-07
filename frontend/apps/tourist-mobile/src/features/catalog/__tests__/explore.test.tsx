@@ -28,9 +28,11 @@ const mockedUseSession = useSession as jest.MockedFunction<typeof useSession>
 function catalogBackend(url: string) {
   switch (url) {
     case '/api/destinations':
+      // Con contadores reales: la portada sólo ofrece ciudades donde hay algo que reservar, así que un
+      // destino sin nada publicado no aparecería en el carrusel.
       return ok([
-        { id: 'city-lpz', name: 'La Paz' },
-        { id: 'city-scz', name: 'Santa Cruz' },
+        { id: 'city-lpz', name: 'La Paz', type: 'CITY', publishedExperienceCount: 12, publishedPackageCount: 2 },
+        { id: 'city-scz', name: 'Santa Cruz', type: 'CITY', publishedExperienceCount: 7, publishedPackageCount: 0 },
       ])
     case '/api/categories':
       return ok([
@@ -197,10 +199,10 @@ describe('acceso rápido a destinos desde Inicio', () => {
       </Wrapper>
     )
     render(<Home />)
-    await waitFor(() => expect(screen.getByLabelText('Explorar La Paz')).toBeTruthy())
+    await waitFor(() => expect(screen.getByLabelText('Explorar La Paz, 12 experiencias · 2 paquetes')).toBeTruthy())
 
-    fireEvent.press(screen.getByLabelText('Explorar La Paz'))
-    fireEvent.press(screen.getByLabelText('Explorar La Paz'))
+    fireEvent.press(screen.getByLabelText('Explorar La Paz, 12 experiencias · 2 paquetes'))
+    fireEvent.press(screen.getByLabelText('Explorar La Paz, 12 experiencias · 2 paquetes'))
 
     expect(mockPush).toHaveBeenCalledTimes(2)
     const [first, second] = mockPush.mock.calls.map(([href]) => href as { pathname: string; params: Record<string, string> })

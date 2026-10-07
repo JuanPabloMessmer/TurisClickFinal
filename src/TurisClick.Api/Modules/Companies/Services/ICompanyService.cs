@@ -7,7 +7,6 @@ namespace TurisClick.Api.Modules.Companies.Services;
 public interface ICompanyService
 {
     /// <summary>UC-P-01.</summary>
-    Task<RegisterProviderResponse> RegisterProviderAsync(RegisterProviderRequest request, CancellationToken ct);
 
     /// <summary>UC-A-01. status = null lista todas las empresas, sin filtrar.</summary>
     Task<PagedResult<CompanyResponse>> ListAsync(CompanyStatus? status, string? search, int page, int pageSize, CancellationToken ct);

@@ -41,6 +41,60 @@ export function DetailBlock({ title, body }: { title: string; body: string }) {
 }
 
 /**
+ * Las condiciones de cancelación, antes de pagar.
+ *
+ * El viajero tiene que poder leer cuánto le devuelven y con cuánta anticipación ANTES de entregar la plata,
+ * no al intentar cancelar. Si el paquete no tiene política, se dice eso: la cancelación se arregla con el
+ * operador. Callarlo dejaría al viajero suponiendo que puede cancelar cuando quiera.
+ */
+export function CancellationTerms({ tiers }: { tiers?: { minDaysBefore?: number; refundPercentage?: number }[] | null }) {
+  const sorted = [...(tiers ?? [])].sort((a, b) => (b.minDaysBefore ?? 0) - (a.minDaysBefore ?? 0))
+
+  return (
+    <View className="mt-6">
+      <Text className="mb-1.5 font-ui600 text-heading text-ink">Si necesitás cancelar</Text>
+      {sorted.length === 0 ? (
+        <Text className="font-sans text-body text-ink-muted">
+          Este operador no definió una política de cancelación, así que la reserva no se cancela desde la app:
+          si te surge algo, escribile directamente.
+        </Text>
+      ) : (
+        <>
+          {sorted.map((tier, index) => (
+            <Text key={index} className="font-sans text-body text-ink-muted">
+              · {cancellationTierLabel(tier, sorted[index - 1]?.minDaysBefore)}
+            </Text>
+          ))}
+          <Text className="mt-1.5 font-sans text-caption text-ink-muted">
+            Es la política que queda guardada en tu reserva: si el operador la cambia después, a vos no te afecta.
+          </Text>
+        </>
+      )}
+    </View>
+  )
+}
+
+/** La misma frase que el operador ve en el Backoffice, para que las dos pantallas digan lo mismo. */
+export function cancellationTierLabel(
+  tier: { minDaysBefore?: number; refundPercentage?: number },
+  thresholdAbove?: number,
+) {
+  const days = tier.minDaysBefore ?? 0
+  const percentage = tier.refundPercentage ?? 0
+
+  const when =
+    days > 0
+      ? `Cancelando ${days} ${days === 1 ? 'día' : 'días'} o más antes`
+      : thresholdAbove && thresholdAbove > 0
+        ? `Cancelando con menos de ${thresholdAbove} ${thresholdAbove === 1 ? 'día' : 'días'}`
+        : 'Cancelando en cualquier momento'
+
+  if (percentage === 0) return `${when}: no se devuelve nada`
+  if (percentage === 100) return `${when}: se devuelve todo`
+  return `${when}: se devuelve el ${percentage}%`
+}
+
+/**
  * Quién opera el viaje. No es decoración: para publicar, el backend exige que la empresa esté APROBADA
  * por un administrador, así que todo lo que se ve en el catálogo pasó por esa revisión. Es la única
  * señal de confianza verificada que el sistema produce, y hasta ahora no se le mostraba al turista.

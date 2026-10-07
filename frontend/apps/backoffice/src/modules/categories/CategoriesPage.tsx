@@ -33,7 +33,7 @@ export function CategoriesPage() {
     <div>
       <PageHeader
         title="Categorías"
-        description="UC-A-05."
+        description="Los intereses con los que el viajero filtra el catálogo: gastronomía, naturaleza, cultura, aventura."
         actions={
           <Button onClick={() => setDialog({ mode: 'create' })}>
             <Plus className="h-4 w-4" aria-hidden="true" />

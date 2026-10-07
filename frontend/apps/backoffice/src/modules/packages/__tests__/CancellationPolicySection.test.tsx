@@ -43,9 +43,10 @@ describe('política de cancelación', () => {
       />,
     )
 
-    expect(screen.getAllByText('30 días o más antes: reembolso completo').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('15 días o más antes: 50% reembolsable').length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/no reembolsable/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('30 días o más antes: se devuelve todo').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('15 días o más antes: se devuelve el 50%').length).toBeGreaterThan(0)
+    // El tramo de 0 días nombra el umbral real en vez de mandar a resolver "los días del tramo anterior".
+    expect(screen.getAllByText('Menos de 15 días antes: no se devuelve nada').length).toBeGreaterThan(0)
     expect(screen.getByText(/no afecta a las reservas que ya existen/)).toBeTruthy()
   })
 

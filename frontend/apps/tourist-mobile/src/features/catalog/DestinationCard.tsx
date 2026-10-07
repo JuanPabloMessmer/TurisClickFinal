@@ -1,6 +1,6 @@
 import type { PublicDestinationResponse } from '@turisclick/api-client'
 import { Pressable, Text, View } from 'react-native'
-import { experienceCountLabel } from '@/features/catalog/destinations'
+import { contentCountLabel } from '@/features/catalog/destinations'
 import { elevation } from '@/theme/elevation'
 import { CatalogImage } from '@/ui'
 import { Scrim } from '@/ui/Scrim'
@@ -19,7 +19,7 @@ export function DestinationCard({
   onPress: () => void
   size?: 'md' | 'lg'
 }) {
-  const count = experienceCountLabel(destination.publishedExperienceCount)
+  const count = contentCountLabel(destination)
   const dimensions = size === 'lg' ? 'h-56 w-44' : 'h-44 w-36'
 
   return (
@@ -30,11 +30,8 @@ export function DestinationCard({
       className={`${dimensions} overflow-hidden rounded-lg bg-brand-900 active:opacity-90`}
       style={elevation.raised}
     >
-      <CatalogImage
-        uri={destination.imageUrl}
-        className="absolute inset-0 h-full w-full"
-        fallbackLabel={destination.name}
-      />
+      {/* Sin fallbackLabel: la tarjeta ya escribe el nombre sobre la foto, y el placeholder lo repetía. */}
+      <CatalogImage uri={destination.imageUrl} className="absolute inset-0 h-full w-full" />
       <Scrim height="60%" />
       <View className="absolute inset-x-0 bottom-0 p-3">
         <Text className="font-display text-heading text-white" numberOfLines={2}>
@@ -61,7 +58,7 @@ export function DestinationBanner({
   destination: PublicDestinationResponse
   onClear: () => void
 }) {
-  const count = experienceCountLabel(destination.publishedExperienceCount)
+  const count = contentCountLabel(destination)
 
   return (
     <View className="h-28 overflow-hidden rounded-2xl bg-[#E2E8F0]" style={{ elevation: 2 }}>

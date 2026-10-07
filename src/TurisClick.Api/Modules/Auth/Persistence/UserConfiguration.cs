@@ -46,6 +46,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsUnique()
             .HasDatabaseName("uq_users_email");
 
+        // Default false: las cuentas que ya existen no arrastran ninguna contraseña temporal.
+        builder.Property(u => u.MustChangePassword)
+            .HasColumnName("must_change_password")
+            .HasDefaultValue(false)
+            .IsRequired();
+
         builder.Property(u => u.PasswordHash)
             .HasColumnName("password_hash")
             .HasMaxLength(255)

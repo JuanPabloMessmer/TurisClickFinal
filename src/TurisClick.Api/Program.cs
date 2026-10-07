@@ -6,6 +6,7 @@ using Microsoft.OpenApi;
 using Serilog;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Database.Seed;
+using Microsoft.AspNetCore.Authorization;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Admin;
 using TurisClick.Api.Modules.Ai;
@@ -98,13 +99,20 @@ try
     // ---- Autorización por rol (ADMIN / PROVIDER / TOURIST) ----
     builder.Services.AddAuthorization(options =>
     {
-        options.AddPolicy("RequireAdmin", p => p.RequireRole("ADMIN"));
-        options.AddPolicy("RequireProvider", p => p.RequireRole("PROVIDER"));
-        options.AddPolicy("RequireTourist", p => p.RequireRole("TOURIST"));
+        // Toda política de operación exige además que la contraseña temporal ya se haya cambiado: una
+        // credencial provisoria sirve para entrar y cambiarla, para nada más.
+        var passwordChanged = new PasswordChangeNotPendingRequirement();
+
+        options.AddPolicy("RequireAdmin", p => p.RequireRole("ADMIN").AddRequirements(passwordChanged));
+        options.AddPolicy("RequireProvider", p => p.RequireRole("PROVIDER").AddRequirements(passwordChanged));
+        options.AddPolicy("RequireTourist", p => p.RequireRole("TOURIST").AddRequirements(passwordChanged));
         // Lecturas donde el operador ve lo suyo y el ADMIN ve todo: la autorización fina (de quién es
         // el recurso) la resuelve el Service, que es el único que sabe a qué empresa pertenece.
-        options.AddPolicy("RequireProviderOrAdmin", p => p.RequireRole("PROVIDER", "ADMIN"));
+        options.AddPolicy("RequireProviderOrAdmin",
+            p => p.RequireRole("PROVIDER", "ADMIN").AddRequirements(passwordChanged));
     });
+
+    builder.Services.AddSingleton<IAuthorizationHandler, PasswordChangeNotPendingHandler>();
 
     // ---- Infraestructura + módulos ----
     builder.Services.AddSecurityInfrastructure();

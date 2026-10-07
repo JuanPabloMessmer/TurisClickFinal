@@ -26,11 +26,21 @@ import { cn } from '@/lib/utils'
 const adminNav = [
   { label: null, links: [{ to: '/dashboard', label: 'Hoy', icon: LayoutDashboard }] },
   {
-    label: 'Moderación',
-    links: [{ to: '/admin/companies', label: 'Empresas', icon: Building2 }],
+    label: 'Plataforma',
+    links: [
+      { to: '/admin/companies', label: 'Empresas', icon: Building2 },
+      { to: '/admin/reservations', label: 'Reservas', icon: ClipboardList },
+    ],
   },
   {
-    label: 'Catálogo',
+    label: 'Catálogo publicado',
+    links: [
+      { to: '/admin/experiences', label: 'Experiencias', icon: Compass },
+      { to: '/admin/packages', label: 'Paquetes', icon: Package },
+    ],
+  },
+  {
+    label: 'Configuración',
     links: [
       { to: '/admin/destinations', label: 'Destinos', icon: MapPinned },
       { to: '/admin/categories', label: 'Categorías', icon: Tags },
