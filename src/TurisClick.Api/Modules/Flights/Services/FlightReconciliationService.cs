@@ -314,7 +314,10 @@ public class FlightReconciliationService(
 
         try
         {
-            var cancellation = await flightProvider.CancelOrderAsync(order.OrderId, confirm: true, ct);
+            // Acá no hay nada que mostrarle a nadie: el presupuesto se pide sólo porque el proveedor exige
+            // crear la cancelación antes de confirmarla.
+            var quoted = await flightProvider.QuoteCancellationAsync(order.OrderId, ct);
+            var cancellation = await flightProvider.ConfirmCancellationAsync(quoted.CancellationId, ct);
 
             booking.Status = FlightBookingStatus.CANCELLED;
             booking.FailureReason = "La reserva ya no estaba vigente: el pasaje se canceló en la aerolínea.";

@@ -16,6 +16,8 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
             t.HasCheckConstraint("ck_packages_duration", "duration_days > 0");
             t.HasCheckConstraint("ck_packages_price", "price >= 0");
             t.HasCheckConstraint("ck_packages_currency", "currency ~ '^[A-Z]{3}$'");
+            t.HasCheckConstraint("ck_packages_cancellation_policy",
+                $"cancellation_policy IS NULL OR cancellation_policy ~ '{Reservations.Policies.CancellationPolicy.ColumnRegex}'");
         });
 
         builder.HasKey(p => p.Id);
@@ -40,6 +42,12 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
 
         // Columna aditiva con default: los paquetes que ya existen quedan sin vuelo, como estaban.
         builder.Property(p => p.IncludesFlight).HasColumnName("includes_flight").HasDefaultValue(false).IsRequired();
+
+        // La base valida la FORMA de la política (tramos `dias:porcentaje`), no su coherencia: que un tramo
+        // no contradiga a otro lo decide el dominio, que es donde está el mensaje que lee el operador.
+        builder.Property(p => p.CancellationPolicy)
+            .HasColumnName("cancellation_policy")
+            .HasMaxLength(Reservations.Policies.CancellationPolicy.MaxLength);
 
         builder.Property(p => p.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
         builder.Property(p => p.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");

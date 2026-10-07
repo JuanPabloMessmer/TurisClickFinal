@@ -39,6 +39,16 @@ public class Package
     /// <summary>Regla con la que se busca el vuelo. Existe si y sólo si IncludesFlight es true.</summary>
     public PackageFlightRule? FlightRule { get; set; }
 
+    /// <summary>
+    /// Política de cancelación del operador, serializada (ver `CancellationPolicy`). Nula significa que el
+    /// operador no definió ninguna, y entonces una reserva ya confirmada **no se cancela desde la app**:
+    /// sin política no hay nada que aplicar, y suponerle un reembolso a alguien que no lo ofreció sería
+    /// inventarle una obligación comercial.
+    ///
+    /// Cambiarla acá no afecta a ninguna reserva existente: cada una guarda su propia copia.
+    /// </summary>
+    public string? CancellationPolicy { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 

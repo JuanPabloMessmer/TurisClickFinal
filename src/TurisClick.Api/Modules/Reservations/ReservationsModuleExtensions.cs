@@ -13,6 +13,12 @@ public static class ReservationsModuleExtensions
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<IReservationBookingService, ReservationBookingService>();
         services.AddScoped<IReservationExpirationService, ReservationExpirationService>();
+        services.AddScoped<IReservationCancellationService, ReservationCancellationService>();
+        services.AddScoped<IPaymentLedger, PaymentLedger>();
+        services.AddScoped<IAdminPaymentsService, AdminPaymentsService>();
+        services.Configure<CancellationResolutionOptions>(
+            configuration.GetSection(CancellationResolutionOptions.SectionName));
+        services.AddHostedService<CancellationResolutionBackgroundService>();
         services.Configure<ReservationExpirationOptions>(configuration.GetSection(ReservationExpirationOptions.SectionName));
         services.AddHostedService<ReservationExpirationBackgroundService>();
 

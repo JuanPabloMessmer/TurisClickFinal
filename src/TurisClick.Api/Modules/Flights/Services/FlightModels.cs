@@ -136,11 +136,27 @@ public record FlightOrderResult(
     /// <summary>Oferta con la que se compró, si el proveedor la informa. Sirve para emparejar una orden con nuestra cotización.</summary>
     string? OfferId = null,
     /// <summary>Nuestra clave de correlación, tal como volvió del proveedor. Confirma que la orden es la que buscábamos.</summary>
-    string? CorrelationKey = null);
+    string? CorrelationKey = null,
+    /// <summary>
+    /// Cuándo quedó cancelada la orden, si lo está. Es lo que permite preguntarle al proveedor "¿esto ya se
+    /// canceló?" antes de reintentar una cancelación cuyo desenlace se perdió.
+    /// </summary>
+    DateTimeOffset? CancelledAt = null);
 
+/// <summary>
+/// Una cancelación aérea, en el lenguaje de TurisClick.
+///
+/// `RefundAmount` **nulo no es cero**: cero significa "la aerolínea no devuelve nada" y nulo significa "no
+/// informó cuánto". Decirle a alguien que su pasaje es reembolsable sin que la aerolínea lo haya dicho es
+/// prometer plata ajena, así que la distinción viaja hasta la pantalla.
+///
+/// `ExpiresAt` es el plazo para confirmar: pasado ese momento hay que volver a pedir el presupuesto. Lo
+/// informa el proveedor y por eso manda sobre la validez de nuestro propio presupuesto de cancelación.
+/// </summary>
 public record FlightCancellationResult(
     string CancellationId,
     decimal? RefundAmount,
     string? RefundCurrency,
     string? RefundTo,
-    DateTimeOffset? ConfirmedAt);
+    DateTimeOffset? ConfirmedAt,
+    DateTimeOffset? ExpiresAt = null);

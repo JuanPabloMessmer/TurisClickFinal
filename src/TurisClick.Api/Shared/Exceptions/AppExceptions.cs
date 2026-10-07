@@ -68,6 +68,23 @@ public static class ErrorCodes
 
     /// <summary>Faltan los datos de los pasajeros, o no coinciden con la cantidad de viajeros de la reserva.</summary>
     public const string FlightTravelersRequired = "FLIGHT_TRAVELERS_REQUIRED";
+
+    // ---- Oleada 12: libro de pagos y cancelación con reembolso ----
+
+    /// <summary>Ya hay una cancelación en curso para esta reserva; no se lanza otra.</summary>
+    public const string CancellationInProgress = "CANCELLATION_IN_PROGRESS";
+
+    /// <summary>El operador no definió política de cancelación para ese producto: no se cancela desde la app.</summary>
+    public const string CancellationPolicyMissing = "CANCELLATION_POLICY_MISSING";
+
+    /// <summary>El presupuesto de cancelación no existe, no es de esta reserva o ya no está vigente.</summary>
+    public const string CancellationQuoteInvalid = "CANCELLATION_QUOTE_INVALID";
+
+    /// <summary>El presupuesto venció: hay que pedir uno nuevo porque el reembolso puede haber cambiado.</summary>
+    public const string CancellationQuoteExpired = "CANCELLATION_QUOTE_EXPIRED";
+
+    /// <summary>Cancelar una reserva confirmada exige aceptar antes un presupuesto de reembolso.</summary>
+    public const string CancellationQuoteRequired = "CANCELLATION_QUOTE_REQUIRED";
 }
 
 /// <summary>Recurso solicitado no existe. El GlobalExceptionHandler la mapea a 404.</summary>

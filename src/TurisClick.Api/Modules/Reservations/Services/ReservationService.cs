@@ -10,6 +10,7 @@ using TurisClick.Api.Modules.Packages.Repositories;
 using TurisClick.Api.Modules.Reservations.Dtos;
 using TurisClick.Api.Modules.Reservations.Entities;
 using TurisClick.Api.Modules.Reservations.Payments;
+using TurisClick.Api.Modules.Reservations.Policies;
 using TurisClick.Api.Modules.Reservations.Repositories;
 using TurisClick.Api.Shared.Exceptions;
 using TurisClick.Api.Shared.Responses;
@@ -28,6 +29,8 @@ public class ReservationService(
     IPaymentGateway paymentGateway,
     IReservationBookingService bookingService,
     IFlightBookingOrchestrator flightOrchestrator,
+    IReservationCancellationService cancellationService,
+    IPaymentLedger ledger,
     ICurrentUserContext currentUser,
     ICompanyOwnershipGuard ownershipGuard,
     ILogger<ReservationService> logger,
@@ -147,7 +150,10 @@ public class ReservationService(
             UnitPrice = experience.Price,
             Currency = experience.Currency,
             Subtotal = experience.Price * travelers,
-            Status = ReservationItemStatus.PENDING_PAYMENT
+            Status = ReservationItemStatus.PENDING_PAYMENT,
+            // Las experiencias todavía no tienen política configurable (ver UC-P-16): nula significa que una
+            // vez confirmada no se cancela desde la app, que es el comportamiento que ya existía.
+            CancellationPolicy = null
         };
 
         return (item, tx);
@@ -208,7 +214,10 @@ public class ReservationService(
             UnitPrice = package.Price,
             Currency = package.Currency,
             Subtotal = package.Price * travelers,
-            Status = ReservationItemStatus.PENDING_PAYMENT
+            Status = ReservationItemStatus.PENDING_PAYMENT,
+            // Se congela junto al precio: si el operador cambia su política mañana, esta reserva conserva la
+            // que la persona aceptó hoy.
+            CancellationPolicy = package.CancellationPolicy
         };
 
         return (item, tx);
@@ -228,7 +237,12 @@ public class ReservationService(
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.ReservationId == id, ct);
 
-        return ToResponse(reservation, flight: flight);
+        // La cancelación se lee para que "Mis viajes" conserve la historia: una reserva cancelada tiene que
+        // poder explicar qué se devolvió, no sólo que dejó de estar vigente.
+        var cancellation = await LoadLastCancellationAsync(id, ct);
+        var refunds = await LoadRefundsByItemAsync(id, ct);
+
+        return ToResponse(reservation, flight: flight, cancellation: cancellation, refundsByItem: refunds);
     }
 
     public async Task<PagedResult<ReservationResponse>> ListMineAsync(int page, int pageSize, CancellationToken ct)
@@ -246,9 +260,24 @@ public class ReservationService(
             .Where(b => reservationIds.Contains(b.ReservationId))
             .ToDictionaryAsync(b => b.ReservationId, ct);
 
+        // Una consulta para las cancelaciones de toda la página, por la misma razón que para los vuelos: la
+        // alternativa es una por reserva.
+        var cancellations = await db.ReservationCancellations
+            .AsNoTracking()
+            .Include(c => c.Lines)
+            .Where(c => reservationIds.Contains(c.ReservationId))
+            .ToListAsync(ct);
+
+        var lastByReservation = cancellations
+            .GroupBy(c => c.ReservationId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CreatedAt).First());
+
         return new PagedResult<ReservationResponse>
         {
-            Items = items.Select(r => ToResponse(r, flight: flights.GetValueOrDefault(r.Id))).ToList(),
+            Items = items.Select(r => ToResponse(
+                r,
+                flight: flights.GetValueOrDefault(r.Id),
+                cancellation: lastByReservation.GetValueOrDefault(r.Id))).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = totalCount
@@ -406,6 +435,12 @@ public class ReservationService(
         {
             chargeResult = await paymentGateway.ChargeAsync(
                 new PaymentChargeRequest(reservation.Id, charge.Amount, charge.Currency, request.Success), ct);
+
+            // Cada intento queda en el libro, aprobado o rechazado. Un rechazo también es historia: es la
+            // única forma de poder responder después qué operación falló.
+            ledger.RecordCharge(
+                reservation.Id, charge.Amount, charge.Currency, "Simulated",
+                chargeResult.Approved, chargeResult.FailureReason);
 
             // Un rechazo en cualquier moneda deja la reserva entera PENDING_PAYMENT y reintentable: no
             // se confirma una parte del viaje. (Con una pasarela real habría que compensar los cargos
@@ -566,8 +601,7 @@ public class ReservationService(
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
 
-                await paymentGateway.VoidAsync(
-                    new PaymentVoidRequest(reservation.Id, flight.TotalAmount, flight.Currency, outcome.Message), ct);
+                await VoidChargesAsync(reservation.Id, outcome.Message, ct);
 
                 throw new ConflictAppException(outcome.Message, outcome.ErrorCode);
             }
@@ -578,8 +612,7 @@ public class ReservationService(
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
 
-                await paymentGateway.VoidAsync(
-                    new PaymentVoidRequest(reservation.Id, flight.TotalAmount, flight.Currency, outcome.Message), ct);
+                await VoidChargesAsync(reservation.Id, outcome.Message, ct);
 
                 throw new ConflictAppException(outcome.Message, outcome.ErrorCode);
             }
@@ -596,6 +629,26 @@ public class ReservationService(
                 return response;
             }
         }
+    }
+
+    /// <summary>
+    /// Revierte los cobros autorizados de esta reserva y lo asienta en el libro. Con el pago simulado no hay
+    /// plata que mover —y el log lo dice así—, pero el asiento existe: el día que haya una pasarela real,
+    /// este es el punto donde se cancela la autorización.
+    /// </summary>
+    private async Task VoidChargesAsync(Guid reservationId, string reason, CancellationToken ct)
+    {
+        var charged = await ledger.GetBalanceAsync(reservationId, ct);
+
+        foreach (var balance in charged.Where(b => b.Net > 0m))
+        {
+            await paymentGateway.VoidAsync(
+                new PaymentVoidRequest(reservationId, balance.Net, balance.Currency, reason), ct);
+
+            ledger.RecordVoid(reservationId, balance.Net, balance.Currency, "Simulated", reason);
+        }
+
+        await db.SaveChangesAsync(ct);
     }
 
     /// <summary>Compensacion local de una emision fallida: cancela la reserva y devuelve el cupo.</summary>
@@ -662,7 +715,7 @@ public class ReservationService(
     /// devolución de dinero, y no existe todavía ni entidad Payment ni pasarela real, así que inventar
     /// una política comercial acá sería peor que no ofrecer la operación (decisión de dominio Oleada 8).
     /// </summary>
-    public async Task<ReservationResponse> CancelAsync(Guid id, CancellationToken ct)
+    public async Task<ReservationResponse> CancelAsync(Guid id, Guid? cancellationQuoteId, CancellationToken ct)
     {
         var reservation = await reservationRepository.GetByIdForCancellationAsync(id, ct)
             ?? throw new NotFoundAppException("Reserva no encontrada.");
@@ -670,10 +723,18 @@ public class ReservationService(
         if (reservation.TouristId != currentUser.UserId)
             throw new ForbiddenAppException("Esta reserva no te pertenece.");
 
-        if (reservation.Status == ReservationStatus.CONFIRMED)
-            throw new ConflictAppException(
-                "Una reserva ya confirmada no se puede cancelar todavía: falta definir la política de reembolso.",
-                ErrorCodes.RefundPolicyRequired);
+        // Una reserva ya confirmada se cancela por el camino con reembolso: hay plata de por medio y la
+        // persona tiene que haber visto y aceptado cuánto vuelve antes de que se ejecute nada.
+        if (reservation.Status is ReservationStatus.CONFIRMED or ReservationStatus.CANCELLING)
+        {
+            if (cancellationQuoteId is not { } quoteId)
+                throw new ConflictAppException(
+                    "Para cancelar una reserva confirmada hace falta aceptar antes el presupuesto de reembolso.",
+                    ErrorCodes.CancellationQuoteRequired);
+
+            await cancellationService.ConfirmAsync(id, quoteId, ct);
+            return await GetByIdForTouristAsync(id, ct);
+        }
 
         if (reservation.Status != ReservationStatus.PENDING_PAYMENT)
             throw new ConflictAppException(
@@ -812,7 +873,9 @@ public class ReservationService(
         bool? paymentApproved = null,
         string? paymentFailureReason = null,
         FlightBooking? flight = null,
-        FlightPreflight? preflight = null) => new()
+        FlightPreflight? preflight = null,
+        ReservationCancellation? cancellation = null,
+        IReadOnlyDictionary<Guid, decimal>? refundsByItem = null) => new()
     {
         Id = reservation.Id,
         Status = reservation.Status.ToString(),
@@ -820,7 +883,8 @@ public class ReservationService(
         CreatedAt = reservation.CreatedAt,
         ConfirmedAt = reservation.ConfirmedAt,
         CancelledAt = reservation.CancelledAt,
-        Items = [.. reservation.Items.Select(i => ToItemResponse(i, revalidationByItemId?.GetValueOrDefault(i.Id)))],
+        Items = [.. reservation.Items.Select(i => ToItemResponse(
+            i, revalidationByItemId?.GetValueOrDefault(i.Id), refundsByItem?.GetValueOrDefault(i.Id)))],
         Totals = [.. reservation.Items
             .GroupBy(i => i.Currency)
             .Select(g => new ReservationTotalResponse { Currency = g.Key, Amount = g.Sum(i => i.Subtotal) })],
@@ -833,14 +897,16 @@ public class ReservationService(
         RequiresFlightPriceAcceptance = preflight?.Kind == FlightPreflightKind.REQUIRES_ACCEPTANCE,
         FlightPreviousPrice = preflight?.Kind == FlightPreflightKind.REQUIRES_ACCEPTANCE ? preflight.Previous : null,
         FlightCurrentPrice = preflight?.Kind == FlightPreflightKind.REQUIRES_ACCEPTANCE ? preflight.Current : null,
-        FlightMessage = preflight?.Kind == FlightPreflightKind.REQUIRES_ACCEPTANCE ? preflight.Message : null
+        FlightMessage = preflight?.Kind == FlightPreflightKind.REQUIRES_ACCEPTANCE ? preflight.Message : null,
+        Cancellation = cancellation is null ? null : AdminPaymentsService.ToSummary(cancellation)
     };
 
     /// <summary>
     /// item.Reservation viene poblado por fixup de EF Core (mismo query, ver ReservationRepository/ReservationItemRepository)
     /// aunque no siempre incluye Tourist — en la vista del propio TOURIST ese dato es irrelevante y queda vacío.
     /// </summary>
-    private static ReservationItemResponse ToItemResponse(ReservationItem item, PriceRevalidation? revalidation = null) => new()
+    private static ReservationItemResponse ToItemResponse(
+        ReservationItem item, PriceRevalidation? revalidation = null, decimal? refundedAmount = null) => new()
     {
         Id = item.Id,
         ReservationId = item.ReservationId,
@@ -866,6 +932,32 @@ public class ReservationService(
         CreatedAt = item.CreatedAt,
         PriceChanged = revalidation?.Changed ?? false,
         CurrentUnitPrice = revalidation?.Changed == true ? revalidation.CurrentUnitPrice : null,
-        CurrentCurrency = revalidation?.Changed == true ? revalidation.CurrentCurrency : null
+        CurrentCurrency = revalidation?.Changed == true ? revalidation.CurrentCurrency : null,
+        CancellationPolicy = CancellationPolicyRules.Deserialize(item.CancellationPolicy),
+        RefundedAmount = refundedAmount
     };
+
+    /// <summary>La última cancelación de una reserva: es la que describe en qué quedó.</summary>
+    private async Task<ReservationCancellation?> LoadLastCancellationAsync(Guid reservationId, CancellationToken ct) =>
+        await db.ReservationCancellations
+            .AsNoTracking()
+            .Include(c => c.Lines)
+            .Where(c => c.ReservationId == reservationId)
+            .OrderByDescending(c => c.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+    /// <summary>Cuánto se reembolsó por línea. Sólo los movimientos exitosos: un intento fallido no devolvió plata.</summary>
+    private async Task<Dictionary<Guid, decimal>> LoadRefundsByItemAsync(Guid reservationId, CancellationToken ct)
+    {
+        var rows = await db.PaymentTransactions
+            .AsNoTracking()
+            .Where(p => p.ReservationId == reservationId
+                && p.Type == PaymentTransactionType.REFUND
+                && p.Status == PaymentTransactionStatus.SUCCEEDED
+                && p.ReservationItemId != null)
+            .Select(p => new { ItemId = p.ReservationItemId!.Value, p.Amount })
+            .ToListAsync(ct);
+
+        return rows.GroupBy(r => r.ItemId).ToDictionary(g => g.Key, g => g.Sum(r => r.Amount));
+    }
 }

@@ -40,6 +40,9 @@ public class TurisClickDbContext(DbContextOptions<TurisClickDbContext> options) 
     public DbSet<PackageFlightRule> PackageFlightRules => Set<PackageFlightRule>();
     public DbSet<FlightQuote> FlightQuotes => Set<FlightQuote>();
     public DbSet<FlightBooking> FlightBookings => Set<FlightBooking>();
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
+    public DbSet<ReservationCancellation> ReservationCancellations => Set<ReservationCancellation>();
+    public DbSet<ReservationCancellationLine> ReservationCancellationLines => Set<ReservationCancellationLine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -51,6 +51,13 @@ public class ReservationResponse
 
     /// <summary>Qué decirle a la persona sobre el vuelo en esta respuesta puntual (cambio de precio, emisión en curso).</summary>
     public string? FlightMessage { get; set; }
+
+    /// <summary>
+    /// UC-T-22 — la última cancelación de esta reserva, si hubo alguna. Es lo que permite que "Mis viajes"
+    /// conserve la historia: qué se canceló, cuánto se devolvió y en qué quedó. Null en una reserva que nunca
+    /// se intentó cancelar.
+    /// </summary>
+    public CancellationSummaryResponse? Cancellation { get; set; }
 }
 
 /// <summary>Vista del PROVIDER dueño de ESE Item puntual (UC-P-12/13) — no expone los Items de otras empresas de la misma Reservation.</summary>
@@ -96,6 +103,16 @@ public class ReservationItemResponse
     /// <summary>Precio/moneda vigentes de la Experience al momento de pagar — solo poblado cuando PriceChanged es true.</summary>
     public decimal? CurrentUnitPrice { get; set; }
     public string? CurrentCurrency { get; set; }
+
+    /// <summary>
+    /// UC-P-16 — la política de cancelación con la que se vendió esta línea, tal como quedó congelada. El
+    /// operador la ve para saber qué se le aplicó a esta reserva en concreto, que puede no ser la que tiene
+    /// configurada hoy.
+    /// </summary>
+    public List<CancellationTierDto> CancellationPolicy { get; set; } = [];
+
+    /// <summary>Cuánto se reembolsó de esta línea, si se canceló. Nulo mientras no haya habido reembolso.</summary>
+    public decimal? RefundedAmount { get; set; }
 }
 
 public class ReservationTotalResponse

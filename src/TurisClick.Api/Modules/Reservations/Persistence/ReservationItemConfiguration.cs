@@ -14,6 +14,8 @@ public class ReservationItemConfiguration : IEntityTypeConfiguration<Reservation
             t.HasCheckConstraint("ck_reservation_items_travelers", "travelers > 0");
             t.HasCheckConstraint("ck_reservation_items_amounts", "unit_price >= 0 AND subtotal >= 0");
             t.HasCheckConstraint("ck_reservation_items_currency", "currency ~ '^[A-Z]{3}$'");
+            t.HasCheckConstraint("ck_reservation_items_cancellation_policy",
+                $"cancellation_policy IS NULL OR cancellation_policy ~ '{Policies.CancellationPolicy.ColumnRegex}'");
             t.HasCheckConstraint("ck_reservation_items_product_shape",
                 "(product_type = 'EXPERIENCE' AND experience_id IS NOT NULL AND package_id IS NULL " +
                 "AND experience_availability_id IS NOT NULL AND package_availability_id IS NULL) " +
@@ -56,6 +58,11 @@ public class ReservationItemConfiguration : IEntityTypeConfiguration<Reservation
         builder.Property(i => i.CancellationReason).HasColumnName("cancellation_reason").HasMaxLength(500);
 
         builder.Property(i => i.DayNumber).HasColumnName("day_number");
+
+        // Snapshot de la política del producto, igual que unit_price congela su precio.
+        builder.Property(i => i.CancellationPolicy)
+            .HasColumnName("cancellation_policy")
+            .HasMaxLength(TurisClick.Api.Modules.Reservations.Policies.CancellationPolicy.MaxLength);
         builder.Property(i => i.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
 
         builder.HasIndex(i => i.ReservationId).HasDatabaseName("ix_reservation_items_reservation_id");

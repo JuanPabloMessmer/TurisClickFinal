@@ -231,12 +231,19 @@ public class DuffelFlightProviderTests
                 Content = new StringContent(Fixture("cancellation-confirmed.json"), Encoding.UTF8, "application/json"),
             });
 
-        var result = await BuildProvider(handler).CancelOrderAsync("ord_0000TestOrder", confirm: true, CancellationToken.None);
+        // Los dos pasos son dos llamadas distintas a propósito: la primera sólo pregunta cuánto devolvería la
+        // aerolínea —Duffel la documenta como no vinculante— y la segunda es la que cancela de verdad.
+        var provider = BuildProvider(handler);
 
-        Assert.Equal("ore_0000TestCancellation", result.CancellationId);
-        Assert.Equal(48.99m, result.RefundAmount);
-        Assert.Equal("balance", result.RefundTo);
-        Assert.NotNull(result.ConfirmedAt);
+        var quoted = await provider.QuoteCancellationAsync("ord_0000TestOrder", CancellationToken.None);
+        Assert.Equal("ore_0000TestCancellation", quoted.CancellationId);
+        Assert.Equal(48.99m, quoted.RefundAmount);
+        Assert.Null(quoted.ConfirmedAt);
+
+        var confirmed = await provider.ConfirmCancellationAsync(quoted.CancellationId, CancellationToken.None);
+        Assert.Equal("ore_0000TestCancellation", confirmed.CancellationId);
+        Assert.Equal("balance", confirmed.RefundTo);
+        Assert.NotNull(confirmed.ConfirmedAt);
         Assert.Empty(paths);
     }
 

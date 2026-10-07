@@ -39,8 +39,19 @@ public interface IFlightProvider
     Task<FlightOrderResult?> FindOrderByOfferAsync(string offerId, string? correlationKey, CancellationToken ct);
 
     /// <summary>
-    /// Cancela una orden. El resultado dice qué se devuelve y a dónde: TurisClick no asume que una
-    /// cancelación implique reembolso, lo informa el proveedor.
+    /// Pide el presupuesto de cancelación de una orden. **No cancela nada**: Duffel lo define así a
+    /// propósito —crear una cancelación pendiente sólo consulta a la aerolínea cuánto devolvería— y es
+    /// exactamente lo que hace falta para mostrarle a la persona qué va a pasar antes de decidir.
+    ///
+    /// El resultado trae el identificador que después hay que confirmar y hasta cuándo vale. Ojo con una
+    /// regla del proveedor: sólo se puede confirmar la cancelación **más reciente** de una orden, así que
+    /// pedir un presupuesto nuevo invalida el anterior.
     /// </summary>
-    Task<FlightCancellationResult> CancelOrderAsync(string orderId, bool confirm, CancellationToken ct);
+    Task<FlightCancellationResult> QuoteCancellationAsync(string orderId, CancellationToken ct);
+
+    /// <summary>
+    /// Confirma una cancelación presupuestada. Este sí es el paso irreversible: a partir de acá el pasaje
+    /// está cancelado en la aerolínea.
+    /// </summary>
+    Task<FlightCancellationResult> ConfirmCancellationAsync(string cancellationId, CancellationToken ct);
 }

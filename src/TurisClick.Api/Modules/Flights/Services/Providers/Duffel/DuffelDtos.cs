@@ -129,6 +129,7 @@ internal sealed record DuffelOrder(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("booking_reference")] string? BookingReference,
     [property: JsonPropertyName("offer_id")] string? OfferId,
+    [property: JsonPropertyName("cancelled_at")] DateTimeOffset? CancelledAt,
     [property: JsonPropertyName("metadata")] Dictionary<string, string>? Metadata,
     [property: JsonPropertyName("total_amount")] string? TotalAmount,
     [property: JsonPropertyName("total_currency")] string? TotalCurrency,

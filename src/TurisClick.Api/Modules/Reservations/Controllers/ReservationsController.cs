@@ -9,7 +9,9 @@ namespace TurisClick.Api.Modules.Reservations.Controllers;
 [ApiController]
 [Route("api/reservations")]
 [Authorize(Policy = "RequireTourist")]
-public class ReservationsController(IReservationService reservationService) : ControllerBase
+public class ReservationsController(
+    IReservationService reservationService,
+    IReservationCancellationService cancellationService) : ControllerBase
 {
     /// <summary>UC-T-08 — reserva directa de una Experience individual.</summary>
     [HttpPost]
@@ -46,14 +48,30 @@ public class ReservationsController(IReservationService reservationService) : Co
     }
 
     /// <summary>
-    /// UC-T-11 — cancelar la reserva completa y liberar el cupo. En esta oleada solo se admite una
-    /// reserva PENDING_PAYMENT: cancelar una ya confirmada exige una política de reembolso que todavía
-    /// no existe (409 `REFUND_POLICY_REQUIRED`).
+    /// UC-T-22 — qué pasaría si cancelara: cuánto devuelve el operador por cada producto según la política
+    /// que la reserva congeló, y cuánto devuelve la aerolínea según lo que ella misma informa. **No cancela
+    /// nada.**
+    ///
+    /// El presupuesto se guarda y vence: confirmar significa aceptar exactamente estos importes, y el cliente
+    /// nunca manda un monto de reembolso.
+    /// </summary>
+    [HttpPost("{id:guid}/cancellation-quote")]
+    [ProducesResponseType(typeof(CancellationQuoteResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<CancellationQuoteResponse>> QuoteCancellation(Guid id, CancellationToken ct)
+        => Ok(await cancellationService.QuoteAsync(id, ct));
+
+    /// <summary>
+    /// UC-T-11 / UC-T-22 — cancelar la reserva y liberar el cupo.
+    ///
+    /// Sin pagar todavía se cancela directo. Ya confirmada hace falta el id del presupuesto aceptado, y el
+    /// resultado puede ser parcial: si la aerolínea no confirma o el reembolso falla, se devuelve el estado
+    /// real en vez de anunciar un éxito que no ocurrió.
     /// </summary>
     [HttpPost("{id:guid}/cancel")]
-    public async Task<ActionResult<ReservationResponse>> Cancel(Guid id, CancellationToken ct)
+    public async Task<ActionResult<ReservationResponse>> Cancel(
+        Guid id, [FromBody] ConfirmCancellationRequest? request, CancellationToken ct)
     {
-        var result = await reservationService.CancelAsync(id, ct);
+        var result = await reservationService.CancelAsync(id, request?.CancellationQuoteId, ct);
         return Ok(result);
     }
 }

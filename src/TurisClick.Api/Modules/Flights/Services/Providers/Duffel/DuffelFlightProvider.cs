@@ -177,19 +177,32 @@ public partial class DuffelFlightProvider : IFlightProvider
     }
 
     /// <summary>
-    /// Cancelación en dos pasos, como la define Duffel: primero se crea una cancelación pendiente —que
-    /// informa cuánto se reintegra— y después se confirma. Son dos llamadas porque la persona tiene que
-    /// poder ver el reembolso antes de aceptarlo.
+    /// Primer paso de la cancelación: crear la cancelación pendiente. Duffel la documenta como **no
+    /// vinculante** —"make sure that you are happy with the prospective cancellation"—, así que esto se
+    /// puede llamar para mostrarle el reembolso a la persona sin cancelarle nada.
     /// </summary>
-    public async Task<FlightCancellationResult> CancelOrderAsync(string orderId, bool confirm, CancellationToken ct)
+    public async Task<FlightCancellationResult> QuoteCancellationAsync(string orderId, CancellationToken ct)
     {
         var pending = await SendAsync<DuffelOrderCancellation>(
-            HttpMethod.Post, "air/order_cancellations", new DuffelEnvelope<DuffelCancellationBody>(new DuffelCancellationBody(orderId)), ct);
+            HttpMethod.Post,
+            "air/order_cancellations",
+            new DuffelEnvelope<DuffelCancellationBody>(new DuffelCancellationBody(orderId)),
+            ct);
 
-        if (!confirm) return MapCancellation(pending);
+        _logger.LogInformation(
+            "Duffel: cancelación {CancellationId} presupuestada para la orden {OrderId} (vence {ExpiresAt}).",
+            pending.Id, orderId, pending.ExpiresAt);
 
+        return MapCancellation(pending);
+    }
+
+    /// <summary>Segundo paso: confirmar. Acá sí se cancela el pasaje y se libera el reintegro.</summary>
+    public async Task<FlightCancellationResult> ConfirmCancellationAsync(string cancellationId, CancellationToken ct)
+    {
         var confirmed = await SendAsync<DuffelOrderCancellation>(
-            HttpMethod.Post, $"air/order_cancellations/{pending.Id}/actions/confirm", null, ct);
+            HttpMethod.Post, $"air/order_cancellations/{cancellationId}/actions/confirm", null, ct);
+
+        _logger.LogInformation("Duffel: cancelación {CancellationId} confirmada.", confirmed.Id);
 
         return MapCancellation(confirmed);
     }
@@ -333,14 +346,17 @@ public partial class DuffelFlightProvider : IFlightProvider
         order.CreatedAt,
         [.. (order.Slices ?? []).Select(MapSlice)],
         order.OfferId,
-        order.Metadata?.GetValueOrDefault(CorrelationMetadataKey));
+        order.Metadata?.GetValueOrDefault(CorrelationMetadataKey),
+        order.CancelledAt);
 
     private static FlightCancellationResult MapCancellation(DuffelOrderCancellation cancellation) => new(
         cancellation.Id,
+        // Importe ausente => nulo, nunca cero: "no informó" y "no devuelve nada" son cosas distintas.
         string.IsNullOrWhiteSpace(cancellation.RefundAmount) ? null : ParseAmount(cancellation.RefundAmount),
         cancellation.RefundCurrency,
         cancellation.RefundTo,
-        cancellation.ConfirmedAt);
+        cancellation.ConfirmedAt,
+        cancellation.ExpiresAt);
 
     /// <summary>Duffel publica los importes como string. Se parsea en cultura invariante, una sola vez.</summary>
     private static decimal ParseAmount(string? amount) =>

@@ -1,5 +1,7 @@
 ﻿using TurisClick.Api.Modules.Categories.Dtos;
 
+using TurisClick.Api.Modules.Reservations.Dtos;
+
 namespace TurisClick.Api.Modules.Packages.Dtos;
 
 /// <summary>Vista completa — usada por el detalle público (UC-T-07, solo PUBLISHED) y por el Provider dueño (cualquier estado).</summary>
@@ -33,6 +35,12 @@ public class PackageResponse
     /// desfases de fecha son configuración interna y no salen al catálogo público.
     /// </summary>
     public List<FlightOriginResponse> FlightOrigins { get; set; } = [];
+
+    /// <summary>
+    /// Política de cancelación del operador, por tramos. Lista vacía = el operador no definió ninguna, y una
+    /// reserva confirmada de este paquete no se cancela desde la app.
+    /// </summary>
+    public List<CancellationTierDto> CancellationPolicy { get; set; } = [];
 
     public bool? FlightRoundTrip { get; set; }
     public List<CategoryResponse> Categories { get; set; } = [];

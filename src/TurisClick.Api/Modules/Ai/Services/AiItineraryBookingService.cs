@@ -203,7 +203,11 @@ public class AiItineraryBookingService(
         var line = new BookingLine(
             ProductType.EXPERIENCE, experience.Id, availability.Id,
             // CompanyId derivado del producto real, nunca de algo que mande el cliente.
-            experience.CompanyId, travelers, experience.Price, experience.Currency, item.DayNumber);
+            experience.CompanyId, travelers, experience.Price, experience.Currency, item.DayNumber,
+            // Las experiencias todavía no tienen política de cancelación configurable: queda nula, y eso
+            // significa que una reserva confirmada que las incluya no se cancela desde la app. Es la misma
+            // frontera que antes de esta oleada, dicha explícitamente.
+            CancellationPolicy: null);
 
         return (line, BuildChange(item, experience.Title, experience.Price, experience.Currency));
     }
@@ -237,7 +241,8 @@ public class AiItineraryBookingService(
 
         var line = new BookingLine(
             ProductType.PACKAGE, package.Id, availability.Id,
-            package.CompanyId, travelers, package.Price, package.Currency, item.DayNumber);
+            package.CompanyId, travelers, package.Price, package.Currency, item.DayNumber,
+            package.CancellationPolicy);
 
         return (line, BuildChange(item, package.Title, package.Price, package.Currency));
     }

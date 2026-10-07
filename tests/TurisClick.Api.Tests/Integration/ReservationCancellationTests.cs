@@ -199,8 +199,16 @@ public class ReservationCancellationTests
         Assert.Equal(0, await ExperienceSlotsAsync(catalog.ExperienceAvailabilityId));
     }
 
+    /// <summary>
+    /// Desde la Oleada 12 una reserva confirmada **sí** se puede cancelar, pero nunca sin que la persona haya
+    /// visto y aceptado cuánto se le devuelve. Este test cuida esa puerta: el pedido pelado no cancela nada.
+    ///
+    /// (Antes el backend contestaba REFUND_POLICY_REQUIRED porque la política no existía. Ahora existe, y lo
+    /// que falta es la aceptación: el código cambió, la garantía de fondo es la misma — no se libera cupo de
+    /// una reserva pagada por accidente.)
+    /// </summary>
     [Fact]
-    public async Task Cancel_ConfirmedReservation_IsRejectedBecauseRefundPolicyDoesNotExistYet()
+    public async Task Cancel_ConfirmedReservation_RequiresAnAcceptedRefundQuote()
     {
         var catalog = await SeedCatalogAsync("can-confirmed");
         var (tourist, reservation) = await CreateDirectReservationAsync(catalog, "can-confirmed-t");
@@ -209,7 +217,7 @@ public class ReservationCancellationTests
         var response = await tourist.PostAsync($"/api/reservations/{reservation.Id}/cancel", null);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-        Assert.Contains("REFUND_POLICY_REQUIRED", await response.Content.ReadAsStringAsync());
+        Assert.Contains("CANCELLATION_QUOTE_REQUIRED", await response.Content.ReadAsStringAsync());
         // El cupo sigue retenido: la reserva pagada no se tocó.
         Assert.Equal(2, await ExperienceSlotsAsync(catalog.ExperienceAvailabilityId));
     }

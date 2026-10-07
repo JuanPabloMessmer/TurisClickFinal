@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TurisClick.Api.Infrastructure.Database;
@@ -11,9 +12,11 @@ using TurisClick.Api.Infrastructure.Database;
 namespace TurisClick.Api.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(TurisClickDbContext))]
-    partial class TurisClickDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261006032156_0012_Oleada12_PagosYCancelacion")]
+    partial class _0012_Oleada12_PagosYCancelacion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1472,7 +1475,7 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.HasIndex("IdempotencyKey")
                         .IsUnique()
                         .HasDatabaseName("ux_payment_transactions_refund_key")
-                        .HasFilter("type = 'REFUND' AND status = 'SUCCEEDED'");
+                        .HasFilter("type = 'REFUND'");
 
                     b.HasIndex("ReservationId", "CreatedAt")
                         .HasDatabaseName("ix_payment_transactions_reservation");

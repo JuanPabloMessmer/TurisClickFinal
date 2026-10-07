@@ -18,6 +18,10 @@ namespace TurisClick.Api.Modules.Flights.Services.Providers;
 ///   UNL -> cualquier destino  : al reservar se pierde la respuesta, y NO quedó ninguna orden
 ///   NET -> cualquier destino  : no se pudo abrir la conexión; la orden nunca salió
 ///   DOC -> cualquier destino  : la oferta exige documento de identidad
+///   NRF -> cualquier destino  : al cancelar, la aerolínea no devuelve nada
+///   NOC -> cualquier destino  : la aerolínea rechaza confirmar la cancelación
+///   CNX -> cualquier destino  : consultar la orden la muestra YA cancelada
+///   NIR -> cualquier destino  : al cancelar, la aerolínea NO informa cuánto devuelve
 ///
 /// UNK y UNL son el par que importa: desde el lado del backend las dos fallas son idénticas —una
 /// respuesta que no llegó—, y lo único que las distingue es lo que el proveedor contesta después. Es
@@ -38,6 +42,10 @@ public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProv
     public const string UnknownAndLostOrigin = "UNL";
     public const string UnreachableOrigin = "NET";
     public const string DocumentsRequiredOrigin = "DOC";
+    public const string NonRefundableOrigin = "NRF";
+    public const string CancellationFailsOrigin = "NOC";
+    public const string AlreadyCancelledOrigin = "CNX";
+    public const string RefundUnknownOrigin = "NIR";
 
     public Task<FlightSearchResult> SearchAsync(FlightSearchRequest request, CancellationToken ct)
     {
@@ -108,7 +116,12 @@ public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProv
             new FlightPrice(120m, "USD"),
             LiveMode: false,
             _time.GetUtcNow(),
-            []));
+            [],
+            OfferId: null,
+            CorrelationKey: null,
+            // La orden se muestra cancelada sólo en el escenario que lo pide: es lo que permite probar que la
+            // resolución PREGUNTA antes de reintentar una cancelación.
+            CancelledAt: orderId.Contains(AlreadyCancelledOrigin, StringComparison.Ordinal) ? _time.GetUtcNow() : null));
     }
 
     /// <summary>
@@ -127,13 +140,64 @@ public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProv
             new FlightOrderRequest(offerId, offer.Price, [], correlationKey), decoded));
     }
 
-    public Task<FlightCancellationResult> CancelOrderAsync(string orderId, bool confirm, CancellationToken ct) =>
-        Task.FromResult(new FlightCancellationResult(
+    /// <summary>
+    /// Presupuesto de cancelación. El origen del vuelo decide qué contesta la aerolínea, igual que en el
+    /// resto del proveedor falso:
+    ///   NRF -> no reembolsable (devuelve 0)
+    ///   UNK -> no informa cuánto devuelve (nulo, que no es lo mismo que cero)
+    ///   resto -> reembolso parcial con cargo de cancelación
+    /// </summary>
+    public Task<FlightCancellationResult> QuoteCancellationAsync(string orderId, CancellationToken ct)
+    {
+        var origin = OriginOf(orderId);
+
+        var refund = RefundFor(origin);
+
+        return Task.FromResult(new FlightCancellationResult(
             $"ore_fake_{orderId}",
-            RefundAmount: 0m,
-            RefundCurrency: "USD",
-            RefundTo: "balance",
-            confirm ? _time.GetUtcNow() : null));
+            refund,
+            refund is null ? null : "USD",
+            refund is null ? null : "balance",
+            ConfirmedAt: null,
+            ExpiresAt: _time.GetUtcNow().AddMinutes(30)));
+    }
+
+    public Task<FlightCancellationResult> ConfirmCancellationAsync(string cancellationId, CancellationToken ct)
+    {
+        if (cancellationId.Contains(CancellationFailsOrigin, StringComparison.Ordinal))
+            throw new FlightProviderRequestException(
+                "La aerolínea no aceptó la cancelación.", 422, "cancellation_not_allowed");
+
+        var refund = RefundFor(OriginOf(cancellationId));
+
+        return Task.FromResult(new FlightCancellationResult(
+            cancellationId,
+            refund,
+            refund is null ? null : "USD",
+            refund is null ? null : "balance",
+            ConfirmedAt: _time.GetUtcNow(),
+            ExpiresAt: null));
+    }
+
+    /// <summary>
+    /// Cuánto devuelve la aerolínea según el escenario. `null` **no es cero**: es "no informó", que es un caso
+    /// distinto y el flujo lo trata distinto.
+    /// </summary>
+    private static decimal? RefundFor(string origin) => origin switch
+    {
+        NonRefundableOrigin => 0m,
+        RefundUnknownOrigin => null,
+        UnknownButOrderedOrigin => null,
+        _ => 100m,
+    };
+
+    /// <summary>El origen va dentro del id de la orden ("ord_fake_VVI0"), así que se lee de ahí.</summary>
+    private static string OriginOf(string id)
+    {
+        var parts = id.Split('_');
+        var tail = parts.Length > 2 ? parts[^1] : string.Empty;
+        return tail.Length >= 3 ? tail[..3] : tail;
+    }
 
     private FlightOrderResult BuildOrder(FlightOrderRequest request, (FlightSearchRequest Request, int Index) decoded)
     {

@@ -109,6 +109,13 @@ public static class Program
             currency = "USD",
             items = new[] { new { dayNumber = 1, sortOrder = 1, kind = "DESCRIPTIVE", title = "Llegada y traslado" } },
             images = Array.Empty<object>(),
+            // Sin política no habría nada que cancelar desde la app: es parte de lo que se valida acá.
+            cancellationPolicy = new[]
+            {
+                new { minDaysBefore = 30, refundPercentage = 100 },
+                new { minDaysBefore = 15, refundPercentage = 50 },
+                new { minDaysBefore = 0, refundPercentage = 0 },
+            },
         }, providerToken);
         Check(package.Ok, "paquete creado", package.Status);
 
@@ -302,7 +309,95 @@ public static class Program
         Report.AppendLine();
 
         // ---------------------------------------------------------------- 7. cancelar la orden de prueba
-        var orderId = await ResolveOrderIdAsync(configuration, reservationId!);
+        // ---------------------------------------------------------------- 7. cancelar desde el producto
+        //
+        // Lo que se prueba acá, y que ningún test con el proveedor falso puede probar: que lo que Duffel
+        // informa como reembolso es lo que TurisClick le muestra a la persona, y que confirmar cancela el
+        // pasaje de verdad.
+        Report.AppendLine("## Cancelación con reembolso");
+        Report.AppendLine();
+
+        var slotsBefore = await ReservedSlotsAsync(configuration, reservationId!);
+
+        var cancellationQuote = await Post($"/api/reservations/{reservationId}/cancellation-quote", null, touristToken);
+        Check(cancellationQuote.Ok, "presupuesto de cancelación calculado", cancellationQuote.Status);
+
+        var quoteLines = cancellationQuote.Body?["lines"]?.AsArray() ?? [];
+        var flightCancellationLine = quoteLines.FirstOrDefault(l => l?["component"]?.GetValue<string>() == "FLIGHT");
+        var packageCancellationLine = quoteLines.FirstOrDefault(l => l?["component"]?.GetValue<string>() == "PACKAGE");
+
+        Check(packageCancellationLine is not null, "el presupuesto tiene la línea del paquete");
+        Check(flightCancellationLine is not null, "el presupuesto tiene la línea del vuelo, calculada aparte");
+
+        Report.AppendLine("| Componente | Pagado | Reembolso | Cargo | Según |");
+        Report.AppendLine("|---|---|---|---|---|");
+        foreach (var line in quoteLines)
+        {
+            var known = line?["refundKnown"]?.GetValue<bool>() ?? false;
+            var percentage = line?["refundPercentage"]?.GetValue<int?>();
+
+            Report.AppendLine(
+                $"| {line?["label"]} | {line?["paidAmount"]} {line?["currency"]} | " +
+                $"{(known ? $"{line?["refundAmount"]} {line?["currency"]}" : "no informado")} | " +
+                $"{line?["feeAmount"]} {line?["currency"]} | " +
+                $"{(percentage is null ? "lo que informó la aerolínea" : $"política del operador ({percentage}%)")} |");
+        }
+        Report.AppendLine();
+
+        var cancellationQuoteId = cancellationQuote.Body?["quoteId"]?.GetValue<string>();
+
+        // El cliente sólo manda el id del presupuesto: ningún importe viaja desde afuera.
+        var cancelled = await Post($"/api/reservations/{reservationId}/cancel",
+            new { cancellationQuoteId }, touristToken);
+        Check(cancelled.Ok, "cancelación ejecutada", cancelled.Status);
+
+        var cancellationStatus = cancelled.Body?["cancellation"]?["status"]?.GetValue<string>();
+        Check(cancelled.Body?["status"]?.GetValue<string>() == "CANCELLED", "la reserva quedó CANCELLED");
+        Check(cancellationStatus == "COMPLETED", $"la cancelación quedó COMPLETED ({cancellationStatus})");
+        Check(cancelled.Body?["cancellation"]?["flightCancelled"]?.GetValue<bool>() == true,
+            "el pasaje quedó cancelado en la aerolínea");
+
+        var slotsAfter = await ReservedSlotsAsync(configuration, reservationId!);
+        Check(slotsBefore - slotsAfter == 1, $"el cupo se liberó exactamente una vez ({slotsBefore} → {slotsAfter})");
+
+        // El libro de pagos, visto por el ADMIN: cobro y reembolsos, sin reescribir nada.
+        var ledger = await Get($"/api/admin/reservations/{reservationId}/payments", adminToken);
+        var transactions = ledger.Body?["transactions"]?.AsArray() ?? [];
+        var charges = transactions.Count(t => t?["type"]?.GetValue<string>() == "CHARGE");
+        var refunds = transactions.Count(t => t?["type"]?.GetValue<string>() == "REFUND");
+
+        Check(charges >= 1 && refunds >= 1, $"el libro conserva el cobro y el reembolso ({charges} cobro(s), {refunds} reembolso(s))");
+
+        Report.AppendLine("| Movimiento | Importe | Componente | Estado |");
+        Report.AppendLine("|---|---|---|---|");
+        foreach (var movement in transactions)
+            Report.AppendLine(
+                $"| {movement?["type"]} | {movement?["amount"]} {movement?["currency"]} | " +
+                $"{movement?["component"] ?? "—"} | {movement?["status"]} |");
+        Report.AppendLine();
+
+        foreach (var balance in ledger.Body?["balances"]?.AsArray() ?? [])
+            Report.AppendLine(
+                $"- Saldo {balance?["currency"]}: cobrado {balance?["charged"]}, devuelto {balance?["refunded"]}, " +
+                $"neto {balance?["net"]}.");
+        Report.AppendLine();
+
+        // "Mis viajes" conserva la historia: la reserva cancelada sigue visible con su reembolso.
+        var history = await Get("/api/reservations/me?page=1&pageSize=5", touristToken);
+        var historic = history.Body?["items"]?.AsArray()
+            .FirstOrDefault(i => i?["id"]?.GetValue<string>() == reservationId);
+
+        Check(historic is not null, "la reserva cancelada sigue en \"Mis viajes\"");
+        Check(historic?["status"]?.GetValue<string>() == "CANCELLED", "se muestra como cancelada");
+        Check(historic?["cancellation"]?["status"]?.GetValue<string>() == "COMPLETED",
+            "con el resultado de la cancelación y lo reembolsado");
+
+        // Si el producto ya canceló la orden, no hay nada que limpiar; si algo falló, se cancela igual para no
+        // dejar una orden de prueba viva.
+        var orderId = cancellationStatus == "COMPLETED"
+            ? null
+            : await ResolveOrderIdAsync(configuration, reservationId!);
+
         return await FinishAsync(orderId, options);
     }
 
@@ -325,6 +420,30 @@ public static class Program
         return await command.ExecuteScalarAsync() as string;
     }
 
+    /// <summary>
+    /// Cupo tomado de la salida del paquete. Se lee de la base local porque la API no expone `reserved_slots`
+    /// y lo que hay que demostrar es que se devuelve exactamente una vez.
+    /// </summary>
+    private static async Task<int> ReservedSlotsAsync(IConfiguration configuration, string reservationId)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString)) return -1;
+
+        await using var connection = new Npgsql.NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        await using var command = new Npgsql.NpgsqlCommand(
+            """
+            SELECT a.reserved_slots
+            FROM package_availabilities a
+            JOIN reservation_items i ON i.package_availability_id = a.id
+            WHERE i.reservation_id = @id
+            """, connection);
+        command.Parameters.AddWithValue("id", Guid.Parse(reservationId));
+
+        return await command.ExecuteScalarAsync() is int slots ? slots : -1;
+    }
+
     private static async Task<int> FinishAsync(string? orderId, FlightsOptions options)
     {
         if (orderId is { Length: > 0 })
@@ -334,7 +453,8 @@ public static class Program
 
             try
             {
-                var cancellation = await provider.CancelOrderAsync(orderId, confirm: true, CancellationToken.None);
+                var pending = await provider.QuoteCancellationAsync(orderId, CancellationToken.None);
+                var cancellation = await provider.ConfirmCancellationAsync(pending.CancellationId, CancellationToken.None);
                 Check(true, $"orden de prueba cancelada (reintegro informado: {cancellation.RefundAmount} {cancellation.RefundCurrency})");
             }
             catch (FlightProviderException ex)
@@ -358,8 +478,9 @@ public static class Program
             "<!-- Generado por tools/package-flight-e2e; no editar a mano. -->",
             "",
             "Qué prueba este documento, y que ningún test con el proveedor falso puede probar: que el itinerario,",
-            "los nombres de pasajero y el importe que TurisClick arma son aceptables para una API aérea real, y",
-            "que el localizador que termina en \"Mis viajes\" lo emitió esa API.",
+            "los nombres de pasajero y el importe que TurisClick arma son aceptables para una API aérea real, que",
+            "el localizador que termina en \"Mis viajes\" lo emitió esa API, y que el reembolso que se le muestra",
+            "a la persona al cancelar es el que esa API informó.",
             "",
             "**Garantías de esta corrida:**",
             "",

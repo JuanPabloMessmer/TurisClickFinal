@@ -23,8 +23,14 @@ public interface IReservationService
     /// <summary>UC-T-19/UC-SYS-02/UC-SYS-07 — pagar una reserva propia en PENDING_PAYMENT (403 si no es dueño).</summary>
     Task<ReservationResponse> PayAsync(Guid id, PayReservationRequest request, CancellationToken ct);
 
-    /// <summary>UC-T-11 — el turista cancela su reserva completa y libera el cupo (UC-SYS-08).</summary>
-    Task<ReservationResponse> CancelAsync(Guid id, CancellationToken ct);
+    /// <summary>
+    /// UC-T-11 — el turista cancela su reserva completa y libera el cupo (UC-SYS-08).
+    ///
+    /// Una reserva que todavía no se pagó se cancela directo: no hay plata que devolver. Una ya confirmada
+    /// exige haber aceptado un presupuesto de reembolso, y esa parte la orquesta
+    /// <see cref="IReservationCancellationService"/> — ver UC-T-22.
+    /// </summary>
+    Task<ReservationResponse> CancelAsync(Guid id, Guid? cancellationQuoteId, CancellationToken ct);
 
     /// <summary>UC-P-14 — el proveedor cancela solo su línea, con motivo. La Reservation padre sigue activa.</summary>
     Task<ReservationItemResponse> CancelItemAsync(Guid itemId, CancelReservationItemRequest request, CancellationToken ct);

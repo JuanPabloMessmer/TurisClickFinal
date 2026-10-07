@@ -65,7 +65,12 @@ internal static class FakeDbSet
         }
     }
 
-    private sealed class AsyncQueryable<T>(IQueryProvider inner, Expression expression) : IQueryable<T>, IAsyncEnumerable<T>
+    /// <summary>
+    /// Implementa también `IOrderedQueryable` porque `OrderBy`/`OrderByDescending` devuelven ese tipo: sin
+    /// eso, cualquier consulta ordenada del código bajo prueba revienta al castear.
+    /// </summary>
+    private sealed class AsyncQueryable<T>(IQueryProvider inner, Expression expression)
+        : IOrderedQueryable<T>, IAsyncEnumerable<T>
     {
         public Type ElementType => typeof(T);
 

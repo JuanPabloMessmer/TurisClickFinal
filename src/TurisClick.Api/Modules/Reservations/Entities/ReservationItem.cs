@@ -53,5 +53,13 @@ public class ReservationItem
     /// <summary>Solo tiene sentido si Reservation.AiItineraryId no es nulo (orden del viaje) — todavía nulo hasta Oleada 5+.</summary>
     public int? DayNumber { get; set; }
 
+    /// <summary>
+    /// **Copia** de la política de cancelación del producto al momento de reservar (ver
+    /// `CancellationPolicy`). Es un snapshot, igual que `UnitPrice`: si el operador cambia su política
+    /// mañana, esta reserva conserva la que la persona aceptó. Nula = no había política y esta línea no se
+    /// puede cancelar una vez confirmada.
+    /// </summary>
+    public string? CancellationPolicy { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 }

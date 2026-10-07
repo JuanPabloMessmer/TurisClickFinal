@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using TurisClick.Api.Modules.Reservations.Dtos;
+using TurisClick.Api.Modules.Reservations.Policies;
 using TurisClick.Api.Shared.Validation;
 
 namespace TurisClick.Api.Modules.Packages.Dtos;
@@ -35,11 +37,23 @@ public class CreatePackageRequest : IValidatableObject
     public List<PackageItemRequest> Items { get; set; } = [];
 
     public List<PackageImageRequest> Images { get; set; } = [];
+    /// <summary>
+    /// UC-P-16 — política de cancelación del paquete, por tramos de anticipación. Vacía o ausente significa
+    /// que el paquete **no se cancela desde la app** una vez confirmado: sin política no hay nada que
+    /// aplicar, y suponerle un reembolso a un operador que no lo ofreció sería inventarle una obligación.
+    ///
+    /// Cambiarla no afecta a las reservas que ya existen: cada una guarda su propia copia.
+    /// </summary>
+    public List<CancellationTierDto>? CancellationPolicy { get; set; }
+
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var item in Items.Where(item => item.DayNumber > DurationDays))
             yield return new ValidationResult(
                 $"El día {item.DayNumber} de un ítem excede DurationDays ({DurationDays}).", [nameof(Items)]);
+        foreach (var error in CancellationPolicyRules.Validate(CancellationPolicy))
+            yield return new ValidationResult(error, [nameof(CancellationPolicy)]);
+
     }
 }

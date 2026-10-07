@@ -44,4 +44,9 @@ public record BookingLine(
     int Travelers,
     decimal UnitPrice,
     string Currency,
-    int? DayNumber);
+    int? DayNumber,
+    /// <summary>
+    /// Política de cancelación del producto, serializada, para copiarla a la reserva. Viaja junto al precio
+    /// porque se congela por la misma razón: es parte de lo que la persona aceptó al comprar.
+    /// </summary>
+    string? CancellationPolicy = null);

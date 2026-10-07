@@ -16,6 +16,8 @@ using TurisClick.Api.Modules.Packages.Repositories;
 using TurisClick.Api.Shared.Exceptions;
 using TurisClick.Api.Shared.Responses;
 
+using TurisClick.Api.Modules.Reservations.Policies;
+
 namespace TurisClick.Api.Modules.Packages.Services;
 
 public class PackageService(
@@ -50,6 +52,7 @@ public class PackageService(
             Title = request.Title.Trim(),
             Description = request.Description.Trim(),
             ConditionsText = NullIfBlank(request.ConditionsText),
+            CancellationPolicy = CancellationPolicyRules.Serialize(request.CancellationPolicy),
             DurationDays = request.DurationDays,
             Price = request.Price,
             Currency = request.Currency,
@@ -87,6 +90,8 @@ public class PackageService(
         package.Title = request.Title.Trim();
         package.Description = request.Description.Trim();
         package.ConditionsText = NullIfBlank(request.ConditionsText);
+        // Editarla no toca ninguna reserva existente: cada una guarda su copia desde que se creó.
+        package.CancellationPolicy = CancellationPolicyRules.Serialize(request.CancellationPolicy);
         package.DurationDays = request.DurationDays;
         package.Price = request.Price;
         package.Currency = request.Currency;
@@ -344,6 +349,7 @@ public class PackageService(
         Title = package.Title,
         Description = package.Description,
         ConditionsText = package.ConditionsText,
+        CancellationPolicy = CancellationPolicyRules.Deserialize(package.CancellationPolicy),
         DurationDays = package.DurationDays,
         Price = package.Price,
         Currency = package.Currency,

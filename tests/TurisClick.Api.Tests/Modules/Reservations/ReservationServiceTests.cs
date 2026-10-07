@@ -55,6 +55,11 @@ public class ReservationServiceTests
         // producción cuando la reserva no tiene pasaje.
         db.Setup(d => d.Set<FlightBooking>()).Returns(FakeDbSet.From<FlightBooking>());
 
+        // Mismo criterio para el libro de pagos y las cancelaciones: estas reservas no tienen ni una cosa ni
+        // la otra, así que las tablas existen y están vacías.
+        db.Setup(d => d.Set<PaymentTransaction>()).Returns(FakeDbSet.From<PaymentTransaction>());
+        db.Setup(d => d.Set<ReservationCancellation>()).Returns(FakeDbSet.From<ReservationCancellation>());
+
         _currentUser.Setup(c => c.UserId).Returns(_touristId);
         _currentUser.Setup(c => c.CompanyId).Returns(_myCompanyId);
 
@@ -74,6 +79,8 @@ public class ReservationServiceTests
             _paymentGateway.Object,
             Mock.Of<IReservationBookingService>(),
             Mock.Of<IFlightBookingOrchestrator>(),
+            Mock.Of<IReservationCancellationService>(),
+            Mock.Of<IPaymentLedger>(),
             _currentUser.Object,
             ownershipGuard.Object,
             Mock.Of<ILogger<ReservationService>>(),

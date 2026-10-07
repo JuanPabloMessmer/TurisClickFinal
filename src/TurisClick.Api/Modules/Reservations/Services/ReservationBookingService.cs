@@ -98,6 +98,9 @@ public class ReservationBookingService(
                 Subtotal = line.UnitPrice * line.Travelers,
                 Status = ReservationItemStatus.PENDING_PAYMENT,
                 DayNumber = line.DayNumber,
+                // Snapshot de la política, por la misma razón que el precio: lo que se aceptó al comprar no
+                // puede cambiar después porque el operador edite su producto.
+                CancellationPolicy = line.CancellationPolicy,
                 CreatedAt = now
             });
         }
