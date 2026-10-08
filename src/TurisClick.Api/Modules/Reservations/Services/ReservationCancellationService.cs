@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Security;
@@ -179,9 +180,9 @@ public class ReservationCancellationService(
             RefundKnown = true,
             Explanation = percentage switch
             {
-                100 => $"Cancelación con {daysBefore} día(s) de anticipación: reembolso completo.",
-                0 => $"Cancelación con {daysBefore} día(s) de anticipación: no reembolsable según la política del operador.",
-                _ => $"Cancelación con {daysBefore} día(s) de anticipación: el operador reembolsa el {percentage}%.",
+                100 => $"Cancelás {Anticipacion(daysBefore)}: se devuelve todo.",
+                0 => $"Cancelás {Anticipacion(daysBefore)}: la política del operador no devuelve nada.",
+                _ => $"Cancelás {Anticipacion(daysBefore)}: el operador devuelve el {percentage}%.",
             },
         };
     }
@@ -749,6 +750,28 @@ public class ReservationCancellationService(
     /// El resumen lo decide el dominio: dos apps distintas no pueden contar historias distintas sobre el
     /// mismo reembolso. Y si falta un importe, se dice que falta en lugar de mostrar un total incompleto.
     /// </summary>
+    /// <summary>
+    /// "con 35 días de anticipación" / "el mismo día". Antes decía "35 día(s)", que es una plantilla sin
+    /// resolver: el viajero lee esta frase tal cual en la app.
+    /// </summary>
+    private static string Anticipacion(int daysBefore) => daysBefore switch
+    {
+        <= 0 => "el mismo día de la salida",
+        1 => "con 1 día de anticipación",
+        _ => $"con {daysBefore} días de anticipación",
+    };
+
+    /// <summary>
+    /// La plata se escribe como se escribe en Bolivia. El resumen viajaba como "3000.00 BOB" y en la app
+    /// quedaba al lado de "Bs 3.000,00", como si fueran dos importes distintos.
+    /// </summary>
+    private static string FormatMoney(decimal amount, string currency)
+    {
+        var cultura = CultureInfo.GetCultureInfo("es-BO");
+        var simbolo = currency switch { "BOB" => "Bs", "USD" => "USD", "EUR" => "EUR", _ => currency };
+        return $"{simbolo} {amount.ToString("N2", cultura)}";
+    }
+
     private static string BuildSummary(ReservationCancellation cancellation)
     {
         var refunds = GroupByCurrency(cancellation.Lines, l => l.RefundAmount);
@@ -759,7 +782,7 @@ public class ReservationCancellationService(
                 ? "La aerolínea todavía no informó cuánto devuelve, y el resto de la reserva no es reembolsable."
                 : "Esta cancelación no tiene reembolso: ningún componente es reembolsable en esta fecha.";
 
-        var amounts = string.Join(" + ", refunds.Select(r => $"{r.Amount:0.00} {r.Currency}"));
+        var amounts = string.Join(" + ", refunds.Select(r => FormatMoney(r.Amount, r.Currency)));
 
         return unknown
             ? $"Reembolso confirmado: {amounts}. Falta lo que informe la aerolínea."

@@ -10,6 +10,16 @@ export function formatCurrency(amount: number, currency: string): string {
 }
 
 /**
+ * El número solo, con la separación de miles y decimales de Bolivia (`3.000,00`) y sin símbolo.
+ *
+ * Es para las tablas y tarjetas que ya dicen la moneda en el encabezado: repetirla en cada fila es ruido,
+ * pero escribir `3000.00` al lado de un `Bs 3.000,00` hace dudar de si son el mismo importe.
+ */
+export function formatAmount(amount: number): string {
+  return new Intl.NumberFormat('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)
+}
+
+/**
  * Para un string "YYYY-MM-DD" puro (sin hora, ej. ExperienceAvailability.Date/ReservationItem.Date),
  * `new Date(value)` lo interpreta como medianoche UTC y al formatear en una zona horaria detrás de UTC
  * se muestra el día anterior. Se arma la fecha en horario local a partir de los componentes en vez de

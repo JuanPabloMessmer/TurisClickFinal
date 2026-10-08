@@ -1,3 +1,4 @@
+import { formatCurrency } from '@turisclick/utils'
 import { useRouter, type Href } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, ScrollView, Text, View } from 'react-native'
@@ -141,7 +142,7 @@ export function ReservationDetail({ id }: { id: string }) {
           <View className="mt-3 flex-row items-baseline justify-between border-t border-[#E2E8F0] pt-3">
             <Text className="text-sm text-[#5B7285]">Vuelo</Text>
             <Text className="text-sm font-semibold text-ink">
-              {reservation.flight.price?.currency} {(reservation.flight.price?.amount ?? 0).toFixed(2)}
+              {formatCurrency(reservation.flight.price?.amount ?? 0, reservation.flight.price?.currency ?? 'BOB')}
             </Text>
           </View>
         ) : null}

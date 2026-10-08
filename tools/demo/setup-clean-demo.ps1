@@ -26,6 +26,10 @@
 .PARAMETER Recreate
   Borra y vuelve a crear la base. Pide confirmación escrita: no hay forma de perder datos sin tipearlo.
 
+.PARAMETER ConfirmName
+  El nombre de la base, para confirmar -Recreate sin que haya nadie tipeando (CI, automatización). Tiene que
+  coincidir exactamente con -Database: sigue siendo imposible borrar la base equivocada por un tipeo.
+
 .PARAMETER SkipCatalog
   Sólo prepara el esquema (crear base + migraciones), sin cargar el catálogo.
 
@@ -47,6 +51,7 @@
 param(
     [string] $Database = 'turisclick_v2_demo',
     [switch] $Recreate,
+    [string] $ConfirmName,
     [switch] $SkipCatalog,
     [int] $ApiPort = 5290
 )
@@ -124,7 +129,15 @@ try {
     if ($Recreate -and $existe) {
         Write-Host ""
         Write-Host "-Recreate borra TODO el contenido de '$Database'." -ForegroundColor Yellow
-        $confirmacion = Read-Host "Escribí el nombre de la base para confirmar"
+
+        # Sin nadie tipeando (CI, automatización) la confirmación llega por parámetro. Sigue exigiendo el
+        # nombre exacto, que es lo que protege: lo que no se puede es borrar la base equivocada de casualidad.
+        $confirmacion = if ($PSBoundParameters.ContainsKey('ConfirmName')) {
+            $ConfirmName
+        }
+        else {
+            Read-Host "Escribí el nombre de la base para confirmar"
+        }
         if ($confirmacion -ne $Database) { throw 'Confirmación incorrecta: no se borró nada.' }
 
         Write-Host "Cerrando conexiones a $Database..."

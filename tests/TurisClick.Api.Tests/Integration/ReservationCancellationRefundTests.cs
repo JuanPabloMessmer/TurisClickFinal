@@ -246,7 +246,9 @@ public class ReservationCancellationRefundTests(TurisClickApiFactory factory)
         Assert.Equal(0m, line.RefundAmount);
         Assert.Equal(1090m, line.FeeAmount);
         Assert.Empty(quote.Refunds);
-        Assert.Contains("no reembolsable", line.Explanation);
+        // La frase se reescribió en la Oleada 14: "no reembolsable según la política del operador" era
+        // correcto pero sonaba a contrato. Lo que el test fija es que diga que no se devuelve nada.
+        Assert.Contains("no devuelve nada", line.Explanation);
         Assert.Contains("no tiene reembolso", quote.Summary);
     }
 
@@ -723,6 +725,46 @@ public class ReservationCancellationRefundTests(TurisClickApiFactory factory)
 
         Assert.Equal(2, payments.Transactions.Count);
         Assert.Equal("COMPLETED", Assert.Single(payments.Cancellations).Status);
+    }
+
+    /// <summary>
+    /// El proceso de fondo vive dentro de la API, y en un App Service gratuito la aplicación se duerme sin
+    /// tráfico: mientras duerme no reintenta nada. Este endpoint es la salida manual para quien está
+    /// operando, y tiene que ser idempotente —un reembolso ya hecho no se repite— porque alguien lo va a
+    /// apretar dos veces.
+    /// </summary>
+    [Fact]
+    public async Task ElAdminPuedeReintentarLasCancelacionesPendientesSinDuplicarReembolsos()
+    {
+        var scenario = await SeedConfirmedAsync("cx-resolve", StandardTiers(), daysAhead: 20);
+        var quote = await QuoteCancellationAsync(scenario);
+        await CancelAsync(scenario, quote.QuoteId);
+
+        var admin = _factory.CreateClient();
+        UseBearerToken(admin, await LoginAsAdminAsync(admin));
+
+        var primera = await admin.PostAsync("/api/admin/cancellations/resolve", null);
+        Assert.Equal(HttpStatusCode.OK, primera.StatusCode);
+
+        var segunda = await admin.PostAsync("/api/admin/cancellations/resolve", null);
+        Assert.Equal(HttpStatusCode.OK, segunda.StatusCode);
+
+        // Lo que importa no es cuántas resolvió —esta ya estaba completa— sino que llamarlo dos veces no
+        // agregue un segundo reembolso al libro.
+        var ledger = await LedgerAsync(scenario.ReservationId);
+        Assert.Single(ledger.Where(t => t.Type == PaymentTransactionType.CHARGE));
+        Assert.Single(ledger.Where(t => t.Type == PaymentTransactionType.REFUND
+                                        && t.Status == PaymentTransactionStatus.SUCCEEDED));
+    }
+
+    [Fact]
+    public async Task ReintentarLasCancelacionesPendientesEsSoloDelAdmin()
+    {
+        var scenario = await SeedConfirmedAsync("cx-resolve-guard", StandardTiers());
+
+        var response = await scenario.Tourist.PostAsync("/api/admin/cancellations/resolve", null);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

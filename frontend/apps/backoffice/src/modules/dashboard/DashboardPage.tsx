@@ -166,7 +166,7 @@ function AdminToday() {
         action={
           pendingCount > 0 ? (
             <Button asChild size="sm">
-              <Link to="/admin/companies?status=PENDING">Revisar {pendingCount}</Link>
+              <Link to="/admin/companies?status=PENDING_APPROVAL">Revisar {pendingCount}</Link>
             </Button>
           ) : undefined
         }

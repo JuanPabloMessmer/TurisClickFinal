@@ -178,7 +178,7 @@ describe('chat del asistente', () => {
     fireEvent.press(screen.getByText('Reservar itinerario'))
 
     expect(await screen.findByText('Cambiaron algunos precios')).toBeTruthy()
-    expect(screen.getByText('Tiwanaku: BOB 380.00 → BOB 400.00')).toBeTruthy()
+    expect(screen.getByText('Tiwanaku: Bs 380,00 → Bs 400,00')).toBeTruthy()
     expect(mockRouter.push).not.toHaveBeenCalled()
     expect(mockPost).toHaveBeenLastCalledWith('/api/ai/itineraries/it-1/book', { acceptPriceChanges: false })
 

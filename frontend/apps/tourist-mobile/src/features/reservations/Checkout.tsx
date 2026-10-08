@@ -1,3 +1,4 @@
+import { formatCurrency } from '@turisclick/utils'
 import type { FlightTravelerRequest, MoneyRequest, ReservationResponse } from '@turisclick/api-client'
 import { useRouter, type Href } from 'expo-router'
 import { CircleCheckBig } from 'lucide-react-native'
@@ -200,7 +201,7 @@ export function Checkout({
       {priceUpdatedAtBooking ? (
         <View className="rounded-2xl bg-[#E8EEF2] p-4">
           <Text className="text-sm leading-5 text-ink">
-            El precio se actualizó al reservar: ahora es {onlyItem.currency} {(onlyItem.unitPrice ?? 0).toFixed(2)} por persona.
+            El precio se actualizó al reservar: ahora es {formatCurrency(onlyItem.unitPrice ?? 0, onlyItem.currency ?? 'BOB')} por persona.
           </Text>
         </View>
       ) : null}
@@ -347,10 +348,10 @@ function PriceChangePanel({
         <View key={line.itemId} className="gap-1">
           <Text className="text-sm font-semibold text-ink">{line.title}</Text>
           <Text className="text-sm text-[#5B7285]">
-            Antes: {line.previousCurrency} {line.previousUnitPrice.toFixed(2)} por persona
+            Antes: {formatCurrency(line.previousUnitPrice, line.previousCurrency ?? 'BOB')} por persona
           </Text>
           <Text className="text-sm font-semibold text-ink">
-            Ahora: {line.currentCurrency} {line.currentUnitPrice.toFixed(2)} por persona
+            Ahora: {formatCurrency(line.currentUnitPrice, line.currentCurrency ?? 'BOB')} por persona
           </Text>
           {line.currentCurrency !== line.previousCurrency ? (
             <Text className="text-xs text-[#92400E]">La moneda también cambió.</Text>

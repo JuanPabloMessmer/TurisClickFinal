@@ -1,3 +1,4 @@
+import { formatAmount, formatCurrency } from '@turisclick/utils'
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/PageHeader'
@@ -117,15 +118,15 @@ export function AdminReservationDetailPage() {
                   <dl className="mt-2 flex flex-col gap-1">
                     <div className="flex justify-between text-label">
                       <dt className="text-ink-muted">Cobrado</dt>
-                      <dd className="tabular-nums">{(balance.charged ?? 0).toFixed(2)}</dd>
+                      <dd className="tabular-nums">{formatAmount(balance.charged ?? 0)}</dd>
                     </div>
                     <div className="flex justify-between text-label">
                       <dt className="text-ink-muted">Devuelto</dt>
-                      <dd className="tabular-nums">{(balance.refunded ?? 0).toFixed(2)}</dd>
+                      <dd className="tabular-nums">{formatAmount(balance.refunded ?? 0)}</dd>
                     </div>
                     <div className="flex justify-between border-t border-border pt-1 text-label font-semibold">
                       <dt>Queda pagado</dt>
-                      <dd className="tabular-nums">{(balance.net ?? 0).toFixed(2)}</dd>
+                      <dd className="tabular-nums">{formatAmount(balance.net ?? 0)}</dd>
                     </div>
                   </dl>
                 </div>
@@ -177,7 +178,7 @@ export function AdminReservationDetailPage() {
                     {movement.component ? COMPONENT_LABEL[movement.component] ?? movement.component : '—'}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {movement.currency} {(movement.amount ?? 0).toFixed(2)}
+                    {formatCurrency(movement.amount ?? 0, movement.currency ?? 'BOB')}
                   </TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[movement.status ?? ''] ?? 'neutral'}>
@@ -225,7 +226,7 @@ export function AdminReservationDetailPage() {
                       <span className="tabular-nums">
                         {line.refundKnown === false
                           ? 'Reembolso a confirmar'
-                          : `${line.currency} ${(line.refundAmount ?? 0).toFixed(2)} de ${(line.paidAmount ?? 0).toFixed(2)}`}
+                          : `${formatCurrency(line.refundAmount ?? 0, line.currency ?? 'BOB')} de ${formatAmount(line.paidAmount ?? 0)}`}
                         {line.refundPercentage != null ? ` (${line.refundPercentage}%)` : ''}
                       </span>
                     </li>

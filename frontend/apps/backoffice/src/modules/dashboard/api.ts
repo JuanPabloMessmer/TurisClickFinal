@@ -13,7 +13,9 @@ import { httpClient } from '@/lib/httpClient'
 export function usePendingCompanies() {
   return useQuery({
     queryKey: ['dashboard', 'pendingCompanies'],
-    queryFn: () => companiesApi.listCompanies(httpClient, { status: 'PENDING', page: 1, pageSize: 5 }),
+    // 'PENDING_APPROVAL' es el valor del enum del backend. Con 'PENDING' el endpoint responde 400 y esta
+    // tarjeta se quedaba girando para siempre — y es lo primero que ve un administrador al entrar.
+    queryFn: () => companiesApi.listCompanies(httpClient, { status: 'PENDING_APPROVAL', page: 1, pageSize: 5 }),
   })
 }
 

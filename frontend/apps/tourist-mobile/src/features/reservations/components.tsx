@@ -4,7 +4,7 @@ import type {
   ReservationResponse,
   ReservationTotalResponse,
 } from '@turisclick/api-client'
-import { formatDate } from '@turisclick/utils'
+import { formatCurrency, formatDate } from '@turisclick/utils'
 import { useRouter, type Href } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
 import {
@@ -98,7 +98,7 @@ export function ReservationItemCard({
 
       <View className="mt-2 flex-row items-center justify-between">
         <Text className="text-sm text-[#5B7285]">
-          {travelersLabel(item.travelers)} × {item.currency} {(item.unitPrice ?? 0).toFixed(2)}
+          {travelersLabel(item.travelers)} × {formatCurrency(item.unitPrice ?? 0, item.currency ?? 'BOB')}
         </Text>
         <Price amount={item.subtotal} currency={item.currency} />
       </View>
@@ -168,7 +168,7 @@ export function CancellationOutcome({ cancellation }: { cancellation: Cancellati
             <View key={index} className="flex-row items-baseline justify-between">
               <Text className={`text-sm ${tone.text}`}>{line.label}</Text>
               <Text className={`text-sm font-semibold ${tone.text}`}>
-                {line.currency} {(line.refundAmount ?? 0).toFixed(2)}
+                {formatCurrency(line.refundAmount ?? 0, line.currency ?? 'BOB')}
               </Text>
             </View>
           ))}
@@ -300,8 +300,10 @@ function refundSummary(reservation: ReservationResponse): string | null {
     byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + (line.refundAmount ?? 0))
   }
 
-  // Nunca se suman monedas distintas: se listan.
-  return [...byCurrency.entries()].map(([currency, amount]) => `${currency} ${amount.toFixed(2)}`).join(' + ')
+  // Nunca se suman monedas distintas: se listan. Y se escriben como se escribe la plata en Bolivia
+  // (`Bs 3.000,00`), igual que el resto de la tarjeta: ese mismo importe aparecía como "BOB 3000.00" dos
+  // líneas más abajo del total, como si fueran dos cosas distintas.
+  return [...byCurrency.entries()].map(([currency, amount]) => formatCurrency(amount, currency)).join(' + ')
 }
 
 export function TripCardSkeleton() {

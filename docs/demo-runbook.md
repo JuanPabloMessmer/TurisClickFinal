@@ -30,18 +30,28 @@ las pruebas de integración y los E2E, así que acumula empresas, categorías y 
 (`Interés-Ai-…`, `Tour O8 …`, `Operador E2E …`). Eso no rompe nada, pero se ve en la demo: aparecen en el
 listado global del administrador y en el selector de categorías del operador.
 
-```bash
-createdb turisclick_demo
+Hay un script que hace todo esto de una:
+
+```powershell
+.\tools\demo\setup-clean-demo.ps1
 ```
 
-Apuntá `ConnectionStrings:DefaultConnection` a esa base y aplicá las migraciones:
+Crea `turisclick_v2_demo` si no existe, le aplica las migraciones de EF y le carga el catálogo curado. Es
+idempotente: volver a correrlo no duplica nada. Para empezar de cero, `-Recreate` (pide tipear el nombre de la
+base antes de borrar).
 
-```bash
-dotnet ef database update --project src/TurisClick.Api
-```
+Se niega a escribir en `turisclick_db` (que es V1), en `turisclick_v2_dev`, en `turisclick_v2_test` o en
+cualquier nombre que no contenga `demo`, y sólo trabaja contra `localhost`.
+
+Resultado esperado: 8 empresas, 100 experiencias, 13 paquetes —los 13 con política de cancelación—, 43
+destinos con foto, 6 categorías sin residuos, 2.000 fechas futuras y 108 salidas.
 
 > El seed de desarrollo (`Seed:Enabled=true`) crea el administrador `admin@turisclick.dev`, los destinos de
 > Bolivia y las categorías base. No crea empresas: eso lo hace el catálogo demo.
+
+> **Si corrés los escenarios de validación**, tené en cuenta que escriben en la base: crean operadores,
+> experiencias, paquetes y reservas de prueba que después aparecen en el catálogo. Reconstruí con `-Recreate`
+> antes de la demostración.
 
 ---
 
@@ -79,8 +89,8 @@ Validación (sólo lecturas):
 .\tools\demo-catalog\run-catalog.ps1 validate-catalog.mjs
 ```
 
-En una base limpia tiene que dar `TODO OK`. Sobre la base de desarrollo compartida va a reportar fallas
-esperables (más experiencias publicadas que las del catálogo, categorías extra, cuentas de QA ausentes): son
+Contra la base de demostración limpia da **`TODO OK` (859 verificaciones)**. Sobre la base de desarrollo
+compartida reporta fallas esperables (más experiencias publicadas que las del catálogo, categorías extra): son
 diferencias de la base, no del producto.
 
 ---
@@ -172,10 +182,22 @@ pero su contraseña no es la demo, regenera la credencial y vuelve a hacer el pr
 | El operador recibe 403 en todo | No cambió su contraseña temporal. |
 | Un paquete no se puede cancelar desde la app | No tiene política de cancelación: es correcto, y el detalle lo dice. |
 | El vuelo no cotiza | Falta `Flights:Duffel:AccessToken` en `user-secrets`, o Duffel TEST no responde. |
+| Una cancelación queda "esperando resolución" | `POST /api/admin/cancellations/resolve` la reintenta ahora. Es idempotente. |
+| El login da 500 en Azure | Falta la migración `0014` en `turisclick_db_v2`. Ver el plan de despliegue. |
 
 ---
 
 ## 9. Qué falta para desplegar
+
+> El procedimiento completo, paso por paso y con su verificación, está en
+> [azure-v2-deployment-plan.md](azure-v2-deployment-plan.md). El estado actual de cada pieza está en
+> [deployment-readiness.md](deployment-readiness.md).
+>
+> **Al 8 de octubre de 2026 el backend V2 en Azure está caído**: el código de las Oleadas 12 y 13 se desplegó
+> automáticamente sin aplicar las migraciones, así que `/api/auth/login` y `/api/packages` responden 500.
+> Arreglarlo es el paso 5 de ese plan.
+
+Resumen de lo que falta:
 
 Nada de esta oleada está en Azure, y desplegarlo **no** es sólo correr el pipeline. Lo que falta:
 

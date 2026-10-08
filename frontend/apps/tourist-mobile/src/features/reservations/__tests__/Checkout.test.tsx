@@ -77,7 +77,7 @@ describe('PENDING_PAYMENT', () => {
 
     await waitFor(() => expect(screen.getByText(/Tu lugar está reservado · \d\d:\d\d/)).toBeTruthy())
     expect(screen.getByText('Tour Illimani')).toBeTruthy()
-    expect(screen.getByText(/2 viajeros × USD 40\.00/)).toBeTruthy()
+    expect(screen.getByText(/2 viajeros × USD 40,00/)).toBeTruthy()
     expect(screen.getAllByText(/USD\s+80,00/).length).toBeGreaterThanOrEqual(2) // subtotal + total
     expect(screen.getByText('Pago de demostración')).toBeTruthy()
     expect(button('Pagar')).toBeTruthy()
@@ -97,7 +97,7 @@ describe('PENDING_PAYMENT', () => {
   it('avisa si el snapshot congelado quedó distinto del precio que se vio antes de reservar', async () => {
     renderCheckout({ quotedPrice: 35, quotedCurrency: 'USD' })
 
-    await waitFor(() => expect(screen.getByText(/El precio se actualizó al reservar: ahora es USD 40\.00/)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/El precio se actualizó al reservar: ahora es USD 40,00/)).toBeTruthy())
   })
 
   it('multi-moneda: una fila por moneda, nunca un total sumado', async () => {
@@ -208,8 +208,8 @@ describe('cambio de precio', () => {
     fireEvent.press(button('Pagar'))
 
     await waitFor(() => expect(screen.getByText('El precio cambió')).toBeTruthy())
-    expect(screen.getByText('Antes: USD 40.00 por persona')).toBeTruthy()
-    expect(screen.getByText('Ahora: USD 60.00 por persona')).toBeTruthy()
+    expect(screen.getByText('Antes: USD 40,00 por persona')).toBeTruthy()
+    expect(screen.getByText('Ahora: USD 60,00 por persona')).toBeTruthy()
     expect(screen.getByLabelText('Nuevo total')).toBeTruthy()
     expect(screen.getAllByText(/USD\s+120,00/).length).toBeGreaterThan(0)
     expect(screen.queryByText('El pago fue rechazado')).toBeNull()
@@ -243,8 +243,8 @@ describe('cambio de precio', () => {
     fireEvent.press(button('Pagar'))
 
     await waitFor(() => expect(screen.getByText('La moneda también cambió.')).toBeTruthy())
-    expect(screen.getByText('Antes: BOB 300.00 por persona')).toBeTruthy()
-    expect(screen.getByText('Ahora: USD 45.00 por persona')).toBeTruthy()
+    expect(screen.getByText('Antes: Bs 300,00 por persona')).toBeTruthy()
+    expect(screen.getByText('Ahora: USD 45,00 por persona')).toBeTruthy()
   })
 })
 

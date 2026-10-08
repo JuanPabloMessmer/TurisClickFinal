@@ -1,3 +1,4 @@
+import { formatCurrency } from '@turisclick/utils'
 import type { BookItineraryResponse, ItineraryResponse } from '@turisclick/api-client'
 import { useRouter } from 'expo-router'
 import { useRef, useState } from 'react'
@@ -68,8 +69,8 @@ export function ItineraryActions({ itinerary }: { itinerary: ItineraryResponse }
           <Text className="text-base font-semibold text-ink">Cambiaron algunos precios</Text>
           {priceChanges.map((change) => (
             <Text key={change.itineraryItemId} className="text-sm text-ink">
-              {change.productTitle}: {change.previousCurrency} {change.previousUnitPrice?.toFixed(2)} → {change.currentCurrency}{' '}
-              {change.currentUnitPrice?.toFixed(2)}
+              {change.productTitle}: {formatCurrency(change.previousUnitPrice ?? 0, change.previousCurrency ?? 'BOB')} →{' '}
+              {formatCurrency(change.currentUnitPrice ?? 0, change.currentCurrency ?? 'BOB')}
             </Text>
           ))}
           <Button label="Aceptar precios y reservar" loading={book.isPending} onPress={() => onBook(true)} />

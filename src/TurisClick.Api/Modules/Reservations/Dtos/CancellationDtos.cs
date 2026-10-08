@@ -156,3 +156,19 @@ public class CancellationSummaryResponse
     public int ResolutionAttempts { get; set; }
     public List<CancellationLineResponse> Lines { get; set; } = [];
 }
+
+/// <summary>
+/// Resultado de reintentar la cola de cancelaciones pendientes. Se devuelven los tres números porque
+/// "completé 2" sin saber cuántas había ni cuántas quedan no le dice nada a quien está operando.
+/// </summary>
+public class ResolvePendingCancellationsResponse
+{
+    /// <summary>Cuántas estaban esperando resolución cuando se pidió el reintento.</summary>
+    public int Attempted { get; set; }
+
+    /// <summary>Cuántas quedaron completadas en esta pasada.</summary>
+    public int Completed { get; set; }
+
+    /// <summary>Cuántas siguen pendientes. Si no baja, el problema no es el proceso de fondo.</summary>
+    public int StillPending { get; set; }
+}

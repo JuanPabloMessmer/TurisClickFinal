@@ -1,3 +1,4 @@
+import { formatCurrency } from '@turisclick/utils'
 import { Plane, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -201,7 +202,7 @@ export function AdminExperiencesPage() {
                   </TableCell>
                   <TableCell>{row.destinationName}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {row.currency} {(row.price ?? 0).toFixed(2)}
+                    {formatCurrency(row.price ?? 0, row.currency ?? 'BOB')}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {/* Sin fechas futuras no se puede reservar, aunque esté publicada. */}
@@ -302,7 +303,7 @@ export function AdminPackagesPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {row.currency} {(row.price ?? 0).toFixed(2)}
+                    {formatCurrency(row.price ?? 0, row.currency ?? 'BOB')}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {row.futureDepartures === 0 ? (

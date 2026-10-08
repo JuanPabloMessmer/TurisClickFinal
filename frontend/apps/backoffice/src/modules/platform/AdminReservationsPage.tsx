@@ -1,3 +1,4 @@
+import { formatCurrency } from '@turisclick/utils'
 import { Plane, TriangleAlert } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/PageHeader'
@@ -197,14 +198,14 @@ export function AdminReservationsPage() {
                     ) : (
                       (row.charged ?? []).map((money) => (
                         <span key={money.currency} className="block">
-                          {money.currency} {(money.amount ?? 0).toFixed(2)}
+                          {formatCurrency(money.amount ?? 0, money.currency ?? 'BOB')}
                         </span>
                       ))
                     )}
                     {/* Lo devuelto se muestra aparte: nunca se resta para mostrar un solo número. */}
                     {(row.refunded ?? []).map((money) => (
                       <span key={money.currency} className="block text-caption text-ink-muted">
-                        −{money.currency} {(money.amount ?? 0).toFixed(2)}
+                        −{formatCurrency(money.amount ?? 0, money.currency ?? 'BOB')}
                       </span>
                     ))}
                   </TableCell>

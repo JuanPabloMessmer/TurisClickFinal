@@ -16,9 +16,15 @@ La base de desarrollo comparte servidor con las pruebas de integración y los E2
 experiencias y el selector de categorías del operador muestran residuos de prueba (`Interés-Ai-…`,
 `Tour O8 …`, `Operador E2E …`, empresas `Gate Visual …`).
 
-**Por qué no se arregló:** borrar datos de una base es una operación destructiva y no se hace por conveniencia
-de una demo. La salida correcta es una base limpia, documentada en el [runbook](demo-runbook.md#2-preparar-la-base-de-datos).
-Lo que sí haría falta a futuro es que las pruebas usen un esquema propio y lo dejen limpio al terminar.
+**Resuelto para la demostración, no en la raíz.** Borrar datos de una base es destructivo y no se hace por
+conveniencia de una demo. En la Oleada 14 se agregó `tools/demo/setup-clean-demo.ps1`, que crea una base
+aparte, la migra y le carga el catálogo curado: ahí el validador da 859/859, contra 6 fallas sobre la base de
+desarrollo.
+
+**Lo que sigue pendiente:** que las pruebas de integración y los E2E usen un esquema propio y lo dejen limpio
+al terminar, en vez de acumular fixtures en la base con la que se trabaja. Y que los scripts de validación de
+escenarios no escriban en la base de demostración —hoy sí lo hacen, y hay que reconstruirla con `-Recreate`
+después de usarlos.
 
 ### Nueve destinos del seed no tienen foto
 
@@ -85,15 +91,35 @@ tienen otras pantallas.
 ### Las cancelaciones que quedan pendientes dependen de un servicio en proceso
 
 `CancellationResolutionBackgroundService` corre dentro de la API. En local funciona; en App Service gratuito la
-app se duerme y una cancelación pendiente puede tardar. El administrador puede forzar la resolución desde la
-ficha de la reserva, así que no hay nada bloqueado, pero la espera no se explica en la pantalla.
+app se duerme sin tráfico y, mientras duerme, ningún timer corre.
 
-**Por qué no se arregló:** la decisión de fondo (trabajo agendado o `Always On`) es de infraestructura y esta
-oleada no toca infraestructura.
+> **Corrección de la Oleada 13.** Ahí escribí que "el administrador puede forzar la resolución desde la ficha
+> de la reserva". Era falso: existía `GET /api/admin/cancellations` para **ver** la cola y nada para actuar
+> sobre ella. En la Oleada 14 se agregó `POST /api/admin/cancellations/resolve`, que reintenta la cola en el
+> momento. Llama a la misma resolución que corre sola, que ya era idempotente, y devuelve cuántas había,
+> cuántas completó y cuántas quedan.
+
+Lo que todavía falta: la espera no se explica en la pantalla del viajero, y el Backoffice no tiene un botón
+para ese endpoint —hoy se invoca a mano.
+
+**Por qué no se arregló del todo:** la decisión de fondo (trabajo agendado o `Always On`, que requiere plan
+pago) es de infraestructura, y estas oleadas no la tocan. Está planteada en
+[deployment-readiness.md](deployment-readiness.md#5-servicios-de-fondo-el-riesgo-real).
 
 ---
 
 ## Lo interno
+
+### El formato de la plata se unificó, pero a mano
+
+En la Oleada 14 se corrigieron once lugares que escribían `BOB 3000.00` al lado de un `Bs 3.000,00` del mismo
+importe: el resumen de cancelación del backend, la tarjeta de viaje cancelado, el detalle de reserva, el
+checkout, los cambios de precio del asistente y tres tablas del Backoffice. Todo pasa por `formatCurrency` (o
+`formatAmount`, cuando la moneda ya está en el encabezado).
+
+**Lo que falta:** nada impide que el próximo `${currency} ${amount.toFixed(2)}` vuelva a entrar. Haría falta
+una regla de lint o un chequeo estático como el que ya existe para los códigos internos y para los valores de
+enum.
 
 ### El nombre accesible de los controles se declara a mano
 
@@ -104,19 +130,6 @@ recordar en cada control nuevo.
 **Por qué no se arregló:** lo correcto es una prueba que recorra las primitivas y falle si una queda sin
 nombre, parecida a la que ya impide que los códigos internos lleguen a la pantalla.
 
-### Tourist Mobile no tiene lint
-
-El Backoffice corre `oxlint` y falla con errores. La app móvil sólo corre `tsc --noEmit`: no tiene ESLint
-instalado ni configurado.
-
-**Por qué no se arregló:** se probó. Con `eslint-config-expo` la app reporta **23 errores** en código que hoy
-funciona y está cubierto por 406 pruebas: 10 `no-undef`, 6 `react-hooks/refs`, 6
-`react-hooks/set-state-in-effect` y 1 `react-hooks/globals`. Varios son reales (`useCountdown` y
-`PackageFlightSection` llaman `setState` dentro de un efecto), pero arreglarlos es refactorizar hooks que
-andan, y no es algo para hacer encima de una demo. Adoptar el lint es un cambio propio: instalar las dos
-dependencias, resolver los 23 hallazgos y recién entonces sumarlo al gate. Mientras tanto quedó **sin
-instalar** a propósito, para no dejar un lint que nadie corre porque siempre falla.
-
 ### No hay revisión visual automatizada
 
 No existen capturas de referencia. Cada oleada se revisa a mano, y eso encuentra lo que se mira.
@@ -124,12 +137,24 @@ No existen capturas de referencia. Cada oleada se revisa a mano, y eso encuentra
 **Por qué no se arregló:** montar capturas de referencia para dos plataformas es un proyecto en sí mismo, y con
 el producto todavía cambiando de forma generaría más ruido que señal.
 
-### Las pantallas privadas de la app no se revisaron renderizadas
+### La app no se revisó en un Android real
 
-Mis viajes, el detalle de reserva, el presupuesto de cancelación, el checkout y el chat del asistente se
-verifican sólo con pruebas automatizadas. Se intentó revisarlos en el build web, pero `expo-secure-store` no
-existe en web (la sesión queda sólo en memoria) y las pantallas de tabs quedan montadas en el DOM al mismo
-tiempo, así que lo que se lee no corresponde a lo que se ve.
+En la Oleada 14 sí se revisaron renderizadas las pantallas privadas, en el build web: Mis viajes con sus tres
+estados, el detalle de reserva, el presupuesto de cancelación, el asistente autenticado, el perfil y los cinco
+pasos de preferencias. El problema de "todas las tabs quedan montadas" se resolvió respetando el
+`aria-hidden="true"` con que react-navigation marca las pantallas inactivas, así que lo que se lee **es** lo
+que está en pantalla.
 
-**Por qué no se arregló:** hace falta un emulador o un teléfono con Expo Go. Las pruebas cubren el
-comportamiento; lo que falta es la mirada sobre el resultado.
+Lo que sigue sin verificarse, porque el build web no puede:
+
+- **La persistencia de sesión.** `expo-secure-store` no existe en web: la sesión vive sólo en memoria y se
+  pierde al recargar o al vencer el access token (15 minutos). En el dispositivo usa el Keystore.
+- **El teclado nativo**, y si tapa el campo activo en el formulario de pasajeros.
+- **Los gestos.** Los `Pressable` que usan el sistema de respondedores de React Native no reaccionan a eventos
+  de puntero sintéticos, así que las tarjetas de opción del onboarding se pudieron **ver** pero no **tocar**.
+- **Safe areas en un teléfono con notch**, y las fuentes y densidades reales.
+
+**Por qué no se arregló:** esta máquina no tiene el SDK de Android, ni emulador, ni `adb`. Hace falta un
+emulador o un teléfono con Expo Go. El paso 14 del
+[plan de despliegue](azure-v2-deployment-plan.md#14-smoke-tests-en-android) enumera exactamente qué verificar
+cuando haya uno.

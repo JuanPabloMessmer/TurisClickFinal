@@ -1,5 +1,5 @@
 import type { ItineraryItemResponse, ItineraryResponse, MessageResponse } from '@turisclick/api-client'
-import { formatDate } from '@turisclick/utils'
+import { formatCurrency, formatDate } from '@turisclick/utils'
 import { useRouter, type Href } from 'expo-router'
 import { useState } from 'react'
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native'
@@ -233,7 +233,7 @@ export function ItineraryItemCard({ item, onExplain }: { item: ItineraryItemResp
           </View>
           {item.priceChanged ? (
             <Text className="text-xs text-[#92400E]">
-              Antes {item.currency} {item.estimatedUnitPrice?.toFixed(2)}
+              Antes {formatCurrency(item.estimatedUnitPrice ?? 0, item.currency ?? 'BOB')}
             </Text>
           ) : null}
         </View>
