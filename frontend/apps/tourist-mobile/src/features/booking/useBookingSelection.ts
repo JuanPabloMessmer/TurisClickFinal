@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { clampTravelers, maxTravelersFor, type BookableSlot } from '@/features/booking/selection'
 
 /**
@@ -14,10 +14,9 @@ export function useBookingSelection(slots: BookableSlot[], slotsLoaded: boolean)
   // Si la disponibilidad se refrescó y queda menos cupo, se ajusta a lo posible sin perder la elección.
   const travelers = clampTravelers(requestedTravelers, selected)
 
-  // La fecha elegida desapareció (se llenó o se cerró): se descarta en vez de reservar algo inexistente.
-  useEffect(() => {
-    if (slotsLoaded && selectedId && !selected) setSelectedId(null)
-  }, [slotsLoaded, selectedId, selected])
+  // La fecha elegida desapareció (se llenó o se cerró): se descarta en vez de reservar algo inexistente. Se
+  // hace durante el render para que ningún consumidor vea un `selectedId` que ya no corresponde a nada.
+  if (slotsLoaded && selectedId && !selected) setSelectedId(null)
 
   return {
     selected,

@@ -66,14 +66,14 @@ export function Checkout({
   const [expiredByServer, setExpiredByServer] = useState(false)
   const [travelerErrors, setTravelerErrors] = useState<TravelerErrors[]>([])
 
-  // Un borrador por pasajero. Se arma una vez a partir de lo que dice el backend que trae la reserva.
+  // Un borrador por pasajero. Se arma a partir de lo que dice el backend que trae la reserva, y se reajusta
+  // durante el render si ese número cambia: con un efecto, el formulario se pintaba una vez con la cantidad
+  // anterior de campos.
   const travelerCount = reservation?.flight?.travelers ?? 0
   const [travelers, setTravelers] = useState<TravelerDraft[]>([])
-  useEffect(() => {
-    setTravelers((current) =>
-      current.length === travelerCount ? current : Array.from({ length: travelerCount }, emptyTraveler),
-    )
-  }, [travelerCount])
+  if (travelers.length !== travelerCount) {
+    setTravelers(Array.from({ length: travelerCount }, emptyTraveler))
+  }
 
   const timeUp = isPending && countdown.isTimeUp
   useEffect(() => {

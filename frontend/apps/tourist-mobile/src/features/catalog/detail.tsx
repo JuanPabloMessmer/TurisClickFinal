@@ -1,4 +1,3 @@
-import { formatDate } from '@turisclick/utils'
 import { useRouter } from 'expo-router'
 import { ArrowLeft, BadgeCheck, CalendarDays } from 'lucide-react-native'
 import { Pressable, ScrollView, Text, View } from 'react-native'

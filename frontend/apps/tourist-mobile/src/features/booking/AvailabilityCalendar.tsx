@@ -1,5 +1,5 @@
 import { addMonths, monthLabel, parseIsoDate, todayIso, WEEKDAY_SHORT_LABELS, yearMonthOf, type IsoDate, type YearMonth } from '@turisclick/utils'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import {
   availableDaysInMonth,
@@ -35,12 +35,15 @@ export function AvailabilityCalendar({
   const initial = selectedDate ?? firstAvailableDate(byDate, today) ?? today
   const [month, setMonth] = useState<YearMonth>(() => yearMonthOf(initial))
 
-  // Cuando la disponibilidad llega después del primer render, se abre en el mes de la primera fecha.
+  // Cuando la disponibilidad llega después del primer render, se abre en el mes de la primera fecha. Se
+  // ajusta durante el render —no desde un efecto— para que el calendario nunca se pinte un frame en el mes
+  // equivocado. Sólo reacciona a la llegada de datos, no a cada selección.
   const firstDate = firstAvailableDate(byDate, today)
-  useEffect(() => {
+  const [lastFirstDate, setLastFirstDate] = useState(firstDate)
+  if (lastFirstDate !== firstDate) {
+    setLastFirstDate(firstDate)
     if (!selectedDate && firstDate) setMonth(yearMonthOf(firstDate))
-    // Solo reacciona a la llegada de datos, no a cada selección.
-  }, [firstDate])
+  }
 
   const weeks = buildCalendarMonth(month, byDate, today, selectedDate)
   const daysAvailable = availableDaysInMonth(month, byDate, today)

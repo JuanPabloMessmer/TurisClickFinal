@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useCategories } from '@/features/catalog/queries'
@@ -50,13 +50,13 @@ export function OnboardingFlow({
   const [draft, setDraft] = useState<PreferencesDraft>(EMPTY_DRAFT)
   const [hydrated, setHydrated] = useState(mode === 'onboarding')
 
-  // En edición, el borrador arranca con lo guardado apenas llega (una sola vez).
-  useEffect(() => {
-    if (!hydrated && saved.data) {
-      setDraft(draftFrom(saved.data))
-      setHydrated(true)
-    }
-  }, [hydrated, saved.data])
+  // En edición, el borrador arranca con lo guardado apenas llega (una sola vez). Se ajusta durante el render
+  // y no desde un efecto: así la primera pintura ya muestra las preferencias de la persona en vez de un
+  // formulario vacío que se rellena un frame después.
+  if (!hydrated && saved.data) {
+    setDraft(draftFrom(saved.data))
+    setHydrated(true)
+  }
 
   const step = ONBOARDING_STEPS[stepIndex]
   const isLast = stepIndex === ONBOARDING_STEPS.length - 1

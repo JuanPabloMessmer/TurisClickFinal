@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 // expo-secure-store es un módulo nativo: en Jest no existe, así que se sustituye por un almacén en
 // memoria. Es suficiente para lo que probamos (que los tokens se guarden y se borren al hacer logout).
 jest.mock('expo-secure-store', () => {

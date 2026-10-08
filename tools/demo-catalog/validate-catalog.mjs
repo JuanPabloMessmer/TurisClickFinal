@@ -213,7 +213,13 @@ const admin = await call('POST', '/api/auth/login', { body: { email: 'admin@turi
 if (ok(admin.status === 200, 'login admin (para revisar estados de cuenta)')) {
   const status = async (email) => items((await call('GET', `/api/admin/users?search=${encodeURIComponent(email)}&pageSize=20`, { token: admin.data.accessToken })).data).find((u) => u.email === email)?.status
   ok((await status(t.email)) === 'ACTIVE', `${t.email}: ACTIVE`)
-  for (const email of LEGACY.suspendUsers) ok((await status(email)) === 'SUSPENDED', `${email}: SUSPENDED (cuenta QA retirada)`)
+  // Lo que importa es que esas cuentas de QA no se puedan usar. En una base que arrastra historia están
+  // suspendidas; en una base de demo recién creada nunca existieron, y eso satisface la misma condición. La
+  // versión anterior exigía SUSPENDED y por eso fallaba justo contra la base limpia, que es la más correcta.
+  for (const email of LEGACY.suspendUsers) {
+    const estado = await status(email)
+    ok(estado === undefined || estado === 'SUSPENDED', `${email}: retirada (inexistente o suspendida)`, estado ?? 'inexistente')
+  }
 }
 
 console.log(`\nRESULTADO: ${failures === 0 ? 'TODO OK' : failures + ' fallas'} (${checks} verificaciones)`)

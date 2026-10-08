@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router'
-import { useRef } from 'react'
+import { useState } from 'react'
 import { Text, View } from 'react-native'
 import { useSession } from '@/auth/session'
 import { Button, Skeleton } from '@/ui'
@@ -22,9 +22,12 @@ export function RequireTourist({
   message?: string
 }) {
   const { status, isAuthenticated } = useSession()
-  const wasAuthenticated = useRef(false)
 
-  if (isAuthenticated) wasAuthenticated.current = true
+  // Que la persona haya tenido sesión en esta pantalla cambia lo que se le dice: "tu sesión expiró" en vez
+  // de "iniciá sesión". Es estado del componente, no un dato auxiliar: se guarda como estado y se ajusta
+  // durante el render, que es el patrón que React recomienda para esto.
+  const [wasAuthenticated, setWasAuthenticated] = useState(false)
+  if (isAuthenticated && !wasAuthenticated) setWasAuthenticated(true)
 
   if (status === 'idle' || status === 'loading') {
     return (
@@ -36,7 +39,7 @@ export function RequireTourist({
   }
 
   if (!isAuthenticated) {
-    return wasAuthenticated.current ? (
+    return wasAuthenticated ? (
       <SignInPrompt
         title="Tu sesión expiró"
         message="Iniciá sesión de nuevo para continuar. Tus reservas siguen guardadas."

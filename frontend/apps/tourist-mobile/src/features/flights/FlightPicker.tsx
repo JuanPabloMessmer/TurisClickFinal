@@ -42,16 +42,29 @@ export function FlightPicker({
   onSelect: (selection: FlightSelection | null) => void
 }) {
   const [origin, setOrigin] = useState<string | null>(null)
-  const [quote, setQuote] = useState<Quote | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   const origins = pkg.flightOrigins ?? []
 
-  // Cambiar de salida, de origen o de cantidad invalida la cotización: ya no es la misma compra.
+  /**
+   * Una cotización vale para una compra concreta: esta salida, este origen y esta cantidad de viajeros.
+   * Se guarda junto a la combinación que la produjo y se descarta derivándola, en vez de limpiarla desde un
+   * efecto. Así no hay un frame en el que se muestre el precio de una búsqueda anterior, y una respuesta que
+   * llega tarde —la persona cambió de origen mientras buscábamos— no se pinta como si fuera la actual.
+   */
+  const quoteKey = `${availabilityId ?? ''}|${travelers}|${origin ?? ''}`
+  const [quoteState, setQuoteState] = useState<{ key: string; quote: Quote | null; error: string | null }>({
+    key: '',
+    quote: null,
+    error: null,
+  })
+  const current = quoteState.key === quoteKey ? quoteState : null
+  const quote = current?.quote ?? null
+  const error = current?.error ?? null
+
+  // Avisarle al padre que ya no hay vuelo elegido sí es un efecto: toca el estado de otro componente, no el
+  // de este. Lo propio de este componente se deriva arriba.
   useEffect(() => {
-    setQuote(null)
     onSelect(null)
-    setError(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availabilityId, travelers, origin])
 
@@ -64,8 +77,7 @@ export function FlightPicker({
       }),
     retry: false,
     onSuccess: (result) => {
-      setQuote(result)
-      setError(null)
+      setQuoteState({ key: quoteKey, quote: result, error: null })
       const first = result.options?.[0]
       if (first?.quoteId) {
         onSelect({
@@ -75,7 +87,8 @@ export function FlightPicker({
         })
       }
     },
-    onError: (searchError) => setError(toApiError(searchError).message),
+    onError: (searchError) =>
+      setQuoteState({ key: quoteKey, quote: null, error: toApiError(searchError).message }),
   })
 
   const options = quote?.options ?? []

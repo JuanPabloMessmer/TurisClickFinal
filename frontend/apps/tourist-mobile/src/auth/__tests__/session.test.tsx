@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { act, render, screen, waitFor } from '@testing-library/react-native'
 import * as SecureStore from 'expo-secure-store'
 import { Text } from 'react-native'
@@ -31,11 +32,16 @@ function sessionFor(role: string) {
   }
 }
 
+// La sonda expone el valor del contexto a las aserciones. Publica el valor desde un efecto y no durante el
+// render: escribir en algo de afuera mientras se renderiza es exactamente lo que React no garantiza.
 let session: ReturnType<typeof useSession>
 
 function Probe() {
-  session = useSession()
-  return <Text>{session.status}</Text>
+  const value = useSession()
+  useEffect(() => {
+    session = value
+  })
+  return <Text>{value.status}</Text>
 }
 
 const renderSession = () =>

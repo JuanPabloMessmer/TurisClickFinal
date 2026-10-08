@@ -15,8 +15,13 @@ import { useSession } from '@/auth/session'
 export function useOnTouristLeave(onLeave: (previousUserId: string) => void) {
   const { status, isAuthenticated, user } = useSession()
   const previousUserId = useRef<string | null | undefined>(undefined)
+  // Se guarda la última callback para que el efecto de abajo no dependa de su identidad: si dependiera,
+  // una función recreada en cada render lo volvería a disparar. La escritura va en su propio efecto, no en
+  // el render.
   const callback = useRef(onLeave)
-  callback.current = onLeave
+  useEffect(() => {
+    callback.current = onLeave
+  }, [onLeave])
 
   useEffect(() => {
     if (status === 'idle' || status === 'loading') return

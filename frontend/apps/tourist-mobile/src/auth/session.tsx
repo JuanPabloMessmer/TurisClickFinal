@@ -1,6 +1,6 @@
 import { authApi, type RegisterTouristRequest, type UserSummaryResponse } from '@turisclick/api-client'
 import { AuthManager, useAuthState } from '@turisclick/auth-core'
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { httpClient } from '@/lib/httpClient'
 import { secureTokenStorage } from '@/lib/secureTokenStorage'
 
@@ -30,10 +30,9 @@ const SessionContext = createContext<SessionContextValue | null>(null)
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   // Una sola instancia por vida de la app: el AuthManager engancha interceptores en el httpClient y
-  // volver a crearlo los duplicaría.
-  const managerRef = useRef<AuthManager>(undefined)
-  managerRef.current ??= new AuthManager(httpClient, secureTokenStorage)
-  const manager = managerRef.current
+  // volver a crearlo los duplicaría. El inicializador perezoso de useState corre una vez y sólo una, que es
+  // justo lo que hacía el ref — pero sin escribirlo durante el render.
+  const [manager] = useState(() => new AuthManager(httpClient, secureTokenStorage))
 
   const state = useAuthState(manager)
   const [bootstrapped, setBootstrapped] = useState(false)
