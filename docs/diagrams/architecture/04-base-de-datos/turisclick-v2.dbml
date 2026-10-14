@@ -1,0 +1,704 @@
+// TurisClick V2 — esquema físico PostgreSQL
+// GENERADO por docs/diagrams/architecture/_herramientas/generar_erd.py desde
+// src/TurisClick.Api/Infrastructure/Database/Migrations/TurisClickDbContextModelSnapshot.cs
+// (14 migraciones, última 0014_Oleada13_AltaDeOperadoresPorAdmin). No editar a mano.
+
+Project turisclick_v2 {
+  database_type: 'PostgreSQL'
+  Note: '''Los estados y tipos de dominio se guardan como varchar con el nombre del enum de C#
+(HasConversion<string>), no como tipos ENUM nativos de PostgreSQL. Las columnas uuid usan
+gen_random_uuid() por defecto.'''
+}
+
+Table users {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  company_id uuid
+  created_at timestamptz [not null, default: `now()`]
+  email varchar(255) [not null, unique]
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  must_change_password boolean [not null, default: false]
+  password_hash varchar(255) [not null]
+  role varchar(20) [not null, note: 'enum C# UserRole: TOURIST, PROVIDER, ADMIN']
+  status varchar(20) [not null, default: 'ACTIVE', note: 'enum C# UserStatus: ACTIVE, SUSPENDED']
+
+  indexes {
+    company_id [name: 'ix_users_company_id']
+  }
+
+  Note: '''CHECK:
+- ck_users_provider_has_company: (role = 'PROVIDER' AND company_id IS NOT NULL) OR (role <> 'PROVIDER' AND company_id IS NULL)
+'''
+}
+
+Table refresh_tokens {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  user_id uuid [not null]
+  created_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz [not null]
+  revoked_at timestamptz
+  token_hash varchar(255) [not null, unique]
+
+  indexes {
+    user_id [name: 'ix_refresh_tokens_user_id']
+  }
+}
+
+Table companies {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  approved_by_user_id uuid
+  approved_at timestamptz
+  contact_email varchar(255) [not null]
+  contact_phone varchar(30)
+  created_at timestamptz [not null, default: `now()`]
+  description text
+  legal_document varchar(50) [not null, unique]
+  name varchar(150) [not null]
+  rejection_reason text
+  status varchar(20) [not null, default: 'PENDING_APPROVAL', note: 'enum C# CompanyStatus: PENDING_APPROVAL, APPROVED, REJECTED, SUSPENDED']
+
+  indexes {
+    approved_by_user_id
+    status [name: 'ix_companies_status']
+  }
+}
+
+Table destinations {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  parent_id uuid
+  created_at timestamptz [not null, default: `now()`]
+  image_url varchar(500)
+  name varchar(150) [not null]
+  type varchar(20) [not null, note: 'enum C# DestinationType: COUNTRY, REGION, CITY']
+
+  indexes {
+    parent_id [name: 'ix_destinations_parent_id']
+    type [name: 'ix_destinations_type']
+    (name, type) [unique, name: 'uq_destinations_name_type_root', note: 'parcial: WHERE parent_id IS NULL']
+    (name, parent_id, type) [unique, name: 'uq_destinations_name_parent_type', note: 'parcial: WHERE parent_id IS NOT NULL']
+  }
+
+  Note: '''CHECK:
+- ck_destinations_country_no_parent: (type = 'COUNTRY' AND parent_id IS NULL) OR (type <> 'COUNTRY' AND parent_id IS NOT NULL)
+'''
+}
+
+Table categories {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  description text
+  name varchar(100) [not null, unique]
+}
+
+Table experiences {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  company_id uuid [not null]
+  destination_id uuid [not null]
+  created_at timestamptz [not null, default: `now()`]
+  currency varchar(3) [not null]
+  description text [not null]
+  duration_label varchar(100)
+  duration_minutes integer
+  excludes_text text
+  includes_text text
+  price numeric(12,2) [not null]
+  status varchar(20) [not null, default: 'DRAFT', note: 'enum C# PublicationStatus: DRAFT, PUBLISHED, UNPUBLISHED, SUSPENDED']
+  title varchar(200) [not null]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    company_id [name: 'ix_experiences_company_id']
+    destination_id [name: 'ix_experiences_destination_id']
+    (status, destination_id) [name: 'ix_experiences_status_destination']
+  }
+
+  Note: '''CHECK:
+- ck_experiences_currency: currency ~ '^[A-Z]{3}$'
+- ck_experiences_duration: duration_minutes IS NULL OR duration_minutes > 0
+- ck_experiences_price: price >= 0
+'''
+}
+
+Table experience_images {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  experience_id uuid [not null, note: 'índice único parcial, ver indexes']
+  is_cover boolean [not null, default: false]
+  sort_order integer [not null, default: 0]
+  url varchar(500) [not null]
+
+  indexes {
+    experience_id [name: 'ix_experience_images_experience_id']
+    experience_id [unique, name: 'ux_experience_images_one_cover', note: 'parcial: WHERE is_cover = true']
+  }
+}
+
+Table experience_availabilities {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  experience_id uuid [not null]
+  date date [not null]
+  reserved_slots integer [not null, default: 0]
+  start_time time
+  status varchar(20) [not null, default: 'OPEN', note: 'enum C# AvailabilitySlotStatus: OPEN, CLOSED']
+  total_slots integer [not null]
+
+  indexes {
+    (experience_id, date) [name: 'ix_experience_availabilities_experience_date']
+    (experience_id, date) [unique, name: 'ux_experience_availabilities_fullday', note: 'parcial: WHERE start_time IS NULL']
+    (experience_id, date, start_time) [unique, name: 'ux_experience_availabilities_timed', note: 'parcial: WHERE start_time IS NOT NULL']
+  }
+
+  Note: '''CHECK:
+- ck_experience_availabilities_slots: total_slots > 0 AND reserved_slots >= 0 AND reserved_slots <= total_slots
+'''
+}
+
+Table experience_categories {
+  experience_id uuid [not null]
+  category_id uuid [not null]
+
+  indexes {
+    (experience_id, category_id) [pk]
+    category_id [name: 'ix_experience_categories_category_id']
+  }
+}
+
+Table packages {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  company_id uuid [not null]
+  destination_id uuid [not null]
+  cancellation_policy varchar(60)
+  conditions_text text
+  created_at timestamptz [not null, default: `now()`]
+  currency varchar(3) [not null]
+  description text [not null]
+  duration_days integer [not null]
+  includes_flight boolean [not null, default: false]
+  price numeric(12,2) [not null]
+  status varchar(20) [not null, default: 'DRAFT', note: 'enum C# PublicationStatus: DRAFT, PUBLISHED, UNPUBLISHED, SUSPENDED']
+  title varchar(200) [not null]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    company_id [name: 'ix_packages_company_id']
+    destination_id [name: 'ix_packages_destination_id']
+    (status, destination_id) [name: 'ix_packages_status_destination']
+  }
+
+  Note: '''CHECK:
+- ck_packages_cancellation_policy: cancellation_policy IS NULL OR cancellation_policy ~ '^[0-9]{1,3}:[0-9]{1,3}(;[0-9]{1,3}:[0-9]{1,3}){0,5}$'
+- ck_packages_currency: currency ~ '^[A-Z]{3}$'
+- ck_packages_duration: duration_days > 0
+- ck_packages_price: price >= 0
+'''
+}
+
+Table package_items {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  experience_id uuid
+  package_id uuid [not null]
+  day_number integer [not null]
+  description text
+  kind varchar(30) [not null, note: 'enum C# PackageItemKind: EXPERIENCE_REFERENCE, DESCRIPTIVE']
+  sort_order integer [not null, default: 0]
+  title varchar(200)
+
+  indexes {
+    experience_id [name: 'ix_package_items_experience_id']
+    package_id [name: 'ix_package_items_package_id']
+  }
+
+  Note: '''CHECK:
+- ck_package_items_day: day_number >= 1
+- ck_package_items_descriptive_title: kind <> 'DESCRIPTIVE' OR title IS NOT NULL
+- ck_package_items_kind_shape: (kind = 'EXPERIENCE_REFERENCE' AND experience_id IS NOT NULL) OR (kind = 'DESCRIPTIVE' AND experience_id IS NULL)
+'''
+}
+
+Table package_images {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  package_id uuid [not null, note: 'índice único parcial, ver indexes']
+  is_cover boolean [not null, default: false]
+  sort_order integer [not null, default: 0]
+  url varchar(500) [not null]
+
+  indexes {
+    package_id [name: 'ix_package_images_package_id']
+    package_id [unique, name: 'ux_package_images_one_cover', note: 'parcial: WHERE is_cover = true']
+  }
+}
+
+Table package_availabilities {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  package_id uuid [not null]
+  departure_date date [not null]
+  reserved_slots integer [not null, default: 0]
+  status varchar(20) [not null, default: 'OPEN', note: 'enum C# AvailabilitySlotStatus: OPEN, CLOSED']
+  total_slots integer [not null]
+
+  indexes {
+    (package_id, departure_date) [name: 'ix_package_availabilities_package_date']
+    (package_id, departure_date) [unique, name: 'uq_package_availabilities_departure']
+  }
+
+  Note: '''CHECK:
+- ck_package_availabilities_slots: total_slots > 0 AND reserved_slots >= 0 AND reserved_slots <= total_slots
+'''
+}
+
+Table package_categories {
+  package_id uuid [not null]
+  category_id uuid [not null]
+
+  indexes {
+    (package_id, category_id) [pk]
+    category_id [name: 'ix_package_categories_category_id']
+  }
+}
+
+Table reservations {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  ai_itinerary_id uuid [note: 'índice único parcial, ver indexes']
+  tourist_id uuid [not null]
+  cancelled_at timestamptz
+  confirmed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz
+  status varchar(20) [not null, default: 'PENDING_PAYMENT', note: 'enum C# ReservationStatus: PENDING_PAYMENT, CONFIRMED, PAYMENT_FAILED, CANCELLING, CANCELLED, EXPIRED']
+
+  indexes {
+    ai_itinerary_id [unique, name: 'ix_reservations_ai_itinerary_id', note: 'parcial: WHERE ai_itinerary_id IS NOT NULL AND status NOT IN (\'EXPIRED\', \'CANCELLED\')']
+    status [name: 'ix_reservations_status']
+    tourist_id [name: 'ix_reservations_tourist_id']
+  }
+}
+
+Table reservation_items {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  company_id uuid [not null]
+  experience_availability_id uuid
+  experience_id uuid
+  package_availability_id uuid
+  package_id uuid
+  reservation_id uuid [not null]
+  cancellation_policy varchar(60)
+  cancellation_reason varchar(500)
+  cancelled_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  currency varchar(3) [not null]
+  day_number integer
+  product_type varchar(20) [not null, note: 'enum C# ProductType: EXPERIENCE, PACKAGE']
+  status varchar(20) [not null, default: 'PENDING_PAYMENT', note: 'enum C# ReservationItemStatus: PENDING_PAYMENT, CONFIRMED, CANCELLED, EXPIRED']
+  subtotal numeric(12,2) [not null]
+  travelers integer [not null]
+  unit_price numeric(12,2) [not null]
+
+  indexes {
+    experience_availability_id [name: 'ix_reservation_items_experience_availability']
+    experience_id
+    package_availability_id [name: 'ix_reservation_items_package_availability']
+    package_id
+    reservation_id [name: 'ix_reservation_items_reservation_id']
+    (company_id, status) [name: 'ix_reservation_items_company_status']
+  }
+
+  Note: '''CHECK:
+- ck_reservation_items_amounts: unit_price >= 0 AND subtotal >= 0
+- ck_reservation_items_cancellation_policy: cancellation_policy IS NULL OR cancellation_policy ~ '^[0-9]{1,3}:[0-9]{1,3}(;[0-9]{1,3}:[0-9]{1,3}){0,5}$'
+- ck_reservation_items_currency: currency ~ '^[A-Z]{3}$'
+- ck_reservation_items_product_shape: (product_type = 'EXPERIENCE' AND experience_id IS NOT NULL AND package_id IS NULL AND experience_availability_id IS NOT NULL AND package_availability_id IS NULL) OR (product_type = 'PACKAGE' AND package_id IS NOT NULL AND experience_id IS NULL AND package_availability_id IS NOT NULL AND experience_availability_id IS NULL)
+- ck_reservation_items_travelers: travelers > 0
+'''
+}
+
+Table payment_transactions {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  reservation_id uuid [not null]
+  amount numeric(12,2) [not null]
+  component varchar(20) [note: 'enum C# PaymentComponent: PACKAGE, EXPERIENCE, FLIGHT']
+  created_at timestamptz [not null, default: `now()`]
+  currency varchar(3) [not null]
+  failure_reason varchar(500)
+  idempotency_key varchar(120) [not null, note: 'índice único parcial, ver indexes']
+  provider varchar(50) [not null]
+  provider_reference varchar(200)
+  reservation_item_id uuid [note: 'referencia lógica a reservation_items.id SIN restricción FK']
+  status varchar(20) [not null, note: 'enum C# PaymentTransactionStatus: PENDING, SUCCEEDED, FAILED']
+  type varchar(20) [not null, note: 'enum C# PaymentTransactionType: CHARGE, VOID, REFUND']
+
+  indexes {
+    idempotency_key [unique, name: 'ux_payment_transactions_refund_key', note: 'parcial: WHERE type = \'REFUND\' AND status = \'SUCCEEDED\'']
+    (reservation_id, created_at) [name: 'ix_payment_transactions_reservation']
+  }
+
+  Note: '''CHECK:
+- ck_payment_transactions_amount: amount >= 0
+- ck_payment_transactions_component: type <> 'REFUND' OR component IS NOT NULL
+- ck_payment_transactions_currency: currency ~ '^[A-Z]{3}$'
+'''
+}
+
+Table reservation_cancellations {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  reservation_id uuid [not null]
+  accepted_at timestamptz
+  completed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz [not null]
+  failure_reason varchar(500)
+  flight_cancelled_at timestamptz
+  next_resolution_at timestamptz
+  provider_cancellation_id varchar(200)
+  resolution_attempts integer [not null]
+  status varchar(20) [not null, note: 'enum C# ReservationCancellationStatus: QUOTED, ACCEPTED, COMPLETED, REFUND_PENDING, REQUIRES_REVIEW, FAILED, EXPIRED']
+
+  indexes {
+    (reservation_id, created_at) [name: 'ix_reservation_cancellations_reservation']
+    (status, next_resolution_at) [name: 'ix_reservation_cancellations_pending']
+  }
+}
+
+Table reservation_cancellation_lines {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  cancellation_id uuid [not null]
+  component varchar(20) [not null, note: 'enum C# PaymentComponent: PACKAGE, EXPERIENCE, FLIGHT']
+  currency varchar(3) [not null]
+  explanation varchar(300) [not null]
+  fee_amount numeric(12,2) [not null]
+  label varchar(200) [not null]
+  paid_amount numeric(12,2) [not null]
+  policy_applied varchar(60)
+  refund_amount numeric(12,2) [not null]
+  refund_known boolean [not null]
+  refund_percentage integer
+  reservation_item_id uuid [note: 'referencia lógica a reservation_items.id SIN restricción FK']
+
+  indexes {
+    cancellation_id
+  }
+
+  Note: '''CHECK:
+- ck_cancellation_lines_amounts: paid_amount >= 0 AND refund_amount >= 0 AND fee_amount >= 0 AND refund_amount <= paid_amount
+- ck_cancellation_lines_currency: currency ~ '^[A-Z]{3}$'
+- ck_cancellation_lines_percentage: refund_percentage IS NULL OR (refund_percentage BETWEEN 0 AND 100)
+'''
+}
+
+Table package_flight_rules {
+  package_id uuid [pk, not null]
+  allowed_origin_iatas varchar(200) [not null]
+  cabin_class varchar(20) [not null, note: 'enum C# FlightCabinClass: ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST']
+  created_at timestamptz [not null, default: `now()`]
+  destination_iata varchar(3) [not null]
+  inbound_offset_days integer [not null]
+  outbound_offset_days integer [not null]
+  round_trip boolean [not null]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: '''CHECK:
+- ck_package_flight_rules_destination: destination_iata ~ '^[A-Z]{3}$'
+- ck_package_flight_rules_offsets: outbound_offset_days BETWEEN -7 AND 7 AND inbound_offset_days BETWEEN -7 AND 7
+- ck_package_flight_rules_origins: allowed_origin_iatas ~ '^[A-Z]{3}(,[A-Z]{3})*$'
+'''
+}
+
+Table flight_quotes {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  package_availability_id uuid [not null]
+  package_id uuid [not null]
+  currency varchar(3) [not null]
+  destination_iata varchar(3) [not null]
+  expires_at timestamptz
+  inbound_date date
+  initial_amount numeric(12,2) [not null]
+  itinerary_summary varchar(500) [not null]
+  origin_iata varchar(3) [not null]
+  outbound_date date [not null]
+  provider varchar(50) [not null]
+  provider_offer_id varchar(200) [not null]
+  quoted_at timestamptz [not null, default: `now()`]
+  revalidated_at timestamptz
+  status varchar(20) [not null, note: 'enum C# FlightQuoteStatus: QUOTED, CONFIRMED, PRICE_CHANGED, EXPIRED, UNAVAILABLE']
+  total_amount numeric(12,2) [not null]
+  tourist_id uuid [note: 'referencia lógica a users.id SIN restricción FK']
+  travelers integer [not null]
+
+  indexes {
+    package_availability_id
+    tourist_id [name: 'ix_flight_quotes_tourist_id']
+    (package_id, quoted_at) [name: 'ix_flight_quotes_package_quoted']
+  }
+
+  Note: '''CHECK:
+- ck_flight_quotes_amounts: total_amount >= 0 AND initial_amount >= 0
+- ck_flight_quotes_currency: currency ~ '^[A-Z]{3}$'
+- ck_flight_quotes_inbound: inbound_date IS NULL OR inbound_date >= outbound_date
+- ck_flight_quotes_travelers: travelers > 0
+'''
+}
+
+Table flight_bookings {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  flight_quote_id uuid [not null, unique]
+  reservation_id uuid [not null, unique]
+  booking_reference varchar(20)
+  carrier_iata varchar(3)
+  carrier_name varchar(100)
+  confirmed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  currency varchar(3) [not null]
+  destination_iata varchar(3) [not null]
+  failed_at timestamptz
+  failure_reason varchar(500)
+  idempotency_key varchar(100) [not null, unique]
+  inbound_arrival_at timestamp
+  inbound_date date
+  inbound_departure_at timestamp
+  inbound_flight_number varchar(10)
+  itinerary_summary varchar(500) [not null]
+  last_reconciliation_at timestamptz
+  next_reconciliation_at timestamptz
+  origin_iata varchar(3) [not null]
+  outbound_arrival_at timestamp
+  outbound_date date [not null]
+  outbound_departure_at timestamp
+  outbound_flight_number varchar(10)
+  provider varchar(50) [not null]
+  provider_order_id varchar(200)
+  reconciliation_attempts integer [not null]
+  status varchar(40) [not null, note: 'enum C# FlightBookingStatus: PENDING, ORDERING, CONFIRMED, FAILED, RECONCILIATION_REQUIRED, CANCELLED']
+  total_amount numeric(12,2) [not null]
+  travelers integer [not null]
+
+  indexes {
+    (status, next_reconciliation_at) [name: 'ix_flight_bookings_reconciliation']
+  }
+
+  Note: '''CHECK:
+- ck_flight_bookings_amount: total_amount >= 0
+- ck_flight_bookings_currency: currency ~ '^[A-Z]{3}$'
+'''
+}
+
+Table ai_conversations {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  preferred_destination_id uuid
+  tourist_id uuid [not null]
+  budget_currency varchar(3)
+  budget_total numeric(12,2)
+  created_at timestamptz [not null, default: `now()`]
+  duration_days integer
+  end_date date
+  restrictions_notes text
+  start_date date
+  status varchar(20) [not null, default: 'ACTIVE', note: 'enum C# AiConversationStatus: ACTIVE, CLOSED']
+  travel_pace varchar(20) [note: 'enum C# TravelPace: RELAXED, BALANCED, INTENSE']
+  travelers_count integer
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    preferred_destination_id
+    tourist_id [name: 'ix_ai_conversations_tourist_id']
+  }
+
+  Note: '''CHECK:
+- ck_ai_conversations_budget: budget_total IS NULL OR budget_total >= 0
+- ck_ai_conversations_currency: budget_currency IS NULL OR budget_currency ~ '^[A-Z]{3}$'
+- ck_ai_conversations_dates: end_date IS NULL OR start_date IS NULL OR end_date >= start_date
+- ck_ai_conversations_travelers: travelers_count IS NULL OR travelers_count > 0
+'''
+}
+
+Table ai_conversation_categories {
+  ai_conversation_id uuid [not null]
+  category_id uuid [not null]
+
+  indexes {
+    (ai_conversation_id, category_id) [pk]
+    category_id
+  }
+}
+
+Table ai_messages {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  ai_conversation_id uuid [not null]
+  content text [not null]
+  created_at timestamptz [not null, default: `now()`]
+  sender varchar(20) [not null, note: 'enum C# MessageSender: TOURIST, AI']
+
+  indexes {
+    (ai_conversation_id, created_at) [name: 'ix_ai_messages_conversation_created']
+  }
+}
+
+Table ai_itineraries {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  ai_conversation_id uuid [not null]
+  tourist_id uuid [not null]
+  created_at timestamptz [not null, default: `now()`]
+  status varchar(20) [not null, default: 'DRAFT', note: 'enum C# AiItineraryStatus: DRAFT, SAVED, BOOKED, DISCARDED']
+  title varchar(200)
+  updated_at timestamptz [not null, default: `now()`]
+  version integer [not null, default: 1]
+
+  indexes {
+    ai_conversation_id [name: 'ix_ai_itineraries_conversation_id']
+    status [name: 'ix_ai_itineraries_status']
+    tourist_id [name: 'ix_ai_itineraries_tourist_id']
+  }
+}
+
+Table ai_itinerary_items {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  ai_itinerary_id uuid [not null]
+  experience_availability_id uuid
+  experience_id uuid
+  package_availability_id uuid
+  package_id uuid
+  currency varchar(3) [not null]
+  day_number integer [not null]
+  estimated_unit_price numeric(12,2) [not null]
+  product_type varchar(20) [not null, note: 'enum C# ProductType: EXPERIENCE, PACKAGE']
+  sort_order integer [not null, default: 0]
+
+  indexes {
+    ai_itinerary_id [name: 'ix_ai_itinerary_items_itinerary_id']
+    experience_availability_id
+    experience_id
+    package_availability_id
+    package_id
+  }
+
+  Note: '''CHECK:
+- ck_ai_itinerary_items_currency: currency ~ '^[A-Z]{3}$'
+- ck_ai_itinerary_items_day: day_number >= 1
+- ck_ai_itinerary_items_product_shape: (product_type = 'EXPERIENCE' AND experience_id IS NOT NULL AND package_id IS NULL AND package_availability_id IS NULL) OR (product_type = 'PACKAGE' AND package_id IS NOT NULL AND experience_id IS NULL AND experience_availability_id IS NULL)
+'''
+}
+
+Table tourist_preferences {
+  user_id uuid [pk, not null]
+  budget_level varchar(20) [note: 'enum C# BudgetLevel: ECONOMY, MODERATE, PREMIUM']
+  created_at timestamptz [not null, default: `now()`]
+  onboarding_completed_at timestamptz
+  travel_pace varchar(20) [note: 'enum C# TravelPace: RELAXED, BALANCED, INTENSE']
+  travel_party varchar(20) [note: 'enum C# TravelParty: SOLO, COUPLE, FRIENDS, FAMILY']
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table tourist_preference_categories {
+  user_id uuid [not null]
+  category_id uuid [not null]
+
+  indexes {
+    (user_id, category_id) [pk]
+    category_id [name: 'ix_tourist_preference_categories_category_id']
+  }
+}
+
+Ref: ai_conversations.preferred_destination_id > destinations.id [delete: restrict]
+Ref: ai_conversations.tourist_id > users.id [delete: restrict]
+Ref: ai_itineraries.ai_conversation_id > ai_conversations.id [delete: cascade]
+Ref: ai_itineraries.tourist_id > users.id [delete: restrict]
+Ref: ai_itinerary_items.ai_itinerary_id > ai_itineraries.id [delete: cascade]
+Ref: ai_itinerary_items.experience_availability_id > experience_availabilities.id [delete: restrict]
+Ref: ai_itinerary_items.experience_id > experiences.id [delete: restrict]
+Ref: ai_itinerary_items.package_availability_id > package_availabilities.id [delete: restrict]
+Ref: ai_itinerary_items.package_id > packages.id [delete: restrict]
+Ref: ai_messages.ai_conversation_id > ai_conversations.id [delete: cascade]
+Ref: refresh_tokens.user_id > users.id [delete: cascade]
+Ref: users.company_id > companies.id [delete: restrict]
+Ref: companies.approved_by_user_id > users.id [delete: restrict]
+Ref: destinations.parent_id > destinations.id [delete: restrict]
+Ref: experiences.company_id > companies.id [delete: restrict]
+Ref: experiences.destination_id > destinations.id [delete: restrict]
+Ref: experience_availabilities.experience_id > experiences.id [delete: cascade]
+Ref: experience_images.experience_id > experiences.id [delete: cascade]
+Ref: flight_bookings.flight_quote_id - flight_quotes.id [delete: restrict]
+Ref: flight_bookings.reservation_id - reservations.id [delete: cascade]
+Ref: flight_quotes.package_availability_id > package_availabilities.id [delete: cascade]
+Ref: flight_quotes.package_id > packages.id [delete: cascade]
+Ref: package_flight_rules.package_id - packages.id [delete: cascade]
+Ref: packages.company_id > companies.id [delete: restrict]
+Ref: packages.destination_id > destinations.id [delete: restrict]
+Ref: package_availabilities.package_id > packages.id [delete: cascade]
+Ref: package_images.package_id > packages.id [delete: cascade]
+Ref: package_items.experience_id > experiences.id [delete: restrict]
+Ref: package_items.package_id > packages.id [delete: cascade]
+Ref: tourist_preferences.user_id - users.id [delete: cascade]
+Ref: payment_transactions.reservation_id > reservations.id [delete: cascade]
+Ref: reservations.ai_itinerary_id > ai_itineraries.id [delete: restrict]
+Ref: reservations.tourist_id > users.id [delete: restrict]
+Ref: reservation_cancellations.reservation_id > reservations.id [delete: cascade]
+Ref: reservation_cancellation_lines.cancellation_id > reservation_cancellations.id [delete: cascade]
+Ref: reservation_items.company_id > companies.id [delete: restrict]
+Ref: reservation_items.experience_availability_id > experience_availabilities.id [delete: restrict]
+Ref: reservation_items.experience_id > experiences.id [delete: restrict]
+Ref: reservation_items.package_availability_id > package_availabilities.id [delete: restrict]
+Ref: reservation_items.package_id > packages.id [delete: restrict]
+Ref: reservation_items.reservation_id > reservations.id [delete: cascade]
+Ref: ai_conversation_categories.ai_conversation_id > ai_conversations.id [delete: cascade]
+Ref: ai_conversation_categories.category_id > categories.id [delete: cascade]
+Ref: experience_categories.category_id > categories.id [delete: cascade]
+Ref: experience_categories.experience_id > experiences.id [delete: cascade]
+Ref: package_categories.category_id > categories.id [delete: cascade]
+Ref: package_categories.package_id > packages.id [delete: cascade]
+Ref: tourist_preference_categories.category_id > categories.id [delete: cascade]
+Ref: tourist_preference_categories.user_id > tourist_preferences.user_id [delete: cascade]
+
+TableGroup Auth {
+  users
+  refresh_tokens
+}
+
+TableGroup Companies {
+  companies
+}
+
+TableGroup Destinations {
+  destinations
+}
+
+TableGroup Categories {
+  categories
+}
+
+TableGroup Experiences {
+  experiences
+  experience_images
+  experience_availabilities
+  experience_categories
+}
+
+TableGroup Packages {
+  packages
+  package_items
+  package_images
+  package_availabilities
+  package_categories
+}
+
+TableGroup Reservations {
+  reservations
+  reservation_items
+  payment_transactions
+  reservation_cancellations
+  reservation_cancellation_lines
+}
+
+TableGroup Flights {
+  package_flight_rules
+  flight_quotes
+  flight_bookings
+}
+
+TableGroup Ai {
+  ai_conversations
+  ai_conversation_categories
+  ai_messages
+  ai_itineraries
+  ai_itinerary_items
+}
+
+TableGroup Preferences {
+  tourist_preferences
+  tourist_preference_categories
+}

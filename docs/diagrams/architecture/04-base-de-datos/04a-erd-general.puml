@@ -1,0 +1,228 @@
+@startuml 04a-erd-general
+' GENERADO por docs/diagrams/architecture/_herramientas/generar_erd.py a partir del snapshot de EF Core.
+' Para cambiar el contenido, editar la vista en el generador y volver a ejecutarlo.
+!pragma layout smetana
+!include ../_tema.iuml
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 55
+
+caption TurisClick V2 — modelo de datos completo: 29 tablas agrupadas por módulo (sólo claves)
+skinparam nodesep 25
+skinparam ranksep 45
+package "Auth" as pkg_Auth {
+  entity "users" as users #E3F2FD {
+    * id <<PK>>
+      company_id <<FK>>
+  }
+  entity "refresh_tokens" as refresh_tokens #E3F2FD {
+    * id <<PK>>
+    * user_id <<FK>>
+  }
+}
+package "Companies" as pkg_Companies {
+  entity "companies" as companies #E8EAF6 {
+    * id <<PK>>
+      approved_by_user_id <<FK>>
+  }
+}
+package "Destinations" as pkg_Destinations {
+  entity "destinations" as destinations #E0F2F1 {
+    * id <<PK>>
+      parent_id <<FK>>
+  }
+}
+package "Categories" as pkg_Categories {
+  entity "categories" as categories #E0F2F1 {
+    * id <<PK>>
+  }
+}
+package "Experiences" as pkg_Experiences {
+  entity "experiences" as experiences #F1F8E9 {
+    * id <<PK>>
+    * company_id <<FK>>
+    * destination_id <<FK>>
+  }
+  entity "experience_images" as experience_images #F1F8E9 {
+    * id <<PK>>
+    * experience_id <<FK>>
+  }
+  entity "experience_availabilities" as experience_availabilities #F1F8E9 {
+    * id <<PK>>
+    * experience_id <<FK>>
+  }
+  entity "experience_categories" as experience_categories #F1F8E9 {
+    * experience_id <<PK, FK>>
+    * category_id <<PK, FK>>
+  }
+}
+package "Packages" as pkg_Packages {
+  entity "packages" as packages #FFFDE7 {
+    * id <<PK>>
+    * company_id <<FK>>
+    * destination_id <<FK>>
+  }
+  entity "package_items" as package_items #FFFDE7 {
+    * id <<PK>>
+      experience_id <<FK>>
+    * package_id <<FK>>
+  }
+  entity "package_images" as package_images #FFFDE7 {
+    * id <<PK>>
+    * package_id <<FK>>
+  }
+  entity "package_availabilities" as package_availabilities #FFFDE7 {
+    * id <<PK>>
+    * package_id <<FK>>
+  }
+  entity "package_categories" as package_categories #FFFDE7 {
+    * package_id <<PK, FK>>
+    * category_id <<PK, FK>>
+  }
+}
+package "Reservations" as pkg_Reservations {
+  entity "reservations" as reservations #FFF3E0 {
+    * id <<PK>>
+      ai_itinerary_id <<FK>>
+    * tourist_id <<FK>>
+  }
+  entity "reservation_items" as reservation_items #FFF3E0 {
+    * id <<PK>>
+    * company_id <<FK>>
+      experience_availability_id <<FK>>
+      experience_id <<FK>>
+      package_availability_id <<FK>>
+      package_id <<FK>>
+    * reservation_id <<FK>>
+  }
+  entity "payment_transactions" as payment_transactions #FFF3E0 {
+    * id <<PK>>
+    * reservation_id <<FK>>
+      reservation_item_id <<ref. lógica>>
+  }
+  entity "reservation_cancellations" as reservation_cancellations #FFF3E0 {
+    * id <<PK>>
+    * reservation_id <<FK>>
+  }
+  entity "reservation_cancellation_lines" as reservation_cancellation_lines #FFF3E0 {
+    * id <<PK>>
+    * cancellation_id <<FK>>
+      reservation_item_id <<ref. lógica>>
+  }
+}
+package "Flights" as pkg_Flights {
+  entity "package_flight_rules" as package_flight_rules #FCE4EC {
+    * package_id <<PK, FK>>
+  }
+  entity "flight_quotes" as flight_quotes #FCE4EC {
+    * id <<PK>>
+    * package_availability_id <<FK>>
+    * package_id <<FK>>
+      tourist_id <<ref. lógica>>
+  }
+  entity "flight_bookings" as flight_bookings #FCE4EC {
+    * id <<PK>>
+    * flight_quote_id <<FK>>
+    * reservation_id <<FK>>
+  }
+}
+package "Ai" as pkg_Ai {
+  entity "ai_conversations" as ai_conversations #F3E5F5 {
+    * id <<PK>>
+      preferred_destination_id <<FK>>
+    * tourist_id <<FK>>
+  }
+  entity "ai_conversation_categories" as ai_conversation_categories #F3E5F5 {
+    * ai_conversation_id <<PK, FK>>
+    * category_id <<PK, FK>>
+  }
+  entity "ai_messages" as ai_messages #F3E5F5 {
+    * id <<PK>>
+    * ai_conversation_id <<FK>>
+  }
+  entity "ai_itineraries" as ai_itineraries #F3E5F5 {
+    * id <<PK>>
+    * ai_conversation_id <<FK>>
+    * tourist_id <<FK>>
+  }
+  entity "ai_itinerary_items" as ai_itinerary_items #F3E5F5 {
+    * id <<PK>>
+    * ai_itinerary_id <<FK>>
+      experience_availability_id <<FK>>
+      experience_id <<FK>>
+      package_availability_id <<FK>>
+      package_id <<FK>>
+  }
+}
+package "Preferences" as pkg_Preferences {
+  entity "tourist_preferences" as tourist_preferences #EDE7F6 {
+    * user_id <<PK, FK>>
+  }
+  entity "tourist_preference_categories" as tourist_preference_categories #EDE7F6 {
+    * user_id <<PK, FK>>
+    * category_id <<PK, FK>>
+  }
+}
+destinations |o--o{ ai_conversations
+users ||--o{ ai_conversations
+ai_conversations ||--o{ ai_itineraries
+users ||--o{ ai_itineraries
+ai_itineraries ||--o{ ai_itinerary_items
+experience_availabilities |o--o{ ai_itinerary_items
+experiences |o--o{ ai_itinerary_items
+package_availabilities |o--o{ ai_itinerary_items
+packages |o--o{ ai_itinerary_items
+ai_conversations ||--o{ ai_messages
+users ||--o{ refresh_tokens
+companies |o--o{ users
+users |o--o{ companies
+destinations |o--o{ destinations
+companies ||--o{ experiences
+destinations ||--o{ experiences
+experiences ||--o{ experience_availabilities
+experiences ||--o{ experience_images
+flight_quotes ||--o| flight_bookings
+reservations ||--o| flight_bookings
+package_availabilities ||--o{ flight_quotes
+packages ||--o{ flight_quotes
+packages ||--o| package_flight_rules
+companies ||--o{ packages
+destinations ||--o{ packages
+packages ||--o{ package_availabilities
+packages ||--o{ package_images
+experiences |o--o{ package_items
+packages ||--o{ package_items
+users ||--o| tourist_preferences
+reservations ||--o{ payment_transactions
+ai_itineraries |o--o{ reservations
+users ||--o{ reservations
+reservations ||--o{ reservation_cancellations
+reservation_cancellations ||--o{ reservation_cancellation_lines
+companies ||--o{ reservation_items
+experience_availabilities |o--o{ reservation_items
+experiences |o--o{ reservation_items
+package_availabilities |o--o{ reservation_items
+packages |o--o{ reservation_items
+reservations ||--o{ reservation_items
+ai_conversations ||--o{ ai_conversation_categories
+categories ||--o{ ai_conversation_categories
+categories ||--o{ experience_categories
+experiences ||--o{ experience_categories
+categories ||--o{ package_categories
+packages ||--o{ package_categories
+categories ||--o{ tourist_preference_categories
+tourist_preferences ||--o{ tourist_preference_categories
+reservation_items |o..o{ payment_transactions
+reservation_items |o..o{ reservation_cancellation_lines
+users |o..o{ flight_quotes
+companies -[hidden]down- users
+legend bottom left
+<b>Notación</b> (Ingeniería de la Información / pata de gallo)
+  ● (punto lleno) columna NOT NULL · <<PK>> clave primaria · <<FK>> clave foránea · <<UK>> única
+  ""||"" exactamente uno · ""|o"" cero o uno · ""o{"" cero o muchos
+  línea continua = FK real en PostgreSQL · línea punteada = referencia lógica sin FK
+endlegend
+
+@enduml

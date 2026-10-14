@@ -1,0 +1,29 @@
+---
+title: Reconciliación de emisiones aéreas con desenlace desconocido (FlightReconciliationService)
+---
+%% Evidencia: Modules/Flights/Services/FlightReconciliationService.cs (ReconcileAsync, FindOrderAsync,
+%% ScheduleRetryAsync, ConfirmAsync, CompensateAsync, CancelOrphanOrderAsync) y FlightReconciliationOptions
+%% (IntervalSeconds 60, BatchSize 20, MaxAttempts 4, espera 1/5/15 min).
+flowchart TB
+    start(["FlightReconciliationBackgroundService<br/>cada 60 s, lote de 20"]) --> q["flight_bookings en RECONCILIATION_REQUIRED u ORDERING<br/>con next_reconciliation_at vencido<br/>(índice status, next_reconciliation_at)"]
+    q --> find{"¿hay provider_order_id?"}
+    find -->|sí| g["IFlightProvider.GetOrderAsync"]
+    find -->|no| fo["IFlightProvider.FindOrderByOfferAsync<br/>(oferta + idempotency_key escrita antes de llamar)"]
+    g --> res{"¿la orden existe?"}
+    fo --> res
+    g -. proveedor no responde .-> retry
+    fo -. proveedor no responde .-> retry
+    res -->|"no, quedan intentos"| retry["ScheduleRetry: RECONCILIATION_REQUIRED<br/>espera 1, 5, 15 min · máx. 4 intentos<br/>→ RETRY_SCHEDULED"]
+    res -->|"no, intentos agotados"| comp["CompensateAsync (1 transacción)<br/>FlightBooking FAILED · reserva e ítems → CANCELLED<br/>libera cupo del paquete · Void del cobro simulado<br/>→ FAILED"]
+    res -->|sí| st{"¿la reserva todavía<br/>admite el vuelo?<br/>(PENDING_PAYMENT)"}
+    st -->|sí| conf["ConfirmAsync (1 transacción)<br/>UPDATE condicional reserva → CONFIRMED<br/>ítems CONFIRMED · vuelo CONFIRMED<br/>→ CONFIRMED"]
+    st -->|no| orphan["CancelOrphanOrderAsync<br/>Quote/ConfirmCancellation con la aerolínea<br/>vuelo CANCELLED<br/>→ ORDER_CANCELLED"]
+    conf -. "otra transición ganó<br/>(0 filas afectadas)" .-> retry
+    admin["Mientras tanto la reserva no se puede<br/>pagar de nuevo, cancelar ni expirar"]
+
+    classDef ok fill:#E8F5E9,stroke:#2E7D32,color:#1B1B1B
+    classDef bad fill:#F4CCCC,stroke:#CC0000,color:#1B1B1B
+    classDef wait fill:#FFF2CC,stroke:#BF9000,color:#1B1B1B
+    class conf ok
+    class comp,orphan bad
+    class retry,admin wait

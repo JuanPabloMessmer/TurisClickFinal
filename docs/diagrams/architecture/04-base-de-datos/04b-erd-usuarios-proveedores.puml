@@ -1,0 +1,98 @@
+@startuml 04b-erd-usuarios-proveedores
+' GENERADO por docs/diagrams/architecture/_herramientas/generar_erd.py a partir del snapshot de EF Core.
+' Para cambiar el contenido, editar la vista en el generador y volver a ejecutarlo.
+!pragma layout smetana
+!include ../_tema.iuml
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 55
+title Usuarios, roles, proveedores y preferencias
+
+package "Módulo Auth" as pkg_Auth {
+  entity "users" as users <<Auth>> #E3F2FD {
+    * id : uuid <<PK>>
+    --
+      company_id : uuid <<FK>>
+    * created_at : timestamptz
+    * email : varchar(255) <<UK>>
+    * first_name : varchar(100)
+    * last_name : varchar(100)
+    * must_change_password : boolean
+    * password_hash : varchar(255)
+    * role : varchar(20)
+    * status : varchar(20)
+  }
+  entity "refresh_tokens" as refresh_tokens <<Auth>> #E3F2FD {
+    * id : uuid <<PK>>
+    --
+    * user_id : uuid <<FK>>
+    * created_at : timestamptz
+    * expires_at : timestamptz
+      revoked_at : timestamptz
+    * token_hash : varchar(255) <<UK>>
+  }
+}
+package "Módulo Companies" as pkg_Companies {
+  entity "companies" as companies <<Companies>> #E8EAF6 {
+    * id : uuid <<PK>>
+    --
+      approved_by_user_id : uuid <<FK>>
+      approved_at : timestamptz
+    * contact_email : varchar(255)
+      contact_phone : varchar(30)
+    * created_at : timestamptz
+      description : text
+    * legal_document : varchar(50) <<UK>>
+    * name : varchar(150)
+      rejection_reason : text
+    * status : varchar(20)
+  }
+}
+package "Módulo Preferences" as pkg_Preferences {
+  entity "tourist_preferences" as tourist_preferences <<Preferences>> #EDE7F6 {
+    * user_id : uuid <<PK, FK>>
+    --
+      budget_level : varchar(20)
+    * created_at : timestamptz
+      onboarding_completed_at : timestamptz
+      travel_pace : varchar(20)
+      travel_party : varchar(20)
+    * updated_at : timestamptz
+  }
+  entity "tourist_preference_categories" as tourist_preference_categories <<Preferences>> #EDE7F6 {
+    * user_id : uuid <<PK, FK>>
+    * category_id : uuid <<PK, FK>>
+  }
+}
+entity "categories" as categories <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+
+users ||--o{ refresh_tokens : "user_id\n[CASCADE]"
+companies |o--o{ users : "company_id\n[RESTRICT]"
+users |o--o{ companies : "approved_by_user_id\n[RESTRICT]"
+users ||--o| tourist_preferences : "user_id\n[CASCADE]"
+categories ||--o{ tourist_preference_categories : "category_id\n[CASCADE]"
+tourist_preferences ||--o{ tourist_preference_categories : "user_id\n[CASCADE]"
+legend bottom left
+<b>Notación</b> (Ingeniería de la Información / pata de gallo)
+  ● (punto lleno) columna NOT NULL · <<PK>> clave primaria · <<FK>> clave foránea · <<UK>> única
+  ""||"" exactamente uno · ""|o"" cero o uno · ""o{"" cero o muchos
+  línea continua = FK real en PostgreSQL · línea punteada = referencia lógica sin FK
+  entidades grises = tablas de otras vistas (sólo su PK)
+<b>Dominios de las columnas varchar</b> (enums de C#, guardados como texto)
+  ""users.role"" → TOURIST, PROVIDER, ADMIN
+  ""users.status"" → ACTIVE, SUSPENDED
+  ""companies.status"" → PENDING_APPROVAL, APPROVED, REJECTED, SUSPENDED
+  ""tourist_preferences.budget_level"" → ECONOMY, MODERATE, PREMIUM
+  ""tourist_preferences.travel_pace"" → RELAXED, BALANCED, INTENSE
+  ""tourist_preferences.travel_party"" → SOLO, COUPLE, FRIENDS, FAMILY
+endlegend
+
+note as checks
+<b>Restricciones CHECK en la base</b> (expresión completa en turisclick-v2.dbml)
+""ck_users_provider_has_company""
+end note
+@enduml

@@ -1,0 +1,90 @@
+@startuml 03c-modulos-catalogo
+' Módulos Destinations, Categories, Experiences y Packages.
+' Evidencia: Modules/{Destinations,Categories,Experiences,Packages}/** (constructores y ModuleExtensions).
+!pragma layout smetana
+!include ../_tema.iuml
+hide empty members
+hide circle
+left to right direction
+skinparam nodesep 25
+skinparam ranksep 50
+
+title Backend — módulos del catálogo turístico
+
+package "Destinations" #EEF8F7 {
+  class PublicDestinationsController <<Controller · GET /api/destinations · anónimo>> #E3F2FD
+  class DestinationsController <<Controller · /api/admin/destinations · ADMIN>> #E3F2FD
+  class PublicDestinationService <<IPublicDestinationService>> #E8F5E9
+  class DestinationService <<IDestinationService>> #E8F5E9
+  class DestinationRepository <<IDestinationRepository>> #FFF8E1
+}
+
+package "Categories" #EEF8F7 {
+  class PublicCategoriesController <<Controller · GET /api/categories · anónimo>> #E3F2FD
+  class CategoriesController <<Controller · /api/admin/categories · ADMIN>> #E3F2FD
+  class CategoryService <<ICategoryService>> #E8F5E9
+  class CategoryRepository <<ICategoryRepository>> #FFF8E1
+}
+
+package "Experiences  ·  /api/experiences" #F4FAEE {
+  class ExperiencesController <<Controller · GET anónimo · escritura PROVIDER>> #E3F2FD
+  class ExperienceAvailabilityController <<Controller · cupos>> #E3F2FD
+  class ExperienceService <<IExperienceService>> #E8F5E9
+  class ExperienceAvailabilityService <<IExperienceAvailabilityService>> #E8F5E9
+  class ExperienceRepository <<IExperienceRepository>> #FFF8E1
+  class ExperienceAvailabilityRepository <<IExperienceAvailabilityRepository>> #FFF8E1
+}
+
+package "Packages  ·  /api/packages" #FFFDEB {
+  class PackagesController <<Controller · GET anónimo · escritura PROVIDER>> #E3F2FD
+  class PackageAvailabilityController <<Controller · salidas>> #E3F2FD
+  class PackageService <<IPackageService>> #E8F5E9
+  class PackageAvailabilityService <<IPackageAvailabilityService>> #E8F5E9
+  class PackageRepository <<IPackageRepository>> #FFF8E1
+  class PackageAvailabilityRepository <<IPackageAvailabilityRepository>> #FFF8E1
+}
+
+class CompanyRepository <<Companies · ICompanyRepository>> #EEEEEE
+class CompanyOwnershipGuard <<Security · ICompanyOwnershipGuard>> #E1F5FE
+
+PublicDestinationsController --> PublicDestinationService
+DestinationsController --> DestinationService
+PublicDestinationService --> DestinationRepository
+DestinationService --> DestinationRepository
+DestinationService --> ExperienceRepository : ¿hay productos\nen el destino?
+DestinationService --> PackageRepository
+
+PublicCategoriesController --> CategoryService
+CategoriesController --> CategoryService
+CategoryService --> CategoryRepository
+
+ExperiencesController --> ExperienceService
+ExperienceAvailabilityController --> ExperienceAvailabilityService
+ExperienceService --> ExperienceRepository
+ExperienceService --> DestinationRepository
+ExperienceService --> CategoryRepository
+ExperienceService --> CompanyRepository
+ExperienceService --> CompanyOwnershipGuard
+ExperienceAvailabilityService --> ExperienceAvailabilityRepository
+ExperienceAvailabilityService --> ExperienceRepository
+ExperienceAvailabilityService --> CompanyOwnershipGuard
+
+PackagesController --> PackageService
+PackageAvailabilityController --> PackageAvailabilityService
+PackageService --> PackageRepository
+PackageService --> ExperienceRepository : ítems que referencian\nexperiencias
+PackageService --> DestinationRepository
+PackageService --> CategoryRepository
+PackageService --> CompanyRepository
+PackageService --> CompanyOwnershipGuard
+PackageAvailabilityService --> PackageAvailabilityRepository
+PackageAvailabilityService --> PackageRepository
+PackageAvailabilityService --> CompanyOwnershipGuard
+
+legend bottom right
+  Patrón "dos controllers sobre el mismo Service": lectura pública anónima y gestión ADMIN.
+  CompanyOwnershipGuard.EnsureOwns(companyId) se aplica en el Service tras cargar
+  el recurso (UC-SYS-03): 403 si el company_id del JWT no coincide.
+  Los catálogos públicos filtran PUBLISHED y empresas no suspendidas.
+endlegend
+@enduml

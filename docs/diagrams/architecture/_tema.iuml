@@ -1,0 +1,32 @@
+' Tema común de los diagramas de arquitectura de TurisClick (no C4).
+' Los diagramas C4 usan el estilo propio de C4-PlantUML y sólo toman de acá la tipografía.
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam backgroundColor #FFFFFF
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam ArrowColor #455A64
+skinparam ArrowFontSize 10
+skinparam ArrowFontColor #37474F
+skinparam legendBackgroundColor #FAFAFA
+skinparam legendBorderColor #B0BEC5
+skinparam legendFontSize 10
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #BDB76B
+skinparam noteFontSize 10
+skinparam packageStyle rectangle
+skinparam packageBorderColor #90A4AE
+skinparam packageFontStyle bold
+skinparam classAttributeFontSize 11
+skinparam classBorderColor #546E7A
+skinparam classHeaderBackgroundColor #ECEFF1
+skinparam componentBorderColor #546E7A
+skinparam componentBackgroundColor #ECEFF1
+skinparam interfaceBorderColor #546E7A
+skinparam interfaceBackgroundColor #FFFFFF
+skinparam rectangleBorderColor #546E7A
+skinparam databaseBorderColor #546E7A
+skinparam databaseBackgroundColor #E1F5FE
+skinparam stereotypeCBackgroundColor #FFFFFF

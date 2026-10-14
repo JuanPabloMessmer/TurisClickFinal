@@ -1,0 +1,40 @@
+---
+title: Secuencia — reservar un itinerario de IA (UC-T-18)
+---
+%% Evidencia: AiItinerariesController.Book, AiItineraryBookingService.BookAsync / ExecuteBookingTransactionAsync,
+%% ReservationBookingService.HoldAndBuildAsync, índice único parcial de reservations.ai_itinerary_id (migración 0007).
+%% La IA orquesta pero no reserva: ningún dato sale del texto del modelo. Los itinerarios de IA NO incluyen vuelos.
+sequenceDiagram
+    autonumber
+    actor T as Turista
+    participant C as AiItinerariesController
+    participant B as AiItineraryBookingService
+    participant K as AiCatalogRepository
+    participant H as ReservationBookingService
+    participant DB as PostgreSQL
+
+    T->>C: POST /api/ai/itineraries/{id}/book { acceptPriceChanges }
+    C->>B: BookAsync
+    B->>DB: itinerario + ítems (dueño = turista del JWT)
+    B->>B: estado DRAFT o SAVED (BOOKED/DISCARDED → 409)
+    B->>K: experiencias y paquetes ACTUALES por id (sin filtrar PUBLISHED)
+    K->>DB: SELECT
+    B->>B: cada ítem: existe, PUBLISHED,<br/>availability resuelta, con cupo y futura
+    alt el precio vigente difiere del estimated_unit_price
+        B-->>T: 200 { requiresPriceAcceptance: true, changes } · no toma cupo<br/>→ reintentar con acceptPriceChanges=true
+    else sin cambios o aceptados
+        B->>DB: BEGIN
+        B->>H: HoldAndBuildAsync(líneas derivadas en el servidor)
+        H->>DB: UPDATE *_availabilities SET reserved_slots += n<br/>WHERE reserved_slots + n ≤ total_slots (agrupado por slot, orden fijo)
+        H-->>B: Reservation PENDING_PAYMENT + ReservationItems (expira en 30 min)
+        B->>DB: reservations.ai_itinerary_id = id · ai_itineraries.status = BOOKED
+        alt otra solicitud ya reservó el mismo itinerario
+            DB-->>B: violación del índice único parcial
+            B->>DB: ROLLBACK (se liberan los holds)
+            B-->>T: 409 con la reserva existente
+        else
+            B->>DB: COMMIT
+            B-->>T: 200 · reserva PENDING_PAYMENT
+        end
+    end
+    Note over T,DB: El pago sigue el camino normal: POST /api/reservations/{id}/pay (simulado).<br/>Si la reserva expira, el itinerario vuelve de BOOKED a SAVED.

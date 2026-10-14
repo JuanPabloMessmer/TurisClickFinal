@@ -1,0 +1,65 @@
+@startuml 03a-patron-por-modulo
+' Estructura interna de un módulo de src/TurisClick.Api/Modules y cómo la cumple cada módulo.
+' Evidencia: Modules/*/*ModuleExtensions.cs (registro DI) y los constructores de cada Service/Repository.
+!pragma layout smetana
+!include ../_tema.iuml
+hide empty members
+hide circle
+skinparam nodesep 35
+skinparam ranksep 40
+
+title Backend — patrón interno de un módulo (ejemplo real: Auth) y su grado de cumplimiento
+
+package "Modules/Auth" {
+  class AuthController <<Controllers>> #E3F2FD
+  class "AuthService" as AuthService <<Services · IAuthService>> #E8F5E9
+  class "JwtTokenService" as JwtTokenService <<Services · ITokenService>> #E8F5E9
+  class "UserRepository" as UserRepository <<Repositories · IUserRepository>> #FFF8E1
+  class "RefreshTokenRepository" as RefreshTokenRepository <<Repositories · IRefreshTokenRepository>> #FFF8E1
+  class "User, RefreshToken" as Entities <<Entities>> #F5F5F5
+  class "LoginRequest, AuthResultResponse, ..." as Dtos <<Dtos>> #F5F5F5
+  class "UserConfiguration,\nRefreshTokenConfiguration" as Config <<Persistence · IEntityTypeConfiguration>> #F5F5F5
+  class "AuthModuleExtensions\n.AddAuthModule()" as Ext <<registro DI>> #F5F5F5
+}
+
+package "Infrastructure" {
+  class TurisClickDbContext <<Database · Scoped = Unit of Work>> #E1F5FE
+  class "PasswordHasherService" as Hasher <<Security · IPasswordHasherService>> #E1F5FE
+  class "CurrentUserContext" as Cuc <<Security · ICurrentUserContext>> #E1F5FE
+}
+
+AuthController --> AuthService : un método\npor acción
+AuthController ..> Dtos
+AuthService --> UserRepository
+AuthService --> RefreshTokenRepository
+AuthService --> JwtTokenService
+AuthService --> Hasher
+AuthService --> Cuc
+AuthService --> TurisClickDbContext : SaveChanges /\ntransacción
+UserRepository --> TurisClickDbContext : consultas LINQ
+RefreshTokenRepository --> TurisClickDbContext
+UserRepository ..> Entities
+TurisClickDbContext ..> Config : ApplyConfigurationsFromAssembly
+Ext ..> AuthService : AddScoped
+
+legend bottom left
+<b>Cumplimiento real por módulo</b> (constructores de cada clase)
+|= Módulo |= Repositorios propios |= Services que además consultan DbSets directamente (db.X) |
+| Auth | User, RefreshToken | AuthService (RefreshTokens) |
+| Companies | Company | — |
+| Destinations | Destination | PublicDestinationService (Experiences, Packages) |
+| Categories | Category | — |
+| Experiences | Experience, ExperienceAvailability | ExperienceService (Images), ExperienceAvailabilityService |
+| Packages | Package, PackageAvailability | PackageService (Images, Items), PackageAvailabilityService |
+| Reservations | Reservation, ReservationItem | ReservationService, ReservationBookingService (UPDATE condicional de cupo), ReservationExpirationService, ReservationCancellationService, PaymentLedger, AdminPaymentsService |
+| Ai | AiConversation, AiItinerary, AiCatalog | AiConversationService (db.Set) |
+| Flights | <color:#B71C1C>ninguno</color> | PackageFlightService, FlightBookingOrchestrator, FlightReconciliationService |
+| Preferences | <color:#B71C1C>ninguno</color> | TouristPreferenceService |
+| Admin | <color:#B71C1C>ninguno</color> | AdminUserService, AdminContentService, AdminOnboardingService, AdminPlatformService |
+
+Todos los Services reciben <b>TurisClickDbContext</b> (Unit of Work: SaveChanges, BeginTransaction,
+ExecuteUpdate condicional). La regla documentada "el Service nunca consulta el DbContext" se cumple
+sólo en Companies y Categories. No existe capa Domain/Application separada ni repositorio genérico.
+endlegend
+
+@enduml

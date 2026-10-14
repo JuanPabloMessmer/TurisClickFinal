@@ -1,0 +1,160 @@
+@startuml 04e-erd-reservas-pagos
+' GENERADO por docs/diagrams/architecture/_herramientas/generar_erd.py a partir del snapshot de EF Core.
+' Para cambiar el contenido, editar la vista en el generador y volver a ejecutarlo.
+!pragma layout smetana
+!include ../_tema.iuml
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 55
+title Reservas, libro de pagos y cancelación con reembolso
+
+package "Módulo Reservations" as pkg_Reservations {
+  entity "reservations" as reservations <<Reservations>> #FFF3E0 {
+    * id : uuid <<PK>>
+    --
+      ai_itinerary_id : uuid <<FK, UK parcial>>
+    * tourist_id : uuid <<FK>>
+      cancelled_at : timestamptz
+      confirmed_at : timestamptz
+    * created_at : timestamptz
+      expires_at : timestamptz
+    * status : varchar(20)
+  }
+  entity "reservation_items" as reservation_items <<Reservations>> #FFF3E0 {
+    * id : uuid <<PK>>
+    --
+    * company_id : uuid <<FK>>
+      experience_availability_id : uuid <<FK>>
+      experience_id : uuid <<FK>>
+      package_availability_id : uuid <<FK>>
+      package_id : uuid <<FK>>
+    * reservation_id : uuid <<FK>>
+      cancellation_policy : varchar(60)
+      cancellation_reason : varchar(500)
+      cancelled_at : timestamptz
+    * created_at : timestamptz
+    * currency : varchar(3)
+      day_number : integer
+    * product_type : varchar(20)
+    * status : varchar(20)
+    * subtotal : numeric(12,2)
+    * travelers : integer
+    * unit_price : numeric(12,2)
+  }
+  entity "payment_transactions" as payment_transactions <<Reservations>> #FFF3E0 {
+    * id : uuid <<PK>>
+    --
+    * reservation_id : uuid <<FK>>
+    * amount : numeric(12,2)
+      component : varchar(20)
+    * created_at : timestamptz
+    * currency : varchar(3)
+      failure_reason : varchar(500)
+    * idempotency_key : varchar(120) <<UK parcial>>
+    * provider : varchar(50)
+      provider_reference : varchar(200)
+      reservation_item_id : uuid <<ref. lógica>>
+    * status : varchar(20)
+    * type : varchar(20)
+  }
+  entity "reservation_cancellations" as reservation_cancellations <<Reservations>> #FFF3E0 {
+    * id : uuid <<PK>>
+    --
+    * reservation_id : uuid <<FK>>
+      accepted_at : timestamptz
+      completed_at : timestamptz
+    * created_at : timestamptz
+    * expires_at : timestamptz
+      failure_reason : varchar(500)
+      flight_cancelled_at : timestamptz
+      next_resolution_at : timestamptz
+      provider_cancellation_id : varchar(200)
+    * resolution_attempts : integer
+    * status : varchar(20)
+  }
+  entity "reservation_cancellation_lines" as reservation_cancellation_lines <<Reservations>> #FFF3E0 {
+    * id : uuid <<PK>>
+    --
+    * cancellation_id : uuid <<FK>>
+    * component : varchar(20)
+    * currency : varchar(3)
+    * explanation : varchar(300)
+    * fee_amount : numeric(12,2)
+    * label : varchar(200)
+    * paid_amount : numeric(12,2)
+      policy_applied : varchar(60)
+    * refund_amount : numeric(12,2)
+    * refund_known : boolean
+      refund_percentage : integer
+      reservation_item_id : uuid <<ref. lógica>>
+  }
+}
+entity "users" as users <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "companies" as companies <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "experiences" as experiences <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "experience_availabilities" as experience_availabilities <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "packages" as packages <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "package_availabilities" as package_availabilities <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "ai_itineraries" as ai_itineraries <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+
+reservations ||--o{ payment_transactions : "reservation_id\n[CASCADE]"
+ai_itineraries |o--o{ reservations : "ai_itinerary_id\n[RESTRICT]"
+users ||--o{ reservations : "tourist_id\n[RESTRICT]"
+reservations ||--o{ reservation_cancellations : "reservation_id\n[CASCADE]"
+reservation_cancellations ||--o{ reservation_cancellation_lines : "cancellation_id\n[CASCADE]"
+companies ||--o{ reservation_items : "company_id\n[RESTRICT]"
+experience_availabilities |o--o{ reservation_items : "experience_availability_id\n[RESTRICT]"
+experiences |o--o{ reservation_items : "experience_id\n[RESTRICT]"
+package_availabilities |o--o{ reservation_items : "package_availability_id\n[RESTRICT]"
+packages |o--o{ reservation_items : "package_id\n[RESTRICT]"
+reservations ||--o{ reservation_items : "reservation_id\n[CASCADE]"
+reservation_items |o..o{ payment_transactions : "reservation_item_id\n(sin FK)"
+reservation_items |o..o{ reservation_cancellation_lines : "reservation_item_id\n(sin FK)"
+legend bottom left
+<b>Notación</b> (Ingeniería de la Información / pata de gallo)
+  ● (punto lleno) columna NOT NULL · <<PK>> clave primaria · <<FK>> clave foránea · <<UK>> única
+  ""||"" exactamente uno · ""|o"" cero o uno · ""o{"" cero o muchos
+  línea continua = FK real en PostgreSQL · línea punteada = referencia lógica sin FK
+  entidades grises = tablas de otras vistas (sólo su PK)
+<b>Dominios de las columnas varchar</b> (enums de C#, guardados como texto)
+  ""reservations.status"" → PENDING_PAYMENT, CONFIRMED, PAYMENT_FAILED, CANCELLING, CANCELLED, EXPIRED
+  ""reservation_items.product_type"" → EXPERIENCE, PACKAGE
+  ""reservation_items.status"" → PENDING_PAYMENT, CONFIRMED, CANCELLED, EXPIRED
+  ""payment_transactions.component"" → PACKAGE, EXPERIENCE, FLIGHT
+  ""payment_transactions.status"" → PENDING, SUCCEEDED, FAILED
+  ""payment_transactions.type"" → CHARGE, VOID, REFUND
+  ""reservation_cancellations.status"" → QUOTED, ACCEPTED, COMPLETED, REFUND_PENDING, REQUIRES_REVIEW, FAILED, EXPIRED
+  ""reservation_cancellation_lines.component"" → PACKAGE, EXPERIENCE, FLIGHT
+endlegend
+
+note as checks
+<b>Restricciones CHECK en la base</b> (expresión completa en turisclick-v2.dbml)
+""ck_reservation_items_amounts""
+""ck_reservation_items_cancellation_policy""
+""ck_reservation_items_currency""
+""ck_reservation_items_product_shape""
+""ck_reservation_items_travelers""
+""ck_payment_transactions_amount""
+""ck_payment_transactions_component""
+""ck_payment_transactions_currency""
+""ck_cancellation_lines_amounts""
+""ck_cancellation_lines_currency""
+""ck_cancellation_lines_percentage""
+end note
+@enduml

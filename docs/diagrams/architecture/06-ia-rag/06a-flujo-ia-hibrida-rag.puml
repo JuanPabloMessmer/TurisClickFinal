@@ -1,0 +1,103 @@
+@startuml 06a-flujo-ia-hibrida-rag
+' Asistente de viajes: IA híbrida + RAG estructurado sobre el catálogo real, en 8 etapas.
+' Evidencia: Modules/Ai/Services/AiConversationService.cs (agente), LlmClients/*.cs, RetrievalService.cs,
+' Repositories/AiCatalogRepository.cs, ItineraryRevalidationService.cs, AiItineraryBookingService.cs,
+' AiModuleExtensions.cs, appsettings*.json, infra/terraform/locals.tf (Ai__Provider en Azure).
+' NO existen: base vectorial, embeddings, pgvector, fine-tuning ni pipeline de entrenamiento.
+!include ../_tema.iuml
+skinparam activityBackgroundColor #E8F5E9
+skinparam activityBorderColor #2E7D32
+skinparam activityDiamondBackgroundColor #FFF8E1
+skinparam swimlaneTitleFontStyle bold
+skinparam swimlaneWidth same
+
+title Asistente de viajes — IA híbrida + RAG estructurado sobre el catálogo real
+
+|#F3F8FD|Turista y API|
+start
+:**1. Pedido en lenguaje natural**
+Tourist Mobile → POST /api/ai/conversations/{id}/messages
+(el texto se guarda tal cual en ai_messages);
+
+|#F8F1FA|Interpretación (agente + modelo)|
+:UntrustedUserText: descarta tramos que imitan
+reglas del sistema y neutraliza marcadores
+del chat template;
+:**2. Extracción determinística**
+DeterministicAiModelClient: regex/keywords en
+español (duración, viajeros, fechas, presupuesto,
+destino, categorías);
+#F3E5F5:**3. Qwen 2.5 7B Instruct vía Ollama** //(sólo local)//
+OllamaAiModelClient → /api/generate
+JSON Schema · temperature 0 · vocabulario cerrado
+(destinos y categorías reales) · calendario resuelto;
+note right
+  Si Ollama está caído, vence el
+  timeout (60 s), el JSON es inválido
+  tras el reintento o ningún id es real,
+  responde <b>DeterministicAiModelClient</b>.
+end note
+#F3E5F5:**4. Interpretación híbrida**
+HybridAiModelClient: las reglas ganan en los escalares
+literales; el LLM en destino, intereses, ritmo y ajustes.
+FallbackAiModelClient valida vocabulario y rangos;
+:Merge con el perfil de onboarding
+(tourist_preferences): la conversación manda;
+if (¿faltan datos mínimos?) then (sí)
+  :Aclaración
+  GenerateClarificationReplyAsync;
+  |Turista y API|
+  :200 · pregunta de aclaración
+  (fin del turno, sin búsqueda);
+  stop
+else (no)
+endif
+
+|#EEF7FC|RAG estructurado (PostgreSQL)|
+:**5. Recuperación del catálogo real**
+RetrievalService + AiCatalogRepository (SQL):
+PUBLISHED · empresa no suspendida · destino ·
+availability con cupo y fecha ≥ hoy · máx. 50 filas/tipo;
+:Ranking determinístico: categorías, duración,
+presupuesto (misma moneda), IsStrongFit
+→ máx. 8 experiencias + 8 paquetes;
+
+|Interpretación (agente + modelo)|
+#F3E5F5:**6. Composición del itinerario**
+IAiModelClient.ComposeItineraryAsync:
+reparte candidatos por día y redacta,
+sólo puede elegir ids ofrecidos;
+:**7. Validación de precio y disponibilidad**
+FallbackAiModelClient descarta ids no ofrecidos,
+ValidateComposedItems toma id, availability y
+precio del RetrievalResult (Postgres), nunca del texto;
+
+|RAG estructurado (PostgreSQL)|
+#E1F5FE:**8a. Persistencia del itinerario**
+ai_itineraries (versión n+1, DRAFT) +
+ai_itinerary_items con estimated_unit_price;
+
+|Turista y API|
+:200 · itinerario por día con precios reales y avisos;
+:Turista guarda (SAVED) o reserva;
+
+|RAG estructurado (PostgreSQL)|
+:ItineraryRevalidationService (sólo lectura) al retomar:
+despublicado, sin cupo, precio cambiado, fecha pasada;
+#E1F5FE:**8b. Reserva** AiItineraryBookingService
+relee todo de Postgres; si cambió el precio exige
+acceptPriceChanges; holds con UPDATE condicional →
+reservations PENDING_PAYMENT + itinerario BOOKED
+(una transacción);
+|Turista y API|
+:Pago por el flujo normal (simulado);
+stop
+
+legend bottom
+  <b>Configuración real por entorno</b>
+  Local (appsettings.Development.json): Ai:Provider = <b>Hybrid</b> · qwen2.5:7b-instruct en Ollama con GPU
+  Azure (app setting Ai~__Provider de Terraform): <b>Deterministic</b> · las etapas 3 y 4 no ocurren y la 6 la resuelven reglas: sin LLM
+  Default de appsettings.json, tests y Newman: Deterministic
+  Violeta = etapa que delega en IAiModelClient · Celeste = escritura en PostgreSQL
+endlegend
+@enduml

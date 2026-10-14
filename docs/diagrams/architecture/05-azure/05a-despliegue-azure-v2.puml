@@ -1,0 +1,71 @@
+@startuml 05a-despliegue-azure-v2
+' Despliegue REAL del ambiente V2 (dev/demo) en Azure.
+' Evidencia: infra/terraform/*.tf, infra/terraform/dev.tfvars, infra/README.md, infra/bootstrap/*.ps1,
+' .github/workflows/backend-v2.yml, docs/deployment-readiness.md (§3).
+' Estado verificado el 2026-10-14 00:49 UTC con GET anónimos de sólo lectura (ver README).
+' No se ejecutó ningún comando sobre Azure ni sobre la base.
+!pragma layout smetana
+!include <C4/C4_Deployment>
+skinparam defaultFontName Arial
+LAYOUT_TOP_DOWN()
+
+AddElementTag("degradado", $bgColor="#F4CCCC", $fontColor="#7F0000", $borderColor="#CC0000", $legendText="desplegado, DEGRADADO (verificado)")
+AddElementTag("ok", $bgColor="#D9EAD3", $fontColor="#1B1B1B", $borderColor="#38761D", $legendText="desplegado, responde (verificado)")
+AddElementTag("sinverificar", $bgColor="#FFF2CC", $fontColor="#1B1B1B", $borderColor="#BF9000", $legendText="existe según la documentación, no verificado en esta sesión")
+AddElementTag("v1", $bgColor="#EEEEEE", $fontColor="#666666", $borderColor="#999999", $legendText="V1: fuera de Terraform, no se toca")
+AddElementTag("ausente", $bgColor="#FFFFFF", $fontColor="#666666", $borderColor="#999999", $legendText="no desplegado / no configurado")
+
+title TurisClick V2 — Arquitectura de despliegue en Azure (ambiente dev/demo)
+
+Deployment_Node(dev, "Teléfono Android", "APK de preview (EAS, distribution: internal)") {
+  Container(apk, "Tourist Mobile", "Expo / React Native", "EXPO_PUBLIC_API_TARGET=azure; tokens en Keystore (expo-secure-store)", $tags="sinverificar")
+}
+Deployment_Node(browser, "Navegador web", "PROVIDER / ADMIN") {
+  Container(spa, "Backoffice SPA", "React + Vite", "VITE_API_TARGET=azure")
+}
+
+Deployment_Node(gh, "GitHub", "repositorio TurisClickFinal") {
+  Deployment_Node(gha, "GitHub Actions", "backend-v2.yml") {
+    Container(ci, "build-test", "ubuntu-latest + postgres:16 efímero", "restore → build Release → tests → publish → artifact. En cada push/PR a master.")
+    Container(cd, "deploy", "workflow_dispatch + casilla deploy", "azure/login por OIDC → sonda de esquema → az webapp deploy (zip) → smoke tests")
+  }
+}
+
+Deployment_Node(az, "Suscripción Azure", "Entra ID") {
+  Deployment_Node(rg, "rg-turisclick-dev", "Resource group compartido con V1 · Brazil South (salvo indicación)") {
+    Deployment_Node(plan, "asp-turisclick-v2-dev", "App Service Plan Linux F1 Free · sin Always On · 60 min CPU/día") {
+      Container(app, "app-turisclick-v2-api", "App Service · .NET 10 · HTTPS only · TLS 1.2", "ASPNETCORE_ENVIRONMENT=Production · app setting Ai:Provider=Deterministic · sin Flights:Provider (usa Fake). GET /api/packages → 500: falta packages.cancellation_policy", $tags="degradado")
+    }
+    Deployment_Node(swa, "swa-turisclick-v2-backoffice", "Static Web Apps Free · East US 2 · creado con az CLI, fuera del state") {
+      Container(swaapp, "Backoffice estático", "HTML/JS + staticwebapp.config.json", "ashy-rock-0dd3b480f.2.azurestaticapps.net → 200", $tags="ok")
+    }
+    Deployment_Node(pg, "turisclick-postgres-jpm", "PostgreSQL Flexible Server 16 · Standard_B1ms · data source (no gestionado por Terraform)") {
+      ContainerDb(db2, "turisclick_db_v2", "Base V2 · Terraform, prevent_destroy", "0001–0009 aplicadas; 0010–0011 indeterminadas; 0012–0014 NO aplicadas", $tags="degradado")
+      ContainerDb(db1, "turisclick_db", "Base V1", "Migraciones incompatibles con V2. Ningún script de V2 escribe acá.", $tags="v1")
+    }
+    Container(kv, "kv-turisclick-v2-dev", "Key Vault · RBAC · soft delete 90 días · prevent_destroy", "Secretos: db-connection-string, jwt-key, seed-admin-password. Terraform conoce sólo los nombres.", $tags="sinverificar")
+    Container(miapp, "id-turisclick-v2-app", "Identidad administrada user-assigned", "Rol Key Vault Secrets User sobre el vault", $tags="sinverificar")
+    Container(mideploy, "id-turisclick-v2-github-deploy", "Identidad user-assigned + federated credential", "subject repo:…:ref:refs/heads/master · rol Website Contributor sólo sobre la web app", $tags="sinverificar")
+    Container(v1app, "turisclick-api (V1)", "App Service · East US 2", "Fuera de Terraform", $tags="v1")
+  }
+  Deployment_Node(rgtf, "rg-turisclick-tfstate", "bootstrap-state.ps1") {
+    ContainerDb(tfstate, "stturisclicktfjpm / tfstate", "Storage · sólo Entra ID, sin shared keys", "turisclick-v2-dev.tfstate", $tags="sinverificar")
+  }
+}
+
+System_Ext(duffel, "Duffel API", "No configurado en Azure (falta el setting Flights:Provider y el secreto del token)", $tags="ausente")
+System_Ext(ollama, "Ollama / LLM", "No existe en Azure: F1 no tiene GPU ni RAM", $tags="ausente")
+
+Rel(apk, app, "HTTPS/JSON + JWT")
+Rel(spa, swaapp, "descarga la SPA", "HTTPS")
+Rel(spa, app, "HTTPS/JSON + JWT", "CORS: origen del SWA permitido")
+Rel(app, db2, "Npgsql", "connection string desde Key Vault")
+Rel(app, kv, "referencias @Microsoft.KeyVault(...)", "resueltas con id-turisclick-v2-app")
+Rel_L(miapp, kv, "lee secretos")
+Rel(ci, cd, "artifact turisclick-api-v2")
+Rel(cd, mideploy, "OIDC token → identidad")
+Rel(cd, app, "az webapp deploy --type zip")
+Rel_R(v1app, db1, "V1")
+
+SHOW_LEGEND()
+@enduml

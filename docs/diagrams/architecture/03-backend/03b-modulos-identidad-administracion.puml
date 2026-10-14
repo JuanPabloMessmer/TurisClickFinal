@@ -1,0 +1,91 @@
+@startuml 03b-modulos-identidad-administracion
+' Módulos Auth, Companies, Preferences y Admin: controllers, servicios (con la interfaz registrada en DI
+' como estereotipo), repositorios y dependencias reales de constructor.
+' Evidencia: Modules/{Auth,Companies,Preferences,Admin}/**, Infrastructure/Security/**.
+!pragma layout smetana
+!include ../_tema.iuml
+hide empty members
+hide circle
+left to right direction
+skinparam nodesep 25
+skinparam ranksep 45
+
+title Backend — módulos de identidad, empresas, preferencias y administración
+
+package "Auth  ·  /api/auth (anónimo salvo change-password/logout)" #F3F8FD {
+  class AuthController <<Controller>> #E3F2FD
+  class AuthService <<IAuthService>> #E8F5E9
+  class JwtTokenService <<ITokenService>> #E8F5E9
+  class UserRepository <<IUserRepository>> #FFF8E1
+  class RefreshTokenRepository <<IRefreshTokenRepository>> #FFF8E1
+}
+
+package "Companies" #F5F5FC {
+  class CompaniesController <<Controller · /api/companies/me · PROVIDER>> #E3F2FD
+  class AdminCompaniesController <<Controller · /api/admin/companies · ADMIN>> #E3F2FD
+  class CompanyService <<ICompanyService>> #E8F5E9
+  class CompanyRepository <<ICompanyRepository>> #FFF8E1
+}
+
+package "Preferences" #F7F4FC {
+  class TouristPreferencesController <<Controller · /api/tourists/me/preferences · TOURIST>> #E3F2FD
+  class TouristPreferenceService <<ITouristPreferenceService>> #E8F5E9
+}
+
+package "Admin  ·  /api/admin/** · ADMIN" #FCF4F4 {
+  class AdminUsersController <<Controller>> #E3F2FD
+  class AdminContentController <<Controller>> #E3F2FD
+  class AdminProviderAccountsController <<Controller>> #E3F2FD
+  class AdminPlatformController <<Controller>> #E3F2FD
+  class AdminUserService <<IAdminUserService>> #E8F5E9
+  class AdminContentService <<IAdminContentService>> #E8F5E9
+  class AdminOnboardingService <<IAdminOnboardingService>> #E8F5E9
+  class AdminPlatformService <<IAdminPlatformService>> #E8F5E9
+}
+
+package "Infrastructure" #FAFAFA {
+  class CurrentUserContext <<ICurrentUserContext>> #E1F5FE
+  class PasswordHasherService <<IPasswordHasherService>> #E1F5FE
+  class TurisClickDbContext <<EF Core>> #E1F5FE
+}
+
+AuthController --> AuthService
+AuthController --> CurrentUserContext
+AuthService --> UserRepository
+AuthService --> RefreshTokenRepository
+AuthService --> JwtTokenService
+AuthService --> PasswordHasherService
+AuthService --> CurrentUserContext
+
+CompaniesController --> CompanyService
+AdminCompaniesController --> CompanyService
+CompanyService --> CompanyRepository
+
+TouristPreferencesController --> TouristPreferenceService
+TouristPreferenceService --> CurrentUserContext
+
+AdminUsersController --> AdminUserService
+AdminContentController --> AdminContentService
+AdminProviderAccountsController --> AdminOnboardingService
+AdminPlatformController --> AdminPlatformService
+AdminUserService --> CurrentUserContext
+AdminContentService --> CurrentUserContext
+AdminOnboardingService --> PasswordHasherService : contraseña temporal\n(must_change_password)
+
+UserRepository --> TurisClickDbContext
+RefreshTokenRepository --> TurisClickDbContext
+CompanyRepository --> TurisClickDbContext
+TouristPreferenceService --> TurisClickDbContext : sin repositorio
+AdminUserService --> TurisClickDbContext : sin repositorio
+AdminContentService --> TurisClickDbContext
+AdminOnboardingService --> TurisClickDbContext
+AdminPlatformService --> TurisClickDbContext
+
+legend bottom right
+  «IXxx» = interfaz con la que la clase se registra en DI (AddScoped)
+  Todos los Services reciben además TurisClickDbContext como Unit of Work;
+  sólo se dibuja cuando lo usan para consultar sin repositorio.
+  No existe registro público de operadores: el ADMIN los da de alta
+  (AdminOnboardingService), con contraseña temporal.
+endlegend
+@enduml

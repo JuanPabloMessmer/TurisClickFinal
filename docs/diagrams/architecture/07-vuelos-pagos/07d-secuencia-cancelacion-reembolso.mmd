@@ -1,0 +1,62 @@
+---
+title: Cancelación con reembolso — presupuesto, aceptación y orquestación (reembolso SIMULADO)
+---
+%% Evidencia: ReservationsController (cancellation-quote, cancel), ReservationCancellationService
+%% (QuoteAsync, ConfirmAsync, ResolvePendingAsync), CancellationPolicy(Rules), PaymentLedger,
+%% SimulatedPaymentGateway.RefundAsync, índice único parcial payment_transactions(idempotency_key)
+%% WHERE type='REFUND' AND status='SUCCEEDED'. docs/payments-and-cancellation.md §3–4.
+sequenceDiagram
+    autonumber
+    actor T as Turista
+    participant C as ReservationCancellationService
+    participant P as IFlightProvider<br/>(Fake | Duffel TEST)
+    participant H as ReservationBookingService
+    participant G as SimulatedPaymentGateway
+    participant L as PaymentLedger
+    participant DB as PostgreSQL
+
+    rect rgb(255, 243, 224)
+    Note over T,DB: 1 · Presupuesto (POST /api/reservations/{id}/cancellation-quote) — no cancela nada
+    T->>C: QuoteAsync
+    C->>DB: reserva CONFIRMED del turista + ítems con cancellation_policy congelada
+    alt algún servicio activo sin política (p. ej. experiencias)
+        C-->>T: 409 · escribirle al operador (no se asume 0 % ni 100 %)
+    end
+    C->>C: paquete/experiencia: tramo de la política según días de anticipación
+    opt la reserva tiene vuelo emitido
+        C->>P: QuoteCancellationAsync(orderId) → reembolso informado por la aerolínea
+    end
+    C->>DB: INSERT reservation_cancellations (QUOTED, vence en min(15 min, plazo de la aerolínea))<br/>+ reservation_cancellation_lines (una por componente, refund_known)
+    C-->>T: desglose por componente y por moneda
+    end
+
+    rect rgb(232, 245, 233)
+    Note over T,DB: 2 · Aceptación (POST /api/reservations/{id}/cancel con el id del presupuesto)
+    T->>C: ConfirmAsync(reservationId, quoteId) — el cliente nunca manda importes
+    C->>DB: UPDATE condicional reservations CONFIRMED → CANCELLING · cancelación ACCEPTED · COMMIT
+    opt hay vuelo
+        C->>P: ConfirmCancellationAsync — la aerolínea PRIMERO
+    end
+    alt la aerolínea rechaza
+        C->>DB: reserva vuelve a CONFIRMED · cancelación FAILED
+        C-->>T: no se canceló nada
+    else desenlace desconocido con la aerolínea
+        C->>DB: cancelación REQUIRES_REVIEW (no libera cupo ni reintenta a ciegas)
+        C-->>T: cancelación en revisión · la retoma la resolución en segundo plano
+    else la aerolínea confirmó, o la reserva no tiene vuelo
+        C->>DB: BEGIN · reserva CANCELLED · ítems CANCELLED · flight_bookings CANCELLED
+        C->>H: ReleaseHoldsAsync (el cupo vuelve exactamente una vez)
+        C->>DB: COMMIT
+        loop por componente con reembolso > 0 (clave idempotente cancelación + componente)
+            C->>L: RefundAlreadyRecordedAsync?
+            C->>G: RefundAsync (SIMULADO: no se mueve dinero)
+            C->>L: RecordRefund (SUCCEEDED o FAILED, también queda el intento fallido)
+        end
+        alt todos los reembolsos registrados
+            C->>DB: cancelación COMPLETED
+        else algún reembolso falló
+            C->>DB: cancelación REFUND_PENDING (lo retoma la resolución en segundo plano)
+        end
+        C-->>T: resultado real por componente
+    end
+    end

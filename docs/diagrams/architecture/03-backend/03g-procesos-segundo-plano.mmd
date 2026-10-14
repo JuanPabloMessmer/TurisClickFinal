@@ -1,0 +1,43 @@
+---
+title: Backend — procesos en segundo plano (IHostedService) dentro del proceso de la API
+---
+%% Evidencia: Modules/Reservations/Services/ReservationExpirationBackgroundService.cs,
+%% CancellationResolutionBackgroundService.cs, Modules/Flights/Services/FlightReconciliationBackgroundService.cs
+%% y sus *Options (Enabled, IntervalSeconds=60, BatchSize). Los tres sólo despiertan y delegan.
+flowchart LR
+    host(["Host ASP.NET Core<br/>(mismo proceso que la API)"])
+
+    subgraph exp["ReservationExpirationBackgroundService"]
+        direction TB
+        e1["cada 60 s<br/>Reservations:Expiration<br/>lote 100"] --> e2["IReservationExpirationService<br/>.ExpireDueReservationsAsync"]
+        e2 --> e3["UPDATE condicional<br/>PENDING_PAYMENT → EXPIRED<br/>(1 transacción por reserva)"]
+        e3 --> e4["ReleaseHoldsAsync: libera cupo<br/>ítems → EXPIRED<br/>AiItinerary BOOKED → SAVED"]
+    end
+
+    subgraph rec["FlightReconciliationBackgroundService"]
+        direction TB
+        r1["cada 60 s<br/>Flights:Reconciliation<br/>lote 20"] --> r2["IFlightReconciliationService<br/>.ReconcilePendingAsync"]
+        r2 --> r3{"¿la orden existe<br/>en el proveedor?<br/>GetOrder / FindOrderByOffer"}
+        r3 -->|sí| r4["FlightBooking → CONFIRMED<br/>(o se cancela si la reserva<br/>ya no la admite)"]
+        r3 -->|"no, 4 intentos agotados"| r5["FlightBooking → FAILED<br/>libera cupo + Void del cobro simulado"]
+        r3 -->|"no o sin respuesta,<br/>quedan intentos"| r6["reintento programado<br/>1, 5, 15 min; máx. 4 intentos"]
+    end
+
+    subgraph res["CancellationResolutionBackgroundService"]
+        direction TB
+        c1["cada 60 s<br/>Reservations:CancellationResolution<br/>lote 20"] --> c2["IReservationCancellationService<br/>.ResolvePendingAsync"]
+        c2 --> c3["toma ACCEPTED, REQUIRES_REVIEW,<br/>REFUND_PENDING"]
+        c3 --> c4["reintenta reembolso (idempotente)<br/>o consulta la orden aérea<br/>espera 1, 5, 15 min; máx. 4 intentos"]
+    end
+
+    host --> e1
+    host --> r1
+    host --> c1
+    admin["ADMIN: POST /api/admin/cancellations/resolve<br/>(misma resolución, sin esperar el timer)"] -.-> c2
+
+    f1["⚠ Azure App Service F1 no tiene Always On:<br/>con la app dormida ningún timer corre."]
+
+    classDef worker fill:#E8F5E9,stroke:#38761D,color:#1B1B1B
+    classDef warn fill:#FFF3E0,stroke:#B45F06,color:#1B1B1B
+    class e1,e2,e3,e4,r1,r2,r4,r5,r6,c1,c2,c3,c4 worker
+    class f1,admin warn

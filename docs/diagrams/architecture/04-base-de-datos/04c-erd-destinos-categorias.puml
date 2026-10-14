@@ -1,0 +1,72 @@
+@startuml 04c-erd-destinos-categorias
+' GENERADO por docs/diagrams/architecture/_herramientas/generar_erd.py a partir del snapshot de EF Core.
+' Para cambiar el contenido, editar la vista en el generador y volver a ejecutarlo.
+!pragma layout smetana
+!include ../_tema.iuml
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 55
+title Destinos, categorías y clasificación del catálogo
+
+package "Módulo Destinations" as pkg_Destinations {
+  entity "destinations" as destinations <<Destinations>> #E0F2F1 {
+    * id : uuid <<PK>>
+    --
+      parent_id : uuid <<FK>>
+    * created_at : timestamptz
+      image_url : varchar(500)
+    * name : varchar(150)
+    * type : varchar(20)
+  }
+}
+package "Módulo Categories" as pkg_Categories {
+  entity "categories" as categories <<Categories>> #E0F2F1 {
+    * id : uuid <<PK>>
+    --
+      description : text
+    * name : varchar(100) <<UK>>
+  }
+}
+package "Módulo Experiences" as pkg_Experiences {
+  entity "experience_categories" as experience_categories <<Experiences>> #F1F8E9 {
+    * experience_id : uuid <<PK, FK>>
+    * category_id : uuid <<PK, FK>>
+  }
+}
+package "Módulo Packages" as pkg_Packages {
+  entity "package_categories" as package_categories <<Packages>> #FFFDE7 {
+    * package_id : uuid <<PK, FK>>
+    * category_id : uuid <<PK, FK>>
+  }
+}
+entity "experiences" as experiences <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "packages" as packages <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+
+destinations |o--o{ destinations : "parent_id\n[RESTRICT]"
+destinations ||--o{ experiences : "destination_id\n[RESTRICT]"
+destinations ||--o{ packages : "destination_id\n[RESTRICT]"
+categories ||--o{ experience_categories : "category_id\n[CASCADE]"
+experiences ||--o{ experience_categories : "experience_id\n[CASCADE]"
+categories ||--o{ package_categories : "category_id\n[CASCADE]"
+packages ||--o{ package_categories : "package_id\n[CASCADE]"
+legend bottom left
+<b>Notación</b> (Ingeniería de la Información / pata de gallo)
+  ● (punto lleno) columna NOT NULL · <<PK>> clave primaria · <<FK>> clave foránea · <<UK>> única
+  ""||"" exactamente uno · ""|o"" cero o uno · ""o{"" cero o muchos
+  línea continua = FK real en PostgreSQL · línea punteada = referencia lógica sin FK
+  entidades grises = tablas de otras vistas (sólo su PK)
+<b>Dominios de las columnas varchar</b> (enums de C#, guardados como texto)
+  ""destinations.type"" → COUNTRY, REGION, CITY
+endlegend
+
+note as checks
+<b>Restricciones CHECK en la base</b> (expresión completa en turisclick-v2.dbml)
+""ck_destinations_country_no_parent""
+end note
+@enduml
