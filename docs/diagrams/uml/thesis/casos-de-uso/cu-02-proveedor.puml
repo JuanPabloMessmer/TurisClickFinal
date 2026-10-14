@@ -25,6 +25,6 @@ Proveedor -- UC4
 Proveedor -- UC7
 Proveedor -- UC8
 
-UC5 .> UC4 : <<extend>>
-UC9 .> UC8 : <<extend>>
+UC5 .> UC4 : <<extend>>                      
+UC9 .> UC8 : <<extend>>                      
 @enduml

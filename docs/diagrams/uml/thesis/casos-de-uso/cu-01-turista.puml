@@ -33,7 +33,7 @@ Turista -- UC8
 Turista -- UC9
 Turista -- UC10
 
-UC7 .> UC6 : <<extend>>\n[paquete con vuelo]
+UC7 .> UC6 : <<extend>>                                \n[paquete con vuelo]                                
 
 UC7 -- Aereo
 UC8 -- Aereo
