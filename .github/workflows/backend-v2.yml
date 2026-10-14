@@ -44,8 +44,12 @@ on:
         description: 'Desplegar a app-turisclick-v2-api. Marcá esto SÓLO si las migraciones pendientes ya se aplicaron a turisclick_db_v2.'
         type: boolean
         default: false
+      first_deploy_bootstrap:
+        description: 'SÓLO para el primer deploy después de la Oleada 15: la app que corre todavía no tiene /api/health. Ver docs/wave15-readiness.md. Falla si no hace falta.'
+        type: boolean
+        default: false
       migrations_applied:
-        description: 'Última migración aplicada en turisclick_db_v2 (ej. 0014). Sólo se usa si la app desplegada todavía no tiene /api/health; si lo tiene, manda lo que informa la base.'
+        description: 'Sólo con first_deploy_bootstrap: id COMPLETO de la última migración aplicada en turisclick_db_v2, verificada por fuera del pipeline.'
         type: string
         required: false
 
@@ -170,22 +174,31 @@ jobs:
             src/TurisClick.Api/Infrastructure/Database/Migrations
 
       # Hasta la Oleada 15 este paso buscaba "does not exist" en el cuerpo de un 500, o sea que dependía de que
-      # el backend publicara el error crudo de PostgreSQL. Ahora compara las migraciones del código con las que
-      # la base informa en /api/health (current_database() y __EFMigrationsHistory), verifica que la app apunte
-      # al secreto V2 de Key Vault, y cualquier 500 en las sondas hace fallar el paso. Ver
+      # el backend publicara el error crudo de PostgreSQL. Ahora manda a /api/health la huella de turisclick_db_v2
+      # con las migraciones de este commit y la app la compara con su base real; verifica que la app apunte al
+      # secreto V2 de Key Vault, y cualquier 500 en las sondas hace fallar el paso. Ver
       # .github/scripts/schema_preflight.py.
       - name: Verificar que la base V2 tiene las migraciones del código
         env:
+          FIRST_DEPLOY_BOOTSTRAP: ${{ inputs.first_deploy_bootstrap }}
           MIGRATIONS_APPLIED: ${{ inputs.migrations_applied }}
         run: |
           az webapp config appsettings list -g "$RESOURCE_GROUP" -n "$WEB_APP" -o json > "$RUNNER_TEMP/settings.json"
+          # El deployment activo sólo importa para la excepción de primer deploy, atada a un paquete exacto.
+          active=$(az rest --method get \
+            --url "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$WEB_APP/deployments?api-version=2023-12-01" \
+            --query "value[?properties.active].name | [0]" -o tsv | sed 's|.*/||' || true)
+          bootstrap=()
+          if [ "$FIRST_DEPLOY_BOOTSTRAP" = "true" ]; then bootstrap=(--first-deploy-bootstrap); fi
           # bash -e cortaría acá ante un fallo sin borrar el archivo: el estado se captura a mano.
           status=0
           python3 repo/.github/scripts/schema_preflight.py pre \
             --app-url "$APP_URL" \
             --migrations-dir repo/src/TurisClick.Api/Infrastructure/Database/Migrations \
             --app-settings "$RUNNER_TEMP/settings.json" \
-            --migrations-applied "$MIGRATIONS_APPLIED" || status=$?
+            --active-deployment-id "$active" \
+            --migrations-applied "$MIGRATIONS_APPLIED" \
+            "${bootstrap[@]}" || status=$?
           rm -f "$RUNNER_TEMP/settings.json"
           exit $status
 
@@ -193,6 +206,7 @@ jobs:
         run: cd publish && zip -qr ../app.zip .
 
       - name: Deploy a app-turisclick-v2-api
+        id: deploy
         run: |
           az webapp deploy \
             --resource-group "$RESOURCE_GROUP" \
@@ -233,8 +247,12 @@ jobs:
 
           echo "::notice title=Smoke tests::categories=$categories destinations=$destinations experiences/packages=200"
 
-      # El código nuevo confirma desde adentro que no ve migraciones pendientes y que habla con turisclick_db_v2.
+      # Obligatorio: el código nuevo confirma contra su base real que es turisclick_db_v2 con exactamente las
+      # migraciones de este commit, y que está sano. Corre siempre que el deploy haya llegado a ejecutarse
+      # (también si fallaron los smoke tests o el propio deploy) y su falla hace fallar el workflow. Nunca acepta
+      # la excepción de primer deploy.
       - name: Verificar el esquema con el código desplegado
+        if: ${{ always() && (steps.deploy.outcome == 'success' || steps.deploy.outcome == 'failure') }}
         run: |
           az webapp config appsettings list -g "$RESOURCE_GROUP" -n "$WEB_APP" -o json > "$RUNNER_TEMP/settings.json"
           status=0

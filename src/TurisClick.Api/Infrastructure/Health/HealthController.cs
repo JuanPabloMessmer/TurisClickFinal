@@ -1,76 +1,103 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TurisClick.Api.Infrastructure.Database;
 
 namespace TurisClick.Api.Infrastructure.Health;
 
 /// <summary>
-/// Estado de la base contra la que corre este proceso: a qué base está conectado de verdad y qué
-/// migraciones tiene aplicadas.
+/// Salud de la app, pública y mínima: sólo dice si está sana. Existe por el incidente del 7 de octubre de
+/// 2026, en el que el backend V2 corrió contra una base con migraciones pendientes y la única forma de
+/// saberlo desde afuera era leer el error crudo de PostgreSQL en un 500.
 ///
-/// Existe por el incidente del 7 de octubre de 2026: el backend V2 se desplegó contra una base con
-/// migraciones pendientes y la única forma de detectarlo desde afuera era leer el error crudo de
-/// PostgreSQL en una respuesta 500. El workflow de deploy lee este endpoint antes de desplegar (compara
-/// las migraciones aplicadas con las del código a desplegar) y después (no debe quedar ninguna pendiente).
+/// Sana = la base responde, el código no ve migraciones pendientes y, si Database:ExpectedName está
+/// configurado (en Production lo está: appsettings.Production.json), la base es esa.
 ///
-/// Anónimo a propósito, porque lo consulta el pipeline. Expone sólo metadatos del esquema: ningún dato,
-/// ningún host, usuario ni connection string, y si la base no responde no dice por qué.
+/// El pipeline necesita además probar que la base es turisclick_db_v2 con exactamente las migraciones del
+/// commit que despliega. Para eso manda <c>?expect=</c> con la huella que calcula del código
+/// (DatabaseSchemaInspector.Fingerprint) y recibe sólo <c>schemaMatches</c>: verdadero o falso. La respuesta
+/// nunca nombra la base ni las migraciones; el detalle está en GET /api/admin/health/schema, sólo ADMIN.
 /// </summary>
 [ApiController]
 [Route("api/health")]
 [AllowAnonymous]
-public class HealthController(TurisClickDbContext db, ILogger<HealthController> logger) : ControllerBase
+public class HealthController(DatabaseSchemaInspector inspector) : ControllerBase
 {
     [HttpGet]
-    [ProducesResponseType<HealthResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType<HealthResponse>(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<ActionResult<HealthResponse>> Get(CancellationToken ct)
+    [ProducesResponseType<PublicHealthResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<PublicHealthResponse>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult<PublicHealthResponse>> Get([FromQuery] string? expect, CancellationToken ct)
     {
-        HealthResponse response;
-        try
-        {
-            // current_database() lo responde el servidor: prueba a qué base llegó la conexión, no lo que
-            // dice la connection string.
-            var database = await db.Database
-                .SqlQuery<string>($"SELECT current_database() AS \"Value\"")
-                .SingleAsync(ct);
-            var applied = (await db.Database.GetAppliedMigrationsAsync(ct)).ToList();
-            var pending = db.Database.GetMigrations().Except(applied).Count();
+        var snapshot = await inspector.InspectAsync(ct);
+        var healthy = snapshot is { IsHealthy: true };
 
-            response = new HealthResponse
-            {
-                Status = pending == 0 ? HealthStatus.Healthy : HealthStatus.PendingMigrations,
-                Database = database,
-                AppliedMigrations = applied.Count,
-                LatestMigration = applied.LastOrDefault(),
-                PendingMigrations = pending
-            };
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        var response = new PublicHealthResponse
         {
-            logger.LogError(ex, "El chequeo de salud no pudo consultar la base");
-            response = new HealthResponse { Status = HealthStatus.DatabaseUnavailable };
-        }
+            Status = healthy ? HealthStatus.Healthy : HealthStatus.Unhealthy,
+            SchemaMatches = string.IsNullOrEmpty(expect) ? null : snapshot is not null && FixedTimeEquals(expect, snapshot.Fingerprint)
+        };
 
-        return response.Status == HealthStatus.Healthy
-            ? Ok(response)
-            : StatusCode(StatusCodes.Status503ServiceUnavailable, response);
+        return healthy ? Ok(response) : StatusCode(StatusCodes.Status503ServiceUnavailable, response);
+    }
+
+    private static bool FixedTimeEquals(string a, string b) =>
+        CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(a.ToLowerInvariant()), Encoding.UTF8.GetBytes(b));
+}
+
+/// <summary>Detalle del esquema para operar: a qué base está conectada la app y qué migraciones tiene.</summary>
+[ApiController]
+[Route("api/admin/health")]
+[Authorize(Policy = "RequireAdmin")]
+public class AdminHealthController(DatabaseSchemaInspector inspector) : ControllerBase
+{
+    [HttpGet("schema")]
+    [ProducesResponseType<SchemaHealthResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<SchemaHealthResponse>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult<SchemaHealthResponse>> Schema(CancellationToken ct)
+    {
+        var snapshot = await inspector.InspectAsync(ct);
+        if (snapshot is null)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new SchemaHealthResponse { Status = HealthStatus.Unhealthy });
+
+        var response = new SchemaHealthResponse
+        {
+            Status = snapshot.IsHealthy ? HealthStatus.Healthy : HealthStatus.Unhealthy,
+            Database = snapshot.Database,
+            DatabaseMatchesExpected = snapshot.DatabaseMatches,
+            AppliedMigrations = snapshot.AppliedMigrations.Count,
+            LatestMigration = snapshot.AppliedMigrations.LastOrDefault(),
+            PendingMigrations = snapshot.PendingMigrations,
+            Fingerprint = snapshot.Fingerprint
+        };
+
+        return snapshot.IsHealthy ? Ok(response) : StatusCode(StatusCodes.Status503ServiceUnavailable, response);
     }
 }
 
 public static class HealthStatus
 {
     public const string Healthy = "HEALTHY";
-    public const string PendingMigrations = "PENDING_MIGRATIONS";
-    public const string DatabaseUnavailable = "DATABASE_UNAVAILABLE";
+    public const string Unhealthy = "UNHEALTHY";
 }
 
-public class HealthResponse
+public class PublicHealthResponse
 {
-    public string Status { get; init; } = HealthStatus.DatabaseUnavailable;
+    public string Status { get; init; } = HealthStatus.Unhealthy;
+
+    /// <summary>Sólo presente si se mandó <c>?expect=</c>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? SchemaMatches { get; init; }
+}
+
+public class SchemaHealthResponse
+{
+    public string Status { get; init; } = HealthStatus.Unhealthy;
     public string? Database { get; init; }
+    public bool DatabaseMatchesExpected { get; init; }
     public int AppliedMigrations { get; init; }
     public string? LatestMigration { get; init; }
     public int PendingMigrations { get; init; }
+    public string? Fingerprint { get; init; }
 }

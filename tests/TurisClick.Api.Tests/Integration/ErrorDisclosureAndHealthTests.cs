@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,39 +61,70 @@ public class ErrorDisclosureAndHealthTests
         Assert.False(string.IsNullOrWhiteSpace(body.RootElement.GetProperty("traceId").GetString()));
     }
 
-    // ================================================================ /api/health
+    // ================================================================ /api/health (público, mínimo)
 
     [Fact]
-    public async Task HealthInformaLaBaseRealYQueNoHayMigracionesPendientes()
+    public async Task HealthPublicoSoloDiceSiLaAppEstaSana()
     {
         var response = await _factory.CreateClient().GetAsync("/api/health");
+        var raw = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var health = (await response.Content.ReadFromJsonAsync<HealthResponse>(JsonOptions))!;
+        using var body = JsonDocument.Parse(raw);
+        // Una sola propiedad: ni el nombre de la base, ni las migraciones, ni datos de conexión.
+        Assert.Equal(["status"], body.RootElement.EnumerateObject().Select(p => p.Name).ToArray());
+        Assert.Equal(HealthStatus.Healthy, body.RootElement.GetProperty("status").GetString());
 
-        string[] expected;
-        string database;
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<TurisClickDbContext>();
-            expected = db.Database.GetMigrations().ToArray();
-            database = new NpgsqlConnectionStringBuilder(db.Database.GetConnectionString()).Database!;
-        }
-
-        Assert.Equal(HealthStatus.Healthy, health.Status);
-        Assert.Equal(database, health.Database);
-        Assert.Equal(0, health.PendingMigrations);
-        Assert.Equal(expected.Length, health.AppliedMigrations);
-        Assert.Equal(expected[^1], health.LatestMigration);
+        var (database, migrations) = ExpectedSchema();
+        foreach (var fragment in new[] { database, migrations[^1], "Oleada", "Host", "Username", "Password", "localhost" })
+            Assert.DoesNotContain(fragment, raw, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task HealthNoExponeDatosDeConexion()
+    public async Task LaHuellaCorrectaConfirmaBaseYMigracionesSinNombrarlas()
     {
-        var raw = await (await _factory.CreateClient().GetAsync("/api/health")).Content.ReadAsStringAsync();
+        var (database, migrations) = ExpectedSchema();
 
-        foreach (var fragment in new[] { "Host", "Username", "Password", "localhost", "Port" })
-            Assert.DoesNotContain(fragment, raw, StringComparison.OrdinalIgnoreCase);
+        var health = await HealthAsync(_factory, DatabaseSchemaInspector.Fingerprint(database, migrations));
+
+        Assert.True(health.SchemaMatches);
+    }
+
+    [Fact]
+    public async Task LaHuellaDeLaBaseV1NoCoincide()
+    {
+        var (_, migrations) = ExpectedSchema();
+
+        var health = await HealthAsync(_factory, DatabaseSchemaInspector.Fingerprint("turisclick_db", migrations));
+
+        Assert.False(health.SchemaMatches);
+    }
+
+    [Fact]
+    public async Task UnaHuellaConMigracionesDeMasODeMenosNoCoincide()
+    {
+        var (database, migrations) = ExpectedSchema();
+
+        Assert.False((await HealthAsync(_factory, DatabaseSchemaInspector.Fingerprint(database, migrations[..^1]))).SchemaMatches);
+        Assert.False((await HealthAsync(_factory, DatabaseSchemaInspector.Fingerprint(database,
+            migrations.Append("20991231000000_9999_Futura")))).SchemaMatches);
+    }
+
+    [Fact]
+    public async Task ConectadaAOtraBaseQueLaEsperadaLaAppNoEstaSana()
+    {
+        // Lo que hace appsettings.Production.json en Azure: si la app llegara a otra base, deja de estar sana.
+        using var wrongDatabase = _factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [DatabaseSchemaInspector.ExpectedDatabaseKey] = "turisclick_db_v2"
+            })));
+
+        var response = await wrongDatabase.CreateClient().GetAsync("/api/health");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        var health = (await response.Content.ReadFromJsonAsync<PublicHealthResponse>(JsonOptions))!;
+        Assert.Equal(HealthStatus.Unhealthy, health.Status);
     }
 
     [Fact]
@@ -106,15 +138,73 @@ public class ErrorDisclosureAndHealthTests
                     "Host=127.0.0.1;Port=1;Database=unreachable_test;Username=nobody;Password=not-a-secret;Timeout=3"
             })));
 
-        var response = await unreachable.CreateClient().GetAsync("/api/health");
+        var (database, migrations) = ExpectedSchema();
+        var response = await unreachable.CreateClient().GetAsync(
+            $"/api/health?expect={DatabaseSchemaInspector.Fingerprint(database, migrations)}");
         var raw = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        var health = JsonSerializer.Deserialize<HealthResponse>(raw, JsonOptions)!;
-        Assert.Equal(HealthStatus.DatabaseUnavailable, health.Status);
-        Assert.Null(health.Database);
+        var health = JsonSerializer.Deserialize<PublicHealthResponse>(raw, JsonOptions)!;
+        Assert.Equal(HealthStatus.Unhealthy, health.Status);
+        Assert.False(health.SchemaMatches);
         foreach (var fragment in new[] { "127.0.0.1", "unreachable_test", "nobody", "not-a-secret", "refused" })
             Assert.DoesNotContain(fragment, raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ================================================================ /api/admin/health/schema (ADMIN)
+
+    [Fact]
+    public async Task ElDetalleDelEsquemaExigeAutenticacion()
+    {
+        var response = await _factory.CreateClient().GetAsync("/api/admin/health/schema");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ElDetalleDelEsquemaNoEsParaUnTurista()
+    {
+        var client = _factory.CreateClient();
+        UseBearerToken(client, await RegisterAndLoginTouristAsync(client, "health-tourist"));
+
+        var response = await client.GetAsync("/api/admin/health/schema");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ElAdminVeLaBaseRealYSusMigraciones()
+    {
+        var client = _factory.CreateClient();
+        UseBearerToken(client, await LoginAsAdminAsync(client));
+
+        var response = await client.GetAsync("/api/admin/health/schema");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var health = (await response.Content.ReadFromJsonAsync<SchemaHealthResponse>(JsonOptions))!;
+        var (database, migrations) = ExpectedSchema();
+        Assert.Equal(HealthStatus.Healthy, health.Status);
+        Assert.Equal(database, health.Database);
+        Assert.Equal(migrations.Length, health.AppliedMigrations);
+        Assert.Equal(migrations[^1], health.LatestMigration);
+        Assert.Equal(0, health.PendingMigrations);
+        Assert.Equal(DatabaseSchemaInspector.Fingerprint(database, migrations), health.Fingerprint);
+    }
+
+    private static async Task<PublicHealthResponse> HealthAsync(WebApplicationFactory<Program> factory, string fingerprint)
+    {
+        var response = await factory.CreateClient().GetAsync($"/api/health?expect={fingerprint}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<PublicHealthResponse>(JsonOptions))!;
+    }
+
+    /// <summary>La base de tests y las migraciones que declara el código, que es lo que el pipeline compara.</summary>
+    private (string Database, string[] Migrations) ExpectedSchema()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TurisClickDbContext>();
+        return (new NpgsqlConnectionStringBuilder(db.Database.GetConnectionString()).Database!,
+            db.Database.GetMigrations().ToArray());
     }
 
     private sealed class ThrowingCategoryService(Exception exception) : ICategoryService
