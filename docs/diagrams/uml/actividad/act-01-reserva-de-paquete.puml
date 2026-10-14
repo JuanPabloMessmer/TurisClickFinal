@@ -1,0 +1,152 @@
+@startuml act-01-reserva-de-paquete
+!include ../_estilo.iuml
+
+title Diagrama de actividad — Reserva de un paquete turístico (con o sin vuelo)
+
+' Nota de autoría: PlantUML arrastra el último carril al branch siguiente, por eso
+' cada rama y cada punto posterior a un endif declara su carril explícitamente.
+
+|Turista|
+start
+:Buscar paquetes por destino,\ncategoría o precio (UC-T-06);
+:Ver detalle del paquete:\nitinerario por días y salidas (UC-T-07);
+:Elegir salida y cantidad de viajeros;
+
+if (¿El paquete incluye vuelo?) then (sí)
+  |Turista|
+  :Elegir aeropuerto de origen\npermitido por el operador;
+  |Sistema TurisClick|
+  :Calcular fechas de ida y vuelta\ncon los desfases de la regla de vuelo;
+  |Proveedor aéreo|
+  :Buscar ofertas de vuelo;
+  |Sistema TurisClick|
+  if (¿Hay ofertas?) then (no)
+    |Sistema TurisClick|
+    :Informar "no encontramos vuelos"\no "no pudimos consultar";
+    stop
+  else (sí)
+    |Sistema TurisClick|
+    :Guardar cotizaciones (QUOTED)\ny mostrar opciones;
+  endif
+  |Turista|
+  :Elegir una opción de vuelo;
+  |Sistema TurisClick|
+  :Revalidar la cotización\ncon el proveedor aéreo (UC-T-20);
+  switch (¿Resultado de la revalidación?)
+  case (vencida o no disponible)
+    |Sistema TurisClick|
+    :Pedir una nueva búsqueda de vuelos;
+    stop
+  case (precio cambió)
+    |Turista|
+    if (¿Acepta el nuevo precio?) then (no)
+      |Turista|
+      stop
+    else (sí)
+      |Turista|
+    endif
+  case (confirmada)
+    |Sistema TurisClick|
+  endswitch
+else (no)
+  |Turista|
+endif
+
+|Sistema TurisClick|
+:Validar paquete PUBLISHED, empresa no suspendida,\nsalida OPEN y no pasada;
+if (¿Válido?) then (no)
+  |Sistema TurisClick|
+  :Responder 404 / 410;
+  stop
+else (sí)
+  |Sistema TurisClick|
+endif
+|Sistema TurisClick|
+:Retener cupo con UPDATE condicional\n(reserved_slots + n <= total_slots);
+if (¿Cupo retenido?) then (no)
+  |Sistema TurisClick|
+  :Responder 409 "sin cupo";
+  stop
+else (sí)
+  |Sistema TurisClick|
+endif
+|Sistema TurisClick|
+:Crear Reservation PENDING_PAYMENT (vence en 30 min)\ncon precio y política de cancelación congelados\n(+ FlightBooking PENDING si hay vuelo);
+
+|Turista|
+:Ingresar datos de pasajeros (si hay vuelo)\ny solicitar el pago (UC-T-19);
+
+|Sistema TurisClick|
+repeat
+  |Sistema TurisClick|
+  if (¿La reserva expiró?) then (sí)
+    |Sistema TurisClick|
+    :Responder 410;
+    note right
+      El proceso de expiración libera
+      el cupo (UC-SYS-08).
+    end note
+    stop
+  else (no)
+    |Sistema TurisClick|
+  endif
+  |Sistema TurisClick|
+  :Revalidar precio vigente del paquete\n(y del vuelo, si corresponde);
+  if (¿Cambió algún precio sin aceptación?) then (sí)
+    |Turista|
+    :Revisar y aceptar el precio vigente;
+  else (no)
+    |Sistema TurisClick|
+  endif
+  |Sistema TurisClick|
+  :Cobrar un cargo por moneda\n(pasarela simulada) y asentar en el libro;
+repeat while (¿Cobro rechazado y el turista reintenta?) is (sí) not (no)
+
+|Sistema TurisClick|
+if (¿Cobro aprobado?) then (no)
+  |Sistema TurisClick|
+  :La reserva sigue PENDING_PAYMENT\nhasta expirar;
+  stop
+else (sí)
+  |Sistema TurisClick|
+endif
+
+|Sistema TurisClick|
+if (¿Incluye vuelo?) then (sí)
+  |Sistema TurisClick|
+  :Marcar FlightBooking ORDERING\n(commit antes de llamar);
+  |Proveedor aéreo|
+  :Emitir el pasaje (orden con clave idempotente);
+  |Sistema TurisClick|
+  switch (¿Desenlace de la emisión?)
+  case (confirmado)
+    |Sistema TurisClick|
+    :Guardar localizador y snapshot del vuelo;
+  case (rechazado)
+    |Sistema TurisClick|
+    :Cancelar reserva, liberar cupo\ny revertir el cobro (VOID);
+    stop
+  case (no se envió)
+    |Sistema TurisClick|
+    :Revertir el cobro; el cupo sigue\nretenido para reintentar;
+    stop
+  case (desconocido)
+    |Sistema TurisClick|
+    :Marcar RECONCILIATION_REQUIRED;
+    note right
+      Lo resuelve la reconciliación
+      en segundo plano.
+    end note
+    stop
+  endswitch
+else (no)
+  |Sistema TurisClick|
+endif
+
+|Sistema TurisClick|
+:Transición condicional a CONFIRMED\n(reserva e ítems) — UC-SYS-07;
+|Turista|
+:Ver la reserva confirmada en "Mis viajes";
+stop
+
+@enduml

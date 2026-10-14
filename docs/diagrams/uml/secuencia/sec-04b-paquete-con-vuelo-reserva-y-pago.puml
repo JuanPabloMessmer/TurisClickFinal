@@ -1,0 +1,119 @@
+@startuml sec-04b-paquete-con-vuelo-reserva-y-pago
+!include ../_estilo.iuml
+autonumber "<b>0."
+hide footbox
+
+title Secuencia — Paquete + vuelo (2/2): reserva coordinada, cobro y emisión del pasaje (UC-T-21)
+
+actor "Turista" as T
+participant "Tourist Mobile" as M
+box "TurisClick API (ASP.NET Core)" #FAFAFA
+  participant "ReservationsController" as RC
+  participant "ReservationService" as RS
+  participant "FlightBooking\nOrchestrator" as FO
+  participant "PaymentLedger" as L
+end box
+participant "SimulatedPayment\nGateway" as PG <<externo>>
+participant "IFlightProvider\n(Duffel)" as FP <<externo>>
+database "PostgreSQL" as DB
+
+== Crear la reserva ==
+T -> M : confirma paquete + vuelo elegido
+M -> RC : POST /api/reservations\n{packageAvailabilityId, travelers, flightQuoteId}
+activate RC
+RC -> RS : CreateAsync(request)
+activate RS
+RS -> FO : FindReservationForQuoteAsync(quoteId, turista)
+alt la cotización ya tiene reserva (doble toque / reintento)
+  RS --> RC : devuelve la reserva existente (idempotencia)
+else primera vez
+  RS -> FO : PrepareAsync(quote, turista, salida, viajeros)
+  note right of FO
+    Valida dueño, salida y viajeros de la cotización,
+    que no esté UNAVAILABLE ni vencida. Arma
+    FlightBooking{PENDING, IdempotencyKey = "tc_<quoteId>",
+    snapshot de ruta y fechas}. Aún no persiste.
+  end note
+  FO --> RS : FlightBooking (en memoria)
+  RS -> DB : BEGIN TRANSACTION
+  RS -> DB : UPDATE package_availabilities (retención condicional de cupo)
+  alt sin cupo
+    RS --> RC : 409
+  else cupo retenido
+    RS -> RS : ReservationItem{precio y CancellationPolicy\ncongelados del paquete}
+    RS -> DB : INSERT reservation (PENDING_PAYMENT, +30 min)\n+ item + flight_booking (PENDING)
+    RS -> DB : COMMIT
+    RS --> RC : ReservationResponse
+  end
+end
+deactivate RS
+RC --> M : 201 Created
+deactivate RC
+
+== Pagar: revalidar, cobrar y emitir ==
+T -> M : datos de pasajeros + "Pagar"
+M -> RC : POST /api/reservations/{id}/pay\n{success, acceptPriceChanges, travelers[], acceptedFlightPrice}
+activate RC
+RC -> RS : PayAsync
+activate RS
+RS -> RS : valida dueño, estado PENDING_PAYMENT y ExpiresAt
+RS -> RS : vuelo ORDERING / RECONCILIATION_REQUIRED → 409;\nFAILED / CANCELLED → 409
+RS -> RS : revalida precio del paquete (UC-SYS-02)
+RS -> FO : PreflightAsync(booking, acceptedFlightPrice)
+FO -> FP : RefreshOfferAsync(providerOfferId)
+alt precio del vuelo cambió y no coincide con el aceptado
+  FO --> RS : REQUIRES_ACCEPTANCE
+  RS --> RC : 200 con precio anterior y vigente (no se cobra)
+else oferta vencida o inexistente
+  RS --> RC : 410 Gone
+else proveedor no responde
+  RS --> RC : 409 (no se cobra a ciegas)
+else READY
+  FO --> RS : oferta vigente
+  loop un cargo por moneda (paquete y vuelo pueden diferir)
+    RS -> PG : ChargeAsync
+    RS -> L : RecordCharge
+  end
+  alt cobro rechazado
+    RS --> RC : 200 {paymentApproved: false}
+  else cobro aprobado
+    RS -> FO : BeginOrderingAsync(booking)
+    FO -> DB : UPDATE flight_bookings SET status = 'ORDERING'\nWHERE status = 'PENDING' (commit antes de llamar)
+    alt otro pago ya está emitiendo
+      RS --> RC : 409 FLIGHT_BOOKING_IN_PROGRESS
+    else transición ganada
+      RS -> FO : PlaceOrderAsync(booking, oferta, pasajeros)
+      FO -> FP : CreateOrderAsync(oferta, precio revalidado,\npasajeros, idempotencyKey)
+      note over FP : sin transacción de base abierta\ndurante la llamada externa
+      FP --> FO : desenlace
+      RS -> DB : BEGIN TRANSACTION
+      RS -> FO : Apply(booking, desenlace)
+      alt CONFIRMED (localizador emitido)
+        RS -> DB : UPDATE reservations → CONFIRMED (condicional),\nítems → CONFIRMED, snapshot del vuelo
+        RS -> DB : COMMIT
+        RS --> RC : 200 {paymentApproved: true, vuelo confirmado}
+      else FAILED (la aerolínea rechazó)
+        RS -> DB : reserva → CANCELLED, libera cupo, vuelo FAILED
+        RS -> DB : COMMIT
+        RS -> PG : VoidAsync (por moneda)
+        RS -> L : RecordVoid
+        RS --> RC : 409 con el motivo
+      else NOT_SENT (la solicitud no salió)
+        RS -> DB : vuelo → PENDING, cupo retenido; COMMIT
+        RS -> PG : VoidAsync
+        RS --> RC : 409 reintentable
+      else desenlace desconocido (timeout)
+        RS -> DB : vuelo → RECONCILIATION_REQUIRED; COMMIT
+        RS --> RC : 200 "Estamos confirmando tu vuelo"
+        note right
+          FlightReconciliationBackgroundService
+          consulta luego al proveedor si la orden existe.
+        end note
+      end
+    end
+  end
+end
+deactivate RS
+RC --> M : respuesta
+deactivate RC
+@enduml

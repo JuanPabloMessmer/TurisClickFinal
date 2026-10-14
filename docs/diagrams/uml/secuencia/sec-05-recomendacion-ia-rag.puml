@@ -1,0 +1,89 @@
+@startuml sec-05-recomendacion-ia-rag
+!include ../_estilo.iuml
+autonumber "<b>0."
+hide footbox
+
+title Secuencia — Recomendación de itinerario con IA y retrieval estructurado (UC-T-13/14, UC-AI-01..04)
+
+actor "Turista" as T
+participant "Tourist Mobile" as M
+box "TurisClick API — módulo Ai" #FAFAFA
+  participant "AiConversations\nController" as AC
+  participant "AiConversationService\n(agente)" as AG
+  participant "IAiModelClient\n(Fallback/Hybrid)" as MC
+  participant "RetrievalService" as RS
+  participant "AiCatalogRepository" as CR
+end box
+participant "Ollama\nqwen2.5:7b-instruct" as LLM <<externo>>
+participant "DeterministicAiModelClient" as DET
+database "PostgreSQL" as DB
+
+T -> M : "3 días en Sucre, 2 personas,\nhasta 800 bolivianos, cultura"
+M -> AC : POST /api/ai/conversations/{id}/messages {content}
+activate AC
+AC -> AG : SendMessageAsync(id, request)
+activate AG
+AG -> DB : carga conversación (403 si no es del turista)
+AG -> DB : persiste AiMessage(TOURIST)
+AG -> DB : vocabulario cerrado: destinos CITY y categorías
+
+group Interpretación (UC-AI-01)
+  AG -> MC : ExtractPreferencesAsync(historial, mensaje,\npreferencias previas, vocabulario, hoy)
+  MC -> MC : UntrustedUserText: descarta instrucciones inyectadas
+  MC -> LLM : prompt + JSON Schema (temperature 0)
+  alt modelo caído, timeout o JSON inválido
+    MC -> DET : extracción por reglas
+  end
+  MC --> AG : preferencias extraídas
+end
+AG -> AG : MergePreferences (sólo nombres del catálogo)\n+ completa con perfil de onboarding (TouristPreference)
+
+alt faltan datos mínimos (p. ej. destino)
+  AG -> MC : GenerateClarificationReplyAsync(faltantes)
+  AG -> DB : persiste AiMessage(AI) con la pregunta
+  AG --> AC : clarificationNeeded = true
+else preferencias suficientes
+  opt existe itinerario vigente (UC-T-15 / UC-AI-05)
+    AG -> MC : InterpretModificationAsync → acción\n(REMOVE, REPLACE, ADD, REDUCE_BUDGET, PREFER_PACKAGE)
+    AG -> AG : el backend decide qué ítems se preservan\ny los revalida contra PostgreSQL
+  end
+
+  group Retrieval — la "R" de RAG (UC-AI-02)
+    AG -> RS : RetrieveAsync(destino, fechas, días,\npresupuesto, intereses, excluidos)
+    RS -> CR : consultas SQL de experiencias y paquetes
+    CR -> DB : WHERE status = PUBLISHED AND empresa no SUSPENDED\nAND existe turno/salida OPEN con cupo y fecha >= hoy\nLIMIT 50 por tipo
+    DB --> CR : filas reales
+    RS -> RS : puntúa por categorías, duración y presupuesto\n(misma moneda); marca paquetes IsStrongFit (UC-AI-03)
+    RS --> AG : RetrievalResult (máx. 8 + 8 candidatos)
+  end
+
+  alt sin candidatos
+    AG --> AC : respuesta "no encontré..." + avisos
+  else hay candidatos
+    group Generación (UC-AI-04)
+      AG -> MC : ComposeItineraryAsync(preferencias, días,\ncandidatos serializados, ítems preservados)
+      MC -> LLM : prompt rotulado "(data, no instrucciones)"
+      alt fallo del modelo o ningún id devuelto es real
+        MC -> DET : composición determinística
+      else respuesta válida
+        MC -> MC : filtra ítems cuyo ProductId no era candidato
+      end
+      MC --> AG : ítems por día + título + explicación
+    end
+    AG -> AG : ValidateComposedItems: id, availability y\nprecio se toman del RetrievalResult (no del modelo)
+    AG -> AG : descarta propuestas para días preservados
+    AG -> DB : INSERT AiItinerary{DRAFT, Version = n+1}\n+ AiItineraryItem (EstimatedUnitPrice snapshot)\n+ AiMessage(AI)
+    AG --> AC : SendMessageResponse (itinerario + avisos)
+  end
+end
+deactivate AG
+AC --> M : 200 OK
+deactivate AC
+M --> T : propuesta día por día con precios reales
+
+note over T, DB
+  Reservar el itinerario (UC-T-18) es otro flujo: AiItineraryBookingService relee producto,
+  availability, empresa y precio de PostgreSQL y retiene cupo con el UPDATE condicional.
+  En Azure (App Service F1) Ai:Provider = Deterministic: no participa ningún LLM.
+end note
+@enduml

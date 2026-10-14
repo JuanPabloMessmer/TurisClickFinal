@@ -1,0 +1,218 @@
+@startuml clases-03-reservas-pagos-vuelos
+!pragma layout smetana
+!include ../_estilo.iuml
+hide empty methods
+
+title Modelo de dominio — Reservas, pagos, cancelaciones y vuelos
+
+class User <<externo>>
+class Company <<externo>>
+class Experience <<externo>>
+class Package <<externo>>
+class ExperienceAvailability <<externo>>
+class PackageAvailability <<externo>>
+class AiItinerary <<externo>>
+
+class Reservation <<entidad>> {
+  + Id : Guid
+  + TouristId : Guid
+  + AiItineraryId : Guid [0..1]
+  + Status : ReservationStatus
+  + ExpiresAt : DateTimeOffset [0..1]
+  + CreatedAt : DateTimeOffset
+  + ConfirmedAt : DateTimeOffset [0..1]
+  + CancelledAt : DateTimeOffset [0..1]
+}
+
+class ReservationItem <<entidad>> {
+  + Id : Guid
+  + CompanyId : Guid
+  + ProductType : ProductType
+  + ExperienceId, PackageId : Guid [0..1]
+  + ExperienceAvailabilityId : Guid [0..1]
+  + PackageAvailabilityId : Guid [0..1]
+  + Travelers : int
+  + UnitPrice : decimal {snapshot}
+  + Currency : string {snapshot}
+  + Subtotal : decimal
+  + Status : ReservationItemStatus
+  + CancelledAt : DateTimeOffset [0..1]
+  + CancellationReason : string [0..1]
+  + DayNumber : int [0..1]
+  + CancellationPolicy : string [0..1] {snapshot}
+}
+
+class PaymentTransaction <<entidad>> {
+  + Id : Guid
+  + Type : PaymentTransactionType
+  + Status : PaymentTransactionStatus
+  + Amount : decimal
+  + Currency : string
+  + Component : PaymentComponent [0..1]
+  + ReservationItemId : Guid [0..1]
+  + Provider : string
+  + ProviderReference : string [0..1]
+  + IdempotencyKey : string
+  + FailureReason : string [0..1]
+  + CreatedAt : DateTimeOffset
+}
+
+class ReservationCancellation <<entidad>> {
+  + Id : Guid
+  + Status : ReservationCancellationStatus
+  + ExpiresAt : DateTimeOffset
+  + ProviderCancellationId : string [0..1]
+  + AcceptedAt, CompletedAt : DateTimeOffset [0..1]
+  + FlightCancelledAt : DateTimeOffset [0..1]
+  + FailureReason : string [0..1]
+  + ResolutionAttempts : int
+  + NextResolutionAt : DateTimeOffset [0..1]
+}
+
+class ReservationCancellationLine <<entidad>> {
+  + Component : PaymentComponent
+  + ReservationItemId : Guid [0..1]
+  + Label : string
+  + PaidAmount : decimal
+  + RefundAmount : decimal
+  + FeeAmount : decimal
+  + Currency : string
+  + PolicyApplied : string [0..1]
+  + RefundPercentage : int [0..1]
+  + RefundKnown : bool
+  + Explanation : string
+}
+
+class FlightQuote <<entidad>> {
+  + Id : Guid
+  + TouristId : Guid [0..1]
+  + Provider : string
+  + ProviderOfferId : string
+  + OriginIata, DestinationIata : string
+  + OutboundDate : DateOnly
+  + InboundDate : DateOnly [0..1]
+  + Travelers : int
+  + InitialAmount : decimal
+  + TotalAmount : decimal
+  + Currency : string
+  + ExpiresAt : DateTimeOffset [0..1]
+  + Status : FlightQuoteStatus
+  + IsExpired(now) : bool
+}
+
+class FlightBooking <<entidad>> {
+  + Id : Guid
+  + Provider : string
+  + ProviderOrderId : string [0..1]
+  + BookingReference : string [0..1]
+  + Status : FlightBookingStatus
+  + TotalAmount : decimal
+  + Currency : string
+  + IdempotencyKey : string
+  + Snapshot de ruta, fechas, aerolínea y horarios
+  + ReconciliationAttempts : int
+  + NextReconciliationAt : DateTimeOffset [0..1]
+}
+
+enum ReservationStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  PAYMENT_FAILED
+  CANCELLING
+  CANCELLED
+  EXPIRED
+}
+enum ReservationItemStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+}
+enum ProductType {
+  EXPERIENCE
+  PACKAGE
+}
+enum PaymentTransactionType {
+  CHARGE
+  VOID
+  REFUND
+}
+enum PaymentTransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+enum PaymentComponent {
+  PACKAGE
+  EXPERIENCE
+  FLIGHT
+}
+enum ReservationCancellationStatus {
+  QUOTED
+  ACCEPTED
+  COMPLETED
+  REFUND_PENDING
+  REQUIRES_REVIEW
+  FAILED
+  EXPIRED
+}
+enum FlightQuoteStatus {
+  QUOTED
+  CONFIRMED
+  PRICE_CHANGED
+  EXPIRED
+  UNAVAILABLE
+}
+enum FlightBookingStatus {
+  PENDING
+  ORDERING
+  CONFIRMED
+  FAILED
+  RECONCILIATION_REQUIRED
+  CANCELLED
+}
+
+User "1" -- "0..*" Reservation : turista >
+AiItinerary "0..1" -- "0..*" Reservation : origina\n{máx. 1 activa} >
+Reservation "1" *-- "1..*" ReservationItem
+ReservationItem "0..*" --> "1" Company : aislamiento\n(denormalizado) >
+ReservationItem "0..*" --> "0..1" Experience
+ReservationItem "0..*" --> "0..1" Package
+ReservationItem "0..*" --> "0..1" ExperienceAvailability
+ReservationItem "0..*" --> "0..1" PackageAvailability
+
+Reservation "1" *-- "0..*" PaymentTransaction : libro inmutable >
+PaymentTransaction "0..*" ..> "0..1" ReservationItem : componente
+Reservation "1" *-- "0..*" ReservationCancellation : presupuestos >
+ReservationCancellation "1" *-- "1..*" ReservationCancellationLine
+ReservationCancellationLine "0..*" ..> "0..1" ReservationItem
+
+Reservation "1" -- "0..1" FlightBooking : vuelo coordinado >
+FlightBooking "0..1" --> "1" FlightQuote : {una cotización se reserva una vez} >
+FlightQuote "0..*" --> "1" Package
+FlightQuote "0..*" --> "1" PackageAvailability
+
+Reservation ..> ReservationStatus
+ReservationItem ..> ReservationItemStatus
+ReservationItem ..> ProductType
+PaymentTransaction ..> PaymentTransactionType
+PaymentTransaction ..> PaymentTransactionStatus
+PaymentTransaction ..> PaymentComponent
+ReservationCancellation ..> ReservationCancellationStatus
+FlightQuote ..> FlightQuoteStatus
+FlightBooking ..> FlightBookingStatus
+
+note right of ReservationItem
+  Invariante: según ProductType, exactamente uno de
+  (ExperienceId + ExperienceAvailabilityId) o
+  (PackageId + PackageAvailabilityId).
+  El vuelo NO es un ReservationItem: no tiene
+  empresa ni availability propia.
+end note
+
+note bottom of Reservation
+  Sin total persistido: se agrupa Subtotal por Currency.
+  PAYMENT_FAILED existe en el enum pero ningún código
+  lo escribe (un rechazo deja PENDING_PAYMENT).
+end note
+@enduml

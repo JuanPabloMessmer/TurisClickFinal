@@ -1,0 +1,38 @@
+@startuml cu-04-procesos-del-sistema
+!pragma layout smetana
+!include ../_estilo.iuml
+top to bottom direction
+
+title Diagrama de casos de uso — Procesos automáticos del sistema (vista complementaria)
+
+actor "Temporizador\n(BackgroundService)" as Reloj <<sistema>>
+
+rectangle "TurisClick API" {
+  usecase "Expirar reservas impagas\ny liberar cupo (UC-SYS-08)" as UC_EXP
+  usecase "Reconciliar vuelos con\ndesenlace desconocido" as UC_RECV
+  usecase "Resolver cancelaciones\na medias" as UC_RESC
+  usecase "Devolver itinerario IA\nBOOKED → SAVED" as UC_ITI
+  usecase "Reindexar catálogo para RAG\n(UC-SYS-09)" <<futuro>> as UC_IDX
+}
+
+rectangle "Sistemas externos" {
+  actor "Proveedor aéreo\n(Duffel, modo prueba)" as Aereo
+  actor "Pasarela de pago\n(simulada)" as Pasarela
+}
+
+Reloj --> UC_EXP
+Reloj --> UC_RECV
+Reloj --> UC_RESC
+UC_ITI ..> UC_EXP : <<extend>>\n[la reserva venía de un itinerario]
+UC_RECV --> Aereo
+UC_RESC --> Aereo
+UC_RESC --> Pasarela
+
+legend right
+  ReservationExpirationBackgroundService, FlightReconciliationBackgroundService y
+  CancellationResolutionBackgroundService despiertan cada N segundos (60 s por
+  defecto, configurable y apagable) y delegan toda la lógica en servicios de dominio.
+  UC-SYS-09 no requiere implementación: el retrieval es SQL directo sobre PostgreSQL
+  (sin índice vectorial); sólo haría falta si se agrega búsqueda semántica.
+endlegend
+@enduml

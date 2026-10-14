@@ -1,0 +1,91 @@
+@startuml sec-02-alta-de-proveedor-por-admin
+!include ../_estilo.iuml
+autonumber "<b>0."
+hide footbox
+
+title Secuencia — Alta de empresa operadora y primera cuenta por el ADMIN (UC-P-01)
+
+actor "Administrador" as A
+actor "Proveedor" as P
+participant "Backoffice\n(React + Vite)" as BO
+box "TurisClick API (ASP.NET Core)" #FAFAFA
+  participant "AdminProvider\nAccountsController" as AC
+  participant "AdminOnboardingService" as OS
+  participant "PasswordHasherService" as PH
+  participant "AuthController" as C
+  participant "AuthService" as S
+end box
+database "PostgreSQL" as DB
+
+== Alta (rol ADMIN, política RequireAdmin) ==
+A -> BO : completa empresa (nombre, documento legal,\ncontacto) y persona (nombre, email); Approve = true
+BO -> AC : POST /api/admin/provider-accounts
+activate AC
+AC -> OS : CreateProviderAccountAsync(request)
+activate OS
+OS -> DB : ¿existe User con ese email?
+OS -> DB : ¿existe Company con ese documento legal?
+alt email o documento duplicado
+  OS --> AC : ConflictAppException
+  AC --> BO : 409 Conflict
+else datos nuevos
+  OS -> OS : crea Company\n(Status = APPROVED + ApprovedAt,\no PENDING_APPROVAL si Approve = false)
+  OS -> OS : GenerateTemporaryPassword()\n(RandomNumberGenerator, formato XXXX-XXXX-XXXX-a1)
+  OS -> PH : Hash(temporal)
+  OS -> OS : crea User{Role = PROVIDER, CompanyId,\nMustChangePassword = true}
+  OS -> DB : SaveChanges (empresa y cuenta juntas)
+  OS --> AC : ProviderAccountCreatedResponse
+  deactivate OS
+  AC --> BO : 201 Created {company, userId, email,\ntemporaryPassword}
+  deactivate AC
+  BO --> A : muestra la contraseña temporal UNA sola vez
+end
+
+A ->> P : entrega la credencial por un canal externo\n(no existe envío por correo)
+
+== Primer ingreso del proveedor ==
+P -> BO : email + contraseña temporal
+BO -> C : POST /api/auth/login
+C -> S : LoginAsync
+S --> C : tokens con claims company_id\ny must_change_password = true
+C --> BO : 200 OK {user.mustChangePassword = true}
+BO -> BO : redirige a /cambiar-contrasena
+
+opt intento de operar antes de cambiarla
+  BO -> AC : cualquier endpoint con RequireProvider
+  note right : PasswordChangeNotPendingHandler\nrechaza el requisito
+  AC --> BO : 403 Forbidden
+end
+
+P -> BO : contraseña actual + nueva
+BO -> C : POST /api/auth/change-password\n([Authorize] sin política)
+activate C
+C -> S : ChangePasswordAsync
+activate S
+S -> PH : Verify(actual)
+alt actual incorrecta
+  S --> C : 401
+else nueva igual a la actual
+  S --> C : 400
+else válida
+  S -> PH : Hash(nueva)
+  S -> S : MustChangePassword = false
+  S -> DB : revoca todos los refresh tokens abiertos
+  S -> S : IssueTokensForUserAsync (sin el claim)
+  S -> DB : SaveChanges
+  S --> C : AuthResultResponse
+  deactivate S
+  C --> BO : 200 OK
+  deactivate C
+  BO --> P : acceso al panel del operador
+end
+
+== Recuperación (opcional) ==
+opt credencial perdida
+  A -> BO : "Regenerar credencial"
+  BO -> AC : POST /api/admin/provider-accounts/{userId}/reset-password
+  AC -> OS : ResetProviderPasswordAsync
+  OS -> DB : nuevo hash, MustChangePassword = true,\nrevoca sesiones abiertas
+  AC --> BO : 200 {temporaryPassword}
+end
+@enduml

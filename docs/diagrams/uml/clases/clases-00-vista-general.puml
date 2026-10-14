@@ -1,0 +1,81 @@
+@startuml clases-00-vista-general
+!pragma layout smetana
+!include ../_estilo.iuml
+hide empty members
+hide circle
+
+title Modelo de dominio — Vista general de agregados
+
+package "Identidad y empresas" {
+  class User as "Usuario\n(User)"
+  class RefreshToken as "Token de renovación\n(RefreshToken)"
+  class TouristPreference as "Preferencias del turista\n(TouristPreference)"
+  class Company as "Empresa operadora\n(Company)"
+}
+
+package "Catálogo" {
+  class Destination as "Destino\n(Destination)"
+  class Category as "Categoría\n(Category)"
+  class Experience as "Experiencia\n(Experience)"
+  class ExperienceAvailability as "Turno de experiencia\n(ExperienceAvailability)"
+  class Package as "Paquete\n(Package)"
+  class PackageItem as "Ítem de paquete\n(PackageItem)"
+  class PackageAvailability as "Salida de paquete\n(PackageAvailability)"
+  class PackageFlightRule as "Regla de vuelo\n(PackageFlightRule)"
+}
+
+package "Reservas, pagos y vuelos" {
+  class Reservation as "Reserva\n(Reservation)"
+  class ReservationItem as "Línea de reserva\n(ReservationItem)"
+  class PaymentTransaction as "Movimiento de pago\n(PaymentTransaction)"
+  class ReservationCancellation as "Cancelación\n(ReservationCancellation)"
+  class FlightQuote as "Cotización de vuelo\n(FlightQuote)"
+  class FlightBooking as "Reserva aérea\n(FlightBooking)"
+}
+
+package "Asistente IA" {
+  class AiConversation as "Conversación IA\n(AiConversation)"
+  class AiItinerary as "Itinerario IA\n(AiItinerary)"
+  class AiItineraryItem as "Ítem de itinerario\n(AiItineraryItem)"
+}
+
+User "1" *-- "0..*" RefreshToken
+User "1" -- "0..1" TouristPreference
+User "0..*" --> "0..1" Company : pertenece a >
+Company "1" -- "0..*" Experience : publica >
+Company "1" -- "0..*" Package : publica >
+Destination "0..1" -- "0..*" Destination : padre de >
+Destination "1" -- "0..*" Experience
+Destination "1" -- "0..*" Package
+Category "0..*" -- "0..*" Experience
+Category "0..*" -- "0..*" Package
+Experience "1" *-- "0..*" ExperienceAvailability
+Package "1" *-- "0..*" PackageItem
+Package "1" *-- "0..*" PackageAvailability
+Package "1" *-- "0..1" PackageFlightRule
+PackageItem "0..*" --> "0..1" Experience : referencia >
+
+User "1" -- "0..*" Reservation : reserva >
+Reservation "1" *-- "1..*" ReservationItem
+ReservationItem "0..*" --> "1" Company
+ReservationItem "0..*" --> "0..1" ExperienceAvailability
+ReservationItem "0..*" --> "0..1" PackageAvailability
+Reservation "1" -- "0..*" PaymentTransaction : libro >
+Reservation "1" -- "0..*" ReservationCancellation
+Reservation "1" -- "0..1" FlightBooking
+FlightBooking "0..1" --> "1" FlightQuote
+FlightQuote "0..*" --> "1" PackageAvailability
+
+User "1" -- "0..*" AiConversation : inicia >
+AiConversation "1" -- "0..*" AiItinerary : produce versiones >
+AiItinerary "1" *-- "1..*" AiItineraryItem
+AiItineraryItem "0..*" --> "0..1" Experience
+AiItineraryItem "0..*" --> "0..1" Package
+AiItinerary "0..1" -- "0..*" Reservation : origina >
+
+legend right
+  Vista resumida: sin atributos. El detalle de cada agregado está en
+  clases-01 a clases-04. Todas las clases existen como entidades EF Core
+  en src/TurisClick.Api/Modules/*/Entities.
+endlegend
+@enduml

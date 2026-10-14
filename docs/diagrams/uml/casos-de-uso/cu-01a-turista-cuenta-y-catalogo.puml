@@ -1,0 +1,50 @@
+@startuml cu-01a-turista-cuenta-y-catalogo
+!pragma layout smetana
+!include ../_estilo.iuml
+top to bottom direction
+
+title Casos de uso — Turista (1/3): cuenta y catálogo público
+
+actor "Visitante\n(sin sesión)" as Visitante
+actor "Turista" as Turista
+Visitante <|-- Turista
+
+rectangle "TurisClick — Tourist Mobile" {
+  usecase "Registrarse como turista\n(UC-AUTH-01)" as UC_REG
+  usecase "Explorar destinos\n(UC-T-03)" as UC_DEST
+  usecase "Buscar y filtrar experiencias\n(UC-T-04)" as UC_BEXP
+  usecase "Ver detalle de experiencia\n(UC-T-05)" as UC_DEXP
+  usecase "Buscar y filtrar paquetes\n(UC-T-06)" as UC_BPAQ
+  usecase "Ver detalle de paquete\n(UC-T-07)" as UC_DPAQ
+
+  usecase "Iniciar sesión\n(UC-AUTH-02)" as UC_LOGIN
+  usecase "Renovar sesión\n(UC-AUTH-03)" as UC_REFRESH
+  usecase "Cerrar sesión\n(UC-AUTH-04)" as UC_LOGOUT
+  usecase "Configurar preferencias\nde viaje (onboarding)" as UC_PREF
+
+  usecase "Calificar / reseñar" <<futuro>> as F_RES
+  usecase "Guardar favoritos" <<futuro>> as F_FAV
+}
+
+Visitante --> UC_REG
+Visitante --> UC_DEST
+Visitante --> UC_BEXP
+Visitante --> UC_DEXP
+Visitante --> UC_BPAQ
+Visitante --> UC_DPAQ
+
+Turista --> UC_LOGIN
+Turista --> UC_REFRESH
+Turista --> UC_LOGOUT
+Turista --> UC_PREF
+
+UC_DEXP ..> UC_BEXP : <<extend>>
+UC_DPAQ ..> UC_BPAQ : <<extend>>
+
+legend right
+  El catálogo es público ([AllowAnonymous]) y sólo muestra
+  productos PUBLISHED de empresas no suspendidas.
+  El Turista hereda todo lo que puede hacer un Visitante.
+  <<futuro>> = backlog, no implementado.
+endlegend
+@enduml

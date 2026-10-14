@@ -1,0 +1,90 @@
+@startuml sec-01b-autorizacion-renovacion-y-cierre
+!include ../_estilo.iuml
+autonumber "<b>0."
+hide footbox
+
+title Secuencia — Autorización por rol, renovación transparente y cierre de sesión (UC-AUTH-03, UC-AUTH-04)
+
+actor "Turista" as T
+box "Tourist Mobile (Expo)" #FAFAFA
+  participant "AuthManager\n(interceptor HTTP)" as AM
+  database "SecureStore" as SS
+end box
+box "TurisClick API (ASP.NET Core)" #FAFAFA
+  participant "JwtBearer +\npolíticas de autorización" as MW
+  participant "Controlador protegido\n(p. ej. ReservationsController)" as RC
+  participant "AuthController" as C
+  participant "AuthService" as S
+  participant "RefreshTokenRepository" as RTR
+  participant "JwtTokenService" as JWT
+end box
+database "PostgreSQL" as DB
+
+== Petición autenticada ==
+T -> AM : acción (p. ej. "Mis viajes")
+AM -> MW : GET /api/reservations/me\nAuthorization: Bearer <access>
+activate MW
+MW -> MW : valida firma, issuer, audience y expiración
+alt token válido
+  MW -> MW : política RequireTourist:\nrole = TOURIST y sin must_change_password
+  alt rol incorrecto o contraseña temporal pendiente
+    MW --> AM : 403 Forbidden
+  else autorizado
+    MW -> RC : ListMine()
+    RC --> AM : 200 OK
+  end
+else access token vencido
+  MW --> AM : 401 Unauthorized
+  deactivate MW
+
+  group Renovación transparente (UC-AUTH-03)
+  AM -> SS : lee refresh token
+  AM -> C : POST /api/auth/refresh {refreshToken}
+  activate C
+  note right of AM
+    Los 401 concurrentes comparten
+    un único refresh (deduplicado).
+  end note
+  C -> S : RefreshAsync(request)
+  activate S
+  S -> JWT : HashRefreshToken(token)
+  S -> RTR : GetByTokenHashAsync(hash)
+  RTR -> DB : SELECT refresh_tokens
+  alt inexistente, revocado o vencido
+    S --> C : UnauthorizedAppException
+    C --> AM : 401
+    AM -> SS : borra sesión
+    AM --> T : "Tu sesión expiró. Iniciá sesión de nuevo."
+  else usuario SUSPENDED
+    C --> AM : 403
+  else válido
+    S -> S : rotación: RevokedAt = ahora
+    S -> JWT : nuevo access + nuevo refresh
+    S -> DB : SaveChanges
+    S --> C : AuthResultResponse
+    deactivate S
+    C --> AM : 200 OK
+    deactivate C
+    AM -> SS : guarda refresh rotado
+    AM -> MW : reintenta la petición original (una sola vez)
+    MW -> RC : ListMine()
+    RC --> AM : 200 OK
+  end
+  end
+end
+
+== Cierre de sesión (UC-AUTH-04) ==
+T -> AM : "Cerrar sesión"
+AM -> C : POST /api/auth/logout {refreshToken}
+activate C
+C -> S : LogoutAsync(userId, request)
+S -> RTR : GetByTokenHashAsync(hash)
+alt no existe o pertenece a otro usuario
+  C --> AM : 404
+else
+  S -> DB : RevokedAt = ahora
+  C --> AM : 204 No Content
+end
+deactivate C
+AM -> SS : borra refresh token
+@enduml
