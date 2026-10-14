@@ -8,8 +8,8 @@ Uso, desde la raíz del repositorio:
     python docs/diagrams/architecture/_herramientas/generar_erd.py
 
 Salida (se sobrescribe):
-    docs/diagrams/architecture/04-base-de-datos/turisclick-v2.dbml
-    docs/diagrams/architecture/04-base-de-datos/04a-erd-general.puml ... 04g-erd-ia-itinerarios.puml
+    docs/diagrams/architecture/tecnico/04-base-de-datos/turisclick-v2.dbml
+    docs/diagrams/architecture/tecnico/04-base-de-datos/04a-erd-general.puml ... 04g-erd-ia-itinerarios.puml
 
 Lo único que NO sale del snapshot, y por eso está escrito a mano abajo:
   * ENUMS: qué enum de C# respalda cada columna varchar (el snapshot sólo ve `string`).
@@ -24,7 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 SNAPSHOT = ROOT / "src/TurisClick.Api/Infrastructure/Database/Migrations/TurisClickDbContextModelSnapshot.cs"
-OUT = ROOT / "docs/diagrams/architecture/04-base-de-datos"
+OUT = ROOT / "docs/diagrams/architecture/tecnico/04-base-de-datos"
 
 # --------------------------------------------------------------------------------------------------
 # 1. Parser del snapshot

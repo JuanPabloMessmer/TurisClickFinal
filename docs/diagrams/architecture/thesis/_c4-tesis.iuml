@@ -1,0 +1,23 @@
+' Estilo común de los tres niveles C4 de la tesis: misma paleta que _tema-tesis.iuml, rellenos claros y texto
+' oscuro (pensado para impresión). Se incluye DESPUÉS de la librería C4 correspondiente.
+skinparam defaultFontName Arial
+HIDE_STEREOTYPE()
+skinparam titleFontSize 18
+skinparam titleFontStyle bold
+
+UpdateElementStyle("person", $bgColor="#1F3A5F", $fontColor="#FFFFFF", $borderColor="#1F3A5F", $legendText="persona")
+UpdateElementStyle("system", $bgColor="#E3F1E6", $fontColor="#1B1B1B", $borderColor="#2E7D32", $legendText="sistema")
+UpdateElementStyle("container", $bgColor="#E3F1E6", $fontColor="#1B1B1B", $borderColor="#2E7D32", $legendText="contenedor")
+UpdateElementStyle("component", $bgColor="#E3F1E6", $fontColor="#1B1B1B", $borderColor="#2E7D32", $legendText="componente")
+UpdateElementStyle("external_system", $bgColor="#EEEEEE", $fontColor="#1B1B1B", $borderColor="#757575", $legendText="sistema externo")
+UpdateElementStyle("external_container", $bgColor="#EEEEEE", $fontColor="#1B1B1B", $borderColor="#757575")
+UpdateBoundaryStyle($bgColor="#FFFFFF", $fontColor="#1B1B1B", $borderColor="#78909C", $legendText="límite")
+UpdateBoundaryStyle($elementName="system", $bgColor="#FFFFFF", $fontColor="#1B1B1B", $borderColor="#78909C", $type="sistema", $legendText="límite del sistema")
+UpdateBoundaryStyle($elementName="container", $bgColor="#FFFFFF", $fontColor="#1B1B1B", $borderColor="#78909C", $type="contenedor", $legendText="límite del contenedor")
+UpdateRelStyle($textColor="#263238", $lineColor="#37474F")
+
+AddElementTag("cliente", $bgColor="#DCE8F5", $fontColor="#1B1B1B", $borderColor="#2E5C8A", $legendText="interfaz de usuario")
+AddElementTag("datos", $bgColor="#FFF4D6", $fontColor="#1B1B1B", $borderColor="#B8860B", $legendText="almacenamiento")
+AddElementTag("ia", $bgColor="#EFE4F7", $fontColor="#1B1B1B", $borderColor="#6A1B9A", $legendText="inteligencia artificial")
+AddElementTag("prueba", $bgColor="#FDE7D8", $fontColor="#1B1B1B", $borderColor="#C55A11", $legendText="simulado o en modo de prueba")
+AddElementTag("local", $bgColor="#EEEEEE", $fontColor="#1B1B1B", $borderColor="#757575", $borderStyle=DashedLine(), $legendText="sólo en desarrollo local")

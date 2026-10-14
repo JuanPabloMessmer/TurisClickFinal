@@ -1,0 +1,35 @@
+@startuml T02b-c4-contenedores
+' C4 Nivel 2 — Contenedores. Evidencia: frontend/apps/{tourist-mobile,backoffice}/package.json,
+' src/TurisClick.Api/TurisClick.Api.csproj, Program.cs (JWT, EF Core + Npgsql), FlightsModuleExtensions.cs,
+' AiModuleExtensions.cs.
+!pragma layout smetana
+!$LEGEND_TITLE_TEXT = "Leyenda"
+!include <C4/C4_Container>
+!include _c4-tesis.iuml
+LAYOUT_TOP_DOWN()
+
+title C4 · Nivel 2 — Contenedores
+
+Person(turista, "Turista")
+Person(gestor, "Operador o administrador")
+
+System_Boundary(tc, "TurisClick") {
+  Container(mobile, "App móvil", "React Native, Expo", "Catálogo, asistente y reservas", $tags="cliente")
+  Container(backoffice, "Backoffice", "React, TypeScript", "Gestión de oferta y plataforma", $tags="cliente")
+  Container(api, "API REST", "ASP.NET Core 10", "Lógica de negocio y seguridad")
+  ContainerDb(db, "Base de datos", "PostgreSQL", "Catálogo, reservas e itinerarios", $tags="datos")
+}
+
+System_Ext(duffel, "Duffel", "Vuelos, modo prueba", $tags="prueba")
+System_Ext(llm, "Ollama · Qwen 2.5", "LLM local", $tags="local")
+
+Rel(turista, mobile, "Usa")
+Rel(gestor, backoffice, "Usa")
+Rel(mobile, api, "JSON/HTTPS, JWT")
+Rel(backoffice, api, "JSON/HTTPS, JWT")
+Rel(api, db, "Lee y escribe", "EF Core")
+Rel(api, duffel, "Vuelos", "HTTPS")
+Rel(api, llm, "Interpretación", "HTTP")
+
+SHOW_LEGEND(false)
+@enduml

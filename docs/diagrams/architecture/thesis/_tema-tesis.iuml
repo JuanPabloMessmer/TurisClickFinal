@@ -1,0 +1,44 @@
+' Tema de los diagramas de la tesis (no C4). Misma paleta en todos los diagramas:
+'   azul    = clientes / interfaz          verde   = backend propio
+'   ámbar   = datos (PostgreSQL)           violeta = inteligencia artificial
+'   gris    = sistemas externos            naranja = simulado o en modo de prueba
+' Cuerpo base 14 px y mínimo 12 px: con anchos de ~780 px (vertical) o ~1200 px (apaisada) el texto
+' queda en ≥ 7 pt impreso en A4 (ver _herramientas/legibilidad_a4.py).
+skinparam defaultFontName Arial
+skinparam defaultFontSize 14
+skinparam shadowing false
+skinparam roundCorner 10
+skinparam backgroundColor #FFFFFF
+skinparam titleFontSize 18
+skinparam titleFontStyle bold
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 1.3
+skinparam ArrowFontSize 12
+skinparam ArrowFontColor #263238
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #90A4AE
+skinparam noteFontSize 12
+skinparam legendBackgroundColor #FAFAFA
+skinparam legendBorderColor #B0BEC5
+skinparam legendFontSize 12
+skinparam packageStyle rectangle
+skinparam packageBorderColor #78909C
+skinparam packageFontSize 14
+skinparam packageFontStyle bold
+skinparam rectangleBorderColor #455A64
+skinparam rectangleFontSize 14
+skinparam databaseBorderColor #B8860B
+skinparam databaseBackgroundColor #FFF4D6
+skinparam actorBorderColor #1F3A5F
+skinparam actorBackgroundColor #DCE8F5
+skinparam actorFontSize 14
+skinparam nodeBorderColor #546E7A
+skinparam cloudBorderColor #546E7A
+skinparam stereotypeFontSize 12
+
+!$CLIENTE = "#DCE8F5"
+!$BACKEND = "#E3F1E6"
+!$DATOS = "#FFF4D6"
+!$IA = "#EFE4F7"
+!$EXTERNO = "#EEEEEE"
+!$SIMULADO = "#FDE7D8"

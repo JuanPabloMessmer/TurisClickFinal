@@ -17,7 +17,7 @@ echo "1/4 ERD y DBML desde el snapshot de EF Core"
 python "$HERE/_herramientas/generar_erd.py"
 
 echo "2/4 Validación del DBML"
-node "$HERE/_herramientas/validar-dbml.mjs" "$HERE/04-base-de-datos/turisclick-v2.dbml"
+node "$HERE/_herramientas/validar-dbml.mjs" "$HERE/tecnico/04-base-de-datos/turisclick-v2.dbml"
 
 echo "3/4 PlantUML (sintaxis + SVG + PNG)"
 mapfile -t PUML < <(find "$HERE" -name '*.puml' -not -path '*/_herramientas/*' | sort)

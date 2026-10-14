@@ -1,0 +1,42 @@
+@startuml T04b-modelo-conceptual-operacion
+' Modelo conceptual de datos (2/2): reservas, pagos, vuelos y asistente de IA. Las entidades grises son de la
+' figura anterior (oferta turística). Cada relación corresponde a una FK real (correspondencia en el README).
+!pragma layout smetana
+!include _tema-tesis.iuml
+hide circle
+hide empty members
+skinparam nodesep 45
+skinparam ranksep 50
+skinparam classFontSize 14
+skinparam classBorderColor #455A64
+
+title Modelo conceptual de datos (2/2): reservas, pagos, vuelos e IA
+
+entity "Turista\n(Usuario)" as usuario $CLIENTE
+entity "Preferencias" as pref $CLIENTE
+entity "Conversación\ncon el asistente" as conv $IA
+entity "Itinerario\npropuesto" as itin $IA
+entity "Reserva" as res $DATOS
+entity "Ítem de reserva" as item $DATOS
+entity "Movimiento de pago\n«simulado»" as pago $SIMULADO
+entity "Cancelación" as canc $DATOS
+entity "Reserva aérea" as raer $SIMULADO
+entity "Cotización\nde vuelo" as cot $SIMULADO
+entity "Experiencia / Paquete\n(oferta)" as prod $EXTERNO
+entity "Disponibilidad\n(oferta)" as disp $EXTERNO
+
+usuario ||--o| pref : tiene
+usuario ||--o{ conv : inicia
+conv ||--o{ itin : genera
+itin }o--o{ prod : propone
+usuario ||--o{ res : realiza
+itin |o--o{ res : origina
+res ||--|{ item : contiene
+item }o--|| disp : retiene cupo
+res ||--o{ pago : registra
+res ||--o{ canc : solicita
+res ||--o| raer : incluye
+cot ||--o| raer : origina
+prod ||--o{ cot : cotiza
+prod ||--o{ disp : programa
+@enduml
