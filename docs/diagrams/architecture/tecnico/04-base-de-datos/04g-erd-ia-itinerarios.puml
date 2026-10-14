@@ -1,0 +1,131 @@
+@startuml 04g-erd-ia-itinerarios
+' GENERADO por docs/diagrams/architecture/_herramientas/generar_erd.py a partir del snapshot de EF Core.
+' Para cambiar el contenido, editar la vista en el generador y volver a ejecutarlo.
+!pragma layout smetana
+!include ../_tema.iuml
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 55
+title Persistencia del asistente de IA: conversaciones e itinerarios
+
+package "Módulo Ai" as pkg_Ai {
+  entity "ai_conversations" as ai_conversations <<Ai>> #F3E5F5 {
+    * id : uuid <<PK>>
+    --
+      preferred_destination_id : uuid <<FK>>
+    * tourist_id : uuid <<FK>>
+      budget_currency : varchar(3)
+      budget_total : numeric(12,2)
+    * created_at : timestamptz
+      duration_days : integer
+      end_date : date
+      restrictions_notes : text
+      start_date : date
+    * status : varchar(20)
+      travel_pace : varchar(20)
+      travelers_count : integer
+    * updated_at : timestamptz
+  }
+  entity "ai_conversation_categories" as ai_conversation_categories <<Ai>> #F3E5F5 {
+    * ai_conversation_id : uuid <<PK, FK>>
+    * category_id : uuid <<PK, FK>>
+  }
+  entity "ai_messages" as ai_messages <<Ai>> #F3E5F5 {
+    * id : uuid <<PK>>
+    --
+    * ai_conversation_id : uuid <<FK>>
+    * content : text
+    * created_at : timestamptz
+    * sender : varchar(20)
+  }
+  entity "ai_itineraries" as ai_itineraries <<Ai>> #F3E5F5 {
+    * id : uuid <<PK>>
+    --
+    * ai_conversation_id : uuid <<FK>>
+    * tourist_id : uuid <<FK>>
+    * created_at : timestamptz
+    * status : varchar(20)
+      title : varchar(200)
+    * updated_at : timestamptz
+    * version : integer
+  }
+  entity "ai_itinerary_items" as ai_itinerary_items <<Ai>> #F3E5F5 {
+    * id : uuid <<PK>>
+    --
+    * ai_itinerary_id : uuid <<FK>>
+      experience_availability_id : uuid <<FK>>
+      experience_id : uuid <<FK>>
+      package_availability_id : uuid <<FK>>
+      package_id : uuid <<FK>>
+    * currency : varchar(3)
+    * day_number : integer
+    * estimated_unit_price : numeric(12,2)
+    * product_type : varchar(20)
+    * sort_order : integer
+  }
+}
+entity "users" as users <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "destinations" as destinations <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "categories" as categories <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "experiences" as experiences <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "experience_availabilities" as experience_availabilities <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "packages" as packages <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "package_availabilities" as package_availabilities <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "reservations" as reservations <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+
+destinations |o--o{ ai_conversations : "preferred_destination_id\n[RESTRICT]"
+users ||--o{ ai_conversations : "tourist_id\n[RESTRICT]"
+ai_conversations ||--o{ ai_itineraries : "ai_conversation_id\n[CASCADE]"
+users ||--o{ ai_itineraries : "tourist_id\n[RESTRICT]"
+ai_itineraries ||--o{ ai_itinerary_items : "ai_itinerary_id\n[CASCADE]"
+experience_availabilities |o--o{ ai_itinerary_items : "experience_availability_id\n[RESTRICT]"
+experiences |o--o{ ai_itinerary_items : "experience_id\n[RESTRICT]"
+package_availabilities |o--o{ ai_itinerary_items : "package_availability_id\n[RESTRICT]"
+packages |o--o{ ai_itinerary_items : "package_id\n[RESTRICT]"
+ai_conversations ||--o{ ai_messages : "ai_conversation_id\n[CASCADE]"
+ai_itineraries |o--o{ reservations : "ai_itinerary_id\n[RESTRICT]"
+ai_conversations ||--o{ ai_conversation_categories : "ai_conversation_id\n[CASCADE]"
+categories ||--o{ ai_conversation_categories : "category_id\n[CASCADE]"
+legend bottom left
+<b>Notación</b> (Ingeniería de la Información / pata de gallo)
+  ● (punto lleno) columna NOT NULL · <<PK>> clave primaria · <<FK>> clave foránea · <<UK>> única
+  ""||"" exactamente uno · ""|o"" cero o uno · ""o{"" cero o muchos
+  línea continua = FK real en PostgreSQL · línea punteada = referencia lógica sin FK
+  entidades grises = tablas de otras vistas (sólo su PK)
+<b>Dominios de las columnas varchar</b> (enums de C#, guardados como texto)
+  ""ai_conversations.status"" → ACTIVE, CLOSED
+  ""ai_conversations.travel_pace"" → RELAXED, BALANCED, INTENSE
+  ""ai_messages.sender"" → TOURIST, AI
+  ""ai_itineraries.status"" → DRAFT, SAVED, BOOKED, DISCARDED
+  ""ai_itinerary_items.product_type"" → EXPERIENCE, PACKAGE
+endlegend
+
+note as checks
+<b>Restricciones CHECK en la base</b> (expresión completa en turisclick-v2.dbml)
+""ck_ai_conversations_budget""
+""ck_ai_conversations_currency""
+""ck_ai_conversations_dates""
+""ck_ai_conversations_travelers""
+""ck_ai_itinerary_items_currency""
+""ck_ai_itinerary_items_day""
+""ck_ai_itinerary_items_product_shape""
+end note
+@enduml

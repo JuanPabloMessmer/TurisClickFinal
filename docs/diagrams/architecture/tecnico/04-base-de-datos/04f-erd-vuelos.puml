@@ -1,0 +1,126 @@
+@startuml 04f-erd-vuelos
+' GENERADO por docs/diagrams/architecture/_herramientas/generar_erd.py a partir del snapshot de EF Core.
+' Para cambiar el contenido, editar la vista en el generador y volver a ejecutarlo.
+!pragma layout smetana
+!include ../_tema.iuml
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 55
+title Vuelos en paquetes: regla, cotización y reserva aérea
+
+package "Módulo Flights" as pkg_Flights {
+  entity "package_flight_rules" as package_flight_rules <<Flights>> #FCE4EC {
+    * package_id : uuid <<PK, FK>>
+    --
+    * allowed_origin_iatas : varchar(200)
+    * cabin_class : varchar(20)
+    * created_at : timestamptz
+    * destination_iata : varchar(3)
+    * inbound_offset_days : integer
+    * outbound_offset_days : integer
+    * round_trip : boolean
+    * updated_at : timestamptz
+  }
+  entity "flight_quotes" as flight_quotes <<Flights>> #FCE4EC {
+    * id : uuid <<PK>>
+    --
+    * package_availability_id : uuid <<FK>>
+    * package_id : uuid <<FK>>
+    * currency : varchar(3)
+    * destination_iata : varchar(3)
+      expires_at : timestamptz
+      inbound_date : date
+    * initial_amount : numeric(12,2)
+    * itinerary_summary : varchar(500)
+    * origin_iata : varchar(3)
+    * outbound_date : date
+    * provider : varchar(50)
+    * provider_offer_id : varchar(200)
+    * quoted_at : timestamptz
+      revalidated_at : timestamptz
+    * status : varchar(20)
+    * total_amount : numeric(12,2)
+      tourist_id : uuid <<ref. lógica>>
+    * travelers : integer
+  }
+  entity "flight_bookings" as flight_bookings <<Flights>> #FCE4EC {
+    * id : uuid <<PK>>
+    --
+    * flight_quote_id : uuid <<FK, UK>>
+    * reservation_id : uuid <<FK, UK>>
+      booking_reference : varchar(20)
+      carrier_iata : varchar(3)
+      carrier_name : varchar(100)
+      confirmed_at : timestamptz
+    * created_at : timestamptz
+    * currency : varchar(3)
+    * destination_iata : varchar(3)
+      failed_at : timestamptz
+      failure_reason : varchar(500)
+    * idempotency_key : varchar(100) <<UK>>
+      inbound_arrival_at : timestamp
+      inbound_date : date
+      inbound_departure_at : timestamp
+      inbound_flight_number : varchar(10)
+    * itinerary_summary : varchar(500)
+      last_reconciliation_at : timestamptz
+      next_reconciliation_at : timestamptz
+    * origin_iata : varchar(3)
+      outbound_arrival_at : timestamp
+    * outbound_date : date
+      outbound_departure_at : timestamp
+      outbound_flight_number : varchar(10)
+    * provider : varchar(50)
+      provider_order_id : varchar(200)
+    * reconciliation_attempts : integer
+    * status : varchar(40)
+    * total_amount : numeric(12,2)
+    * travelers : integer
+  }
+}
+entity "packages" as packages <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "package_availabilities" as package_availabilities <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "reservations" as reservations <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "users" as users <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+
+flight_quotes ||--o| flight_bookings : "flight_quote_id\n[RESTRICT]"
+reservations ||--o| flight_bookings : "reservation_id\n[CASCADE]"
+package_availabilities ||--o{ flight_quotes : "package_availability_id\n[CASCADE]"
+packages ||--o{ flight_quotes : "package_id\n[CASCADE]"
+packages ||--o| package_flight_rules : "package_id\n[CASCADE]"
+users |o..o{ flight_quotes : "tourist_id\n(sin FK)"
+legend bottom left
+<b>Notación</b> (Ingeniería de la Información / pata de gallo)
+  ● (punto lleno) columna NOT NULL · <<PK>> clave primaria · <<FK>> clave foránea · <<UK>> única
+  ""||"" exactamente uno · ""|o"" cero o uno · ""o{"" cero o muchos
+  línea continua = FK real en PostgreSQL · línea punteada = referencia lógica sin FK
+  entidades grises = tablas de otras vistas (sólo su PK)
+<b>Dominios de las columnas varchar</b> (enums de C#, guardados como texto)
+  ""package_flight_rules.cabin_class"" → ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST
+  ""flight_quotes.status"" → QUOTED, CONFIRMED, PRICE_CHANGED, EXPIRED, UNAVAILABLE
+  ""flight_bookings.status"" → PENDING, ORDERING, CONFIRMED, FAILED, RECONCILIATION_REQUIRED, CANCELLED
+endlegend
+
+note as checks
+<b>Restricciones CHECK en la base</b> (expresión completa en turisclick-v2.dbml)
+""ck_package_flight_rules_destination""
+""ck_package_flight_rules_offsets""
+""ck_package_flight_rules_origins""
+""ck_flight_quotes_amounts""
+""ck_flight_quotes_currency""
+""ck_flight_quotes_inbound""
+""ck_flight_quotes_travelers""
+""ck_flight_bookings_amount""
+""ck_flight_bookings_currency""
+end note
+@enduml

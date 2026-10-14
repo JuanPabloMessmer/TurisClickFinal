@@ -1,0 +1,50 @@
+@startuml 02b-c4-n2-contenedores
+' C4 Nivel 2 — Contenedores de TurisClick V2.
+' Evidencia: frontend/apps/*/package.json, frontend/packages/*, src/TurisClick.Api/TurisClick.Api.csproj,
+' Program.cs, frontend/apps/*/src/lib/env.ts, appsettings*.json.
+!pragma layout smetana
+!include <C4/C4_Container>
+skinparam defaultFontName Arial
+LAYOUT_TOP_DOWN()
+
+AddElementTag("opcional", $bgColor="#8E7CC3", $borderColor="#5B4A99", $legendText="integración opcional (por configuración)")
+AddElementTag("solo_local", $bgColor="#999999", $borderColor="#666666", $legendText="sólo en desarrollo local, no desplegado")
+
+title TurisClick V2 — C4 Nivel 2: Contenedores
+
+Person(turista, "Turista", "Rol TOURIST")
+Person(operador, "Operador turístico", "Rol PROVIDER")
+Person(admin, "Administrador", "Rol ADMIN")
+
+System_Boundary(tc, "TurisClick V2") {
+  Container(mobile, "Tourist Mobile", "React Native 0.86, Expo 57, expo-router, TanStack Query, axios", "App Android del turista: catálogo, asistente IA, reservas, checkout con pago simulado, Mis viajes y cancelación. Tokens en expo-secure-store (Keystore).")
+  Container(backoffice, "Backoffice", "React 19, TypeScript, Vite, React Router 7, TanStack Query, Radix UI", "SPA web para PROVIDER y ADMIN: empresas, catálogo, calendario de cupos, reservas recibidas, plataforma. Tokens en localStorage del navegador.")
+  Container(api, "TurisClick API", "ASP.NET Core 10 Web API, EF Core 10 + Npgsql, JWT Bearer, Serilog", "Monolito modular: 11 módulos de negocio, autorización por rol, reservas con UPDATE condicional, pago simulado, vuelos, asistente IA y 3 procesos en segundo plano.")
+  ContainerDb(db, "Base de datos", "PostgreSQL 16", "29 tablas + __EFMigrationsHistory, 14 migraciones EF Core. turisclick_db_v2 en Azure; turisclick_v2_dev/_test/_demo en local.")
+}
+
+System_Ext(duffel, "Duffel Flights API", "Modo TEST; desactivado por defecto (proveedor Fake)", $tags="opcional")
+System_Ext(ollama, "Ollama + qwen2.5:7b-instruct", "Sólo local (Ai:Provider=Hybrid/Ollama)", $tags="solo_local")
+System_Ext(commons, "Wikimedia Commons", "Imágenes del catálogo demo")
+
+Rel(turista, mobile, "Usa")
+Rel(operador, backoffice, "Usa", "navegador")
+Rel(admin, backoffice, "Usa", "navegador")
+
+Rel(mobile, api, "Llama a la API REST", "HTTPS/JSON, Authorization: Bearer JWT")
+Rel(backoffice, api, "Llama a la API REST", "HTTPS/JSON, Bearer JWT, CORS")
+Rel(api, db, "Lee y escribe; transacciones y UPDATE condicional de cupos", "EF Core / Npgsql, TCP 5432")
+Rel(api, duffel, "IFlightProvider → DuffelFlightProvider", "HTTPS/JSON")
+Rel(api, ollama, "IAiModelClient → OllamaAiModelClient (/api/generate)", "HTTP/JSON")
+Rel(mobile, commons, "Descarga imágenes", "HTTPS")
+Rel(backoffice, commons, "Descarga imágenes", "HTTPS")
+
+note right of api
+  Paquetes compartidos del frontend (npm workspaces):
+  @turisclick/api-client (cliente axios + tipos OpenAPI),
+  @turisclick/auth-core (sesión y refresh de tokens),
+  @turisclick/utils (calendario). Son librerías, no contenedores.
+end note
+
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,11 @@
+{
+  "name": "turisclick-diagramas-arquitectura",
+  "private": true,
+  "description": "Herramientas para renderizar los diagramas Mermaid y validar el DBML de docs/diagrams/architecture",
+  "type": "module",
+  "dependencies": {
+    "@dbml/core": "3.13.5",
+    "mermaid": "11.17.2",
+    "puppeteer-core": "23.11.1"
+  }
+}

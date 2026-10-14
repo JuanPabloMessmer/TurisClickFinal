@@ -1,0 +1,47 @@
+---
+title: Azure V2 — CI/CD con GitHub Actions y pasos manuales de infraestructura
+---
+%% Evidencia: .github/workflows/backend-v2.yml, infra/README.md, infra/bootstrap/*.ps1,
+%% docs/azure-v2-deployment-plan.md. El deploy dejó de ser automático tras el incidente del 2026-10-07.
+flowchart TB
+    push(["push / pull request a master<br/>(src/, tests/, TurisClick.slnx, workflow)"])
+    manual(["workflow_dispatch<br/>deploy = true · migrations_applied = 00xx"])
+
+    subgraph ci["Job build-test (siempre)"]
+        direction TB
+        b1["restore → build Release"] --> b2["dotnet test<br/>contra postgres:16 efímero del job"]
+        b2 --> b3["publish → artifact turisclick-api-v2"]
+    end
+
+    subgraph cd["Job deploy (sólo manual, sólo master)"]
+        direction TB
+        d1["azure/login por OIDC<br/>id-turisclick-v2-github-deploy<br/>(sin secretos de Azure en GitHub)"]
+        d1 --> d2{"Sonda de esquema<br/>GET /api/packages<br/>POST /api/auth/login (credencial inválida)"}
+        d2 -->|"500 'does not exist'"| stop["Deploy detenido<br/>sin tocar la app"]
+        d2 -->|"200 / 401"| d3["az webapp deploy --type zip --restart"]
+        d3 --> d4["Smoke tests: /api/categories,<br/>/api/destinations, /api/experiences, /api/packages"]
+    end
+
+    subgraph ops["Fuera del workflow: scripts infra/bootstrap (PowerShell, a mano)"]
+        direction TB
+        o1["register-providers · bootstrap-state"] --> o2["terraform plan / apply<br/>(6 recursos V2)"]
+        o2 --> o3["set-keyvault-secrets · create-db-role"]
+        o3 --> o4["run-migrations (script EF idempotente)<br/>regla de firewall temporal para la IP actual"]
+        o4 --> o5["run-seed · deploy-backoffice (SWA CLI)"]
+        o5 --> o6["lock-postgres (pendiente)"]
+    end
+
+    push --> ci
+    manual --> ci
+    ci -->|"sólo si fue workflow_dispatch con deploy=true"| cd
+    o4 -.->|"precondición:<br/>migraciones al día"| manual
+
+    estado["Estado verificado 2026-10-14 00:49 UTC:<br/>/api/packages → 500 (cancellation_policy no existe)<br/>⇒ 0012–0014 siguen sin aplicarse; la sonda detendría un deploy nuevo"]
+    estado -.- d2
+
+    classDef ok fill:#E8F5E9,stroke:#38761D,color:#1B1B1B
+    classDef bad fill:#F4CCCC,stroke:#CC0000,color:#1B1B1B
+    classDef man fill:#FFF2CC,stroke:#BF9000,color:#1B1B1B
+    class b1,b2,b3,d1,d3,d4 ok
+    class stop,estado bad
+    class o1,o2,o3,o4,o5,o6,manual man

@@ -1,0 +1,54 @@
+@startuml T02c-c4-componentes
+' C4 Nivel 3 — Componentes de la API. Cada componente agrupa módulos reales de src/TurisClick.Api/Modules;
+' las relaciones son dependencias reales de constructor (ver tecnico/02-c4/02c y tecnico/03-backend/*).
+'   Seguridad y acceso  = Modules/Auth + Infrastructure/Security
+'   Catálogo            = Destinations, Categories, Experiences, Packages
+'   Empresas y admin.   = Companies, Admin
+'   Tareas programadas  = 3 BackgroundService (expiración, conciliación de vuelos, cancelaciones)
+!pragma layout smetana
+!$LEGEND_TITLE_TEXT = "Leyenda"
+!include <C4/C4_Component>
+!include _c4-tesis.iuml
+LAYOUT_TOP_DOWN()
+
+title C4 · Nivel 3 — Componentes de la API
+
+Container(clientes, "App móvil y Backoffice", "React Native, React", $tags="cliente")
+
+Container_Boundary(api, "API REST") {
+  Component(seg, "Seguridad y acceso", "JWT", "Autenticación y roles")
+  Component(emp, "Empresas y administración", "", "Operadores y control")
+  Component(ia, "Asistente de IA", "", "Interpreta y compone itinerarios", $tags="ia")
+  Component(tar, "Tareas programadas", "", "Expiración y conciliación")
+  Component(pref, "Preferencias", "", "Perfil del turista")
+  Component(cat, "Catálogo", "", "Destinos, productos y cupos")
+  Component(res, "Reservas", "", "Cupo, pago y cancelación")
+  Component(vue, "Vuelos", "", "Cotización y emisión")
+  Component(pag, "Pagos", "", "Cobro y reembolso simulados", $tags="prueba")
+  Component(per, "Persistencia", "EF Core", "Acceso a datos de todos los componentes")
+}
+
+ContainerDb(db, "Base de datos", "PostgreSQL", $tags="datos")
+System_Ext(duffel, "Duffel", "modo prueba", $tags="prueba")
+System_Ext(llm, "Qwen 2.5", "sólo local", $tags="local")
+
+Rel(clientes, seg, "HTTPS + JWT")
+Rel(ia, pref, "perfil")
+Rel(ia, cat, "candidatos")
+Rel(ia, res, "reserva itinerario")
+Rel_L(res, cat, "retiene cupo")
+Rel(res, pag, "cobra / reembolsa")
+BiRel_R(res, vue, "emisión y\ncompensación")
+Rel(tar, res, "expira")
+Rel(tar, vue, "concilia")
+Rel(per, db, "SQL")
+Rel(vue, duffel, "HTTPS")
+Rel(ia, llm, "HTTP")
+
+Lay_R(seg, emp)
+Lay_R(emp, ia)
+Lay_R(ia, tar)
+Lay_R(pref, cat)
+Lay_R(pag, per)
+
+@enduml

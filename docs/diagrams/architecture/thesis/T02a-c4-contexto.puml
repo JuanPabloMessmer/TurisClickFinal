@@ -1,0 +1,28 @@
+@startuml T02a-c4-contexto
+' C4 Nivel 1 — Contexto del sistema. Sólo actores, el sistema y los sistemas externos con los que el
+' backend se comunica. Evidencia: Program.cs (roles), FlightsModuleExtensions.cs, AiModuleExtensions.cs.
+!pragma layout smetana
+!$LEGEND_TITLE_TEXT = "Leyenda"
+!include <C4/C4_Context>
+!include _c4-tesis.iuml
+LAYOUT_TOP_DOWN()
+
+title C4 · Nivel 1 — Contexto del sistema
+
+Person(turista, "Turista", "Planifica y reserva su viaje")
+Person(operador, "Operador turístico", "Publica experiencias y paquetes")
+Person(admin, "Administrador", "Gestiona la plataforma")
+
+System(tc, "TurisClick", "Plataforma de reservas turísticas con asistente de IA")
+
+System_Ext(duffel, "Duffel", "API de vuelos, modo prueba", $tags="prueba")
+System_Ext(llm, "Ollama · Qwen 2.5", "Modelo de lenguaje local", $tags="local")
+
+Rel(turista, tc, "Busca, reserva y paga")
+Rel(operador, tc, "Gestiona su oferta")
+Rel(admin, tc, "Administra")
+Rel(tc, duffel, "Cotiza y emite vuelos")
+Rel(tc, llm, "Interpreta pedidos")
+
+SHOW_LEGEND(false)
+@enduml

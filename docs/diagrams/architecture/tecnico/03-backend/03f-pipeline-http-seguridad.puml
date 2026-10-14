@@ -1,0 +1,63 @@
+@startuml 03f-pipeline-http-seguridad
+' Recorrido de una solicitud HTTP por el pipeline real de Program.cs, autenticación JWT y autorización.
+' Evidencia: src/TurisClick.Api/Program.cs, Infrastructure/Security/*, Shared/Exceptions/GlobalExceptionHandler.cs.
+!include ../_tema.iuml
+skinparam activityBackgroundColor #ECEFF1
+skinparam activityBorderColor #546E7A
+skinparam activityDiamondBackgroundColor #FFF8E1
+
+title Backend — pipeline HTTP, autenticación y autorización (orden real de Program.cs)
+
+start
+:Solicitud HTTPS desde Tourist Mobile o Backoffice
+""Authorization: Bearer <access token JWT>"";
+:**UseExceptionHandler** → GlobalExceptionHandler
+(envuelve todo lo que sigue; mapea excepciones a ProblemDetails);
+if (¿Entorno Development?) then (sí)
+  :UseSwagger / UseSwaggerUI;
+else (no: Production en Azure)
+endif
+:**UseSerilogRequestLogging** (consola + logs/turisclick-.log);
+:**UseHttpsRedirection**;
+:**UseCors("Frontend")**
+orígenes de Cors:AllowedOrigins, sin AllowCredentials;
+:**UseAuthentication** — JwtBearer
+valida issuer TurisClick.Api, audience TurisClick.Client,
+firma HMAC-SHA256 (Jwt:Key) y expiración (clock skew 30 s);
+:**UseAuthorization** — política del endpoint;
+if (¿[AllowAnonymous]?) then (sí)
+elseif (¿token JWT presente y válido?) then (no)
+  #FFCDD2:401 Unauthorized;
+  stop
+elseif (¿rol del token cumple la política?\nRequireAdmin · RequireProvider · RequireTourist · RequireProviderOrAdmin) then (no)
+  #FFCDD2:403 Forbidden;
+  stop
+elseif (¿must_change_password pendiente?\nPasswordChangeNotPendingHandler) then (sí)
+  #FFCDD2:403 — sólo puede cambiar la contraseña;
+  stop
+else (no)
+endif
+:**MapControllers** → Controller → Service;
+:Service: ICurrentUserContext (sub, role, company_id del JWT)
+y ICompanyOwnershipGuard.EnsureOwns(companyId) tras cargar el recurso;
+if (¿excepción de dominio?) then (sí)
+  #FFE0B2:GlobalExceptionHandler →
+  400 Validation · 401 Unauthorized · 403 Forbidden
+  404 NotFound · 409 Conflict · 410 Gone · 500;
+  stop
+else (no)
+  #C8E6C9:200/201 con el DTO de respuesta;
+  stop
+endif
+
+legend right
+  <b>Tokens</b>
+  access: JWT, 15 min (Jwt:AccessTokenExpirationMinutes)
+  refresh: valor opaco aleatorio, guardado como hash en
+  refresh_tokens.token_hash, 30 días; se revoca en logout.
+  <b>Contraseñas</b>: PasswordHasher<User> de ASP.NET Core
+  Identity (PBKDF2), envuelto en PasswordHasherService.
+  <b>Arranque</b>: DevelopmentSeeder sólo si
+  IsDevelopment() Y Seed:Enabled=true.
+endlegend
+@enduml

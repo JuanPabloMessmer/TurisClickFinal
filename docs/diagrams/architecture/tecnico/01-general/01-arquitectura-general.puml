@@ -1,0 +1,79 @@
+@startuml 01-arquitectura-general
+' Vista general de TurisClick V2: clientes, API modular, persistencia, subsistemas e infraestructura,
+' con el ESTADO REAL de cada pieza. Estado de Azure verificado el 2026-10-14 00:49 UTC con GET anónimos
+' (ver README, sección "Verificación de Azure"). Ningún recurso de Azure fue modificado.
+!pragma layout smetana
+!include ../_tema.iuml
+skinparam nodesep 30
+skinparam ranksep 45
+left to right direction
+
+title TurisClick V2 — Arquitectura general del sistema y estado de cada componente
+
+legend top right
+<b>Estado</b>
+<back:#C8E6C9>  implementado y probado localmente  </back>
+<back:#BBDEFB>  desplegado en Azure y respondiendo  </back>
+<back:#FFCDD2>  desplegado en Azure, DEGRADADO  </back>
+<back:#FFE0B2>  SIMULADO (no mueve dinero / inventario de prueba)  </back>
+<back:#E0E0E0>  sólo en desarrollo local, no desplegado  </back>
+endlegend
+
+actor "Turista\n(TOURIST)" as turista
+actor "Operador\n(PROVIDER)" as operador
+actor "Administrador\n(ADMIN)" as admin
+
+package "Clientes" {
+  rectangle "<b>Tourist Mobile</b>\nReact Native 0.86 · Expo 57\nexpo-router · TanStack Query\nAPK de preview (EAS, interno)\nAPI: Azure por defecto | local :5288" as mobile #C8E6C9
+  rectangle "<b>Backoffice</b>\nReact 19 · TypeScript · Vite\nAzure Static Web Apps (Free)\nashy-rock-0dd3b480f.2.azurestaticapps.net" as backoffice #BBDEFB
+}
+
+package "TurisClick API — ASP.NET Core 10 (monolito modular)" as apipkg {
+  rectangle "<b>Autenticación y autorización</b>\nJWT HMAC-SHA256 (15 min) + refresh token\nopaco hasheado (30 días) · PBKDF2\nPolíticas por rol + cambio de contraseña\nobligatorio · aislamiento por company_id" as authz #C8E6C9
+  rectangle "<b>Catálogo y operación</b>\nDestinations · Categories · Companies\nExperiences · Packages · Preferences · Admin" as catalog #C8E6C9
+  rectangle "<b>Reservas</b>\nHold de cupo con UPDATE condicional\nexpiración a los 30 min · libro de pagos\npolítica y cancelación con reembolso" as reservas #C8E6C9
+  rectangle "<b>Pagos SIMULADOS</b>\nIPaymentGateway →\nSimulatedPaymentGateway\n(Charge / Void / Refund)" as pagos #FFE0B2
+  rectangle "<b>Subsistema de IA</b>\nAgente determinístico + RAG estructurado\nIAiModelClient: Deterministic | Ollama | Hybrid\nAzure: Deterministic · Local: Hybrid" as ia #C8E6C9
+  rectangle "<b>Integración aérea</b>\nIFlightProvider: Fake (por defecto) | Duffel\ncotización · revalidación · emisión\nreconciliación" as vuelos #C8E6C9
+  rectangle "<b>Procesos en segundo plano</b>\nExpiración · Reconciliación de vuelos\nResolución de cancelaciones (60 s)" as workers #C8E6C9
+}
+
+database "<b>PostgreSQL 16</b>\n29 tablas · 14 migraciones EF Core\nlocal: turisclick_v2_dev / _test / _demo" as pglocal #C8E6C9
+
+package "Azure — rg-turisclick-dev (Brazil South)" as azure {
+  rectangle "<b>App Service</b> app-turisclick-v2-api\nLinux · plan F1 (sin Always On)\n<color:#B71C1C>GET /api/packages → 500</color>\n<color:#B71C1C>(falta packages.cancellation_policy)</color>" as appsvc #FFCDD2
+  database "<b>PostgreSQL Flexible Server</b>\nturisclick-postgres-jpm (compartido)\nturisclick_db_v2 (V2) · turisclick_db (V1)\nV2: 0001–0009 aplicadas; 0012–0014 NO" as pgazure #FFCDD2
+  rectangle "<b>Key Vault</b> kv-turisclick-v2-dev\n+ identidad administrada\nid-turisclick-v2-app" as kv #BBDEFB
+}
+
+rectangle "<b>Duffel Flights API</b>\nsólo modo TEST (duffel_test_)\nno configurado en Azure" as duffel #FFE0B2
+rectangle "<b>Ollama</b>\nqwen2.5:7b-instruct\nlocalhost:11434 (GPU local)" as ollama #E0E0E0
+rectangle "<b>GitHub Actions</b>\nbuild + tests en cada push\ndeploy sólo manual (OIDC)" as gha #BBDEFB
+
+turista --> mobile
+operador --> backoffice
+admin --> backoffice
+
+mobile --> authz : HTTPS/JSON\nBearer JWT
+backoffice --> authz : HTTPS/JSON\nBearer JWT
+authz --> catalog
+authz --> reservas
+authz --> ia
+authz --> vuelos
+reservas --> pagos
+reservas --> vuelos
+ia --> reservas : reserva del\nitinerario
+workers --> reservas
+workers --> vuelos
+vuelos --> duffel : HTTPS\n(opcional)
+ia --> ollama : HTTP\n(sólo local)
+apipkg --> pglocal : EF Core / Npgsql\n(desarrollo)
+
+appsvc ..> apipkg : ejecuta el mismo\nbinario publicado
+appsvc --> pgazure : Npgsql
+appsvc --> kv : referencias Key Vault\n(connection string, JWT key)
+gha --> appsvc : az webapp deploy\n(workflow_dispatch)
+backoffice --> appsvc : HTTPS (CORS)
+mobile --> appsvc : HTTPS
+
+@enduml

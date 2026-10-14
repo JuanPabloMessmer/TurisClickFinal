@@ -1,0 +1,107 @@
+@startuml 07a-abstraccion-proveedor-vuelos
+' Abstracción del proveedor aéreo y su selección por configuración.
+' Evidencia: Modules/Flights/Services/IFlightProvider.cs, Providers/FakeFlightProvider.cs,
+' Providers/Duffel/DuffelFlightProvider.cs, FlightsOptions.cs, FlightProviderExceptions.cs,
+' FlightsModuleExtensions.cs.
+!pragma layout smetana
+!include ../_tema.iuml
+hide empty members
+skinparam nodesep 30
+skinparam ranksep 45
+
+title Vuelos — abstracción del proveedor aéreo (IFlightProvider) y sus dos implementaciones
+
+interface IFlightProvider {
+  + Name : string
+  + SearchAsync(FlightSearchRequest) : FlightSearchResult
+  + RefreshOfferAsync(offerId) : FlightOffer
+  + CreateOrderAsync(FlightOrderRequest) : FlightOrderResult
+  + GetOrderAsync(orderId) : FlightOrderResult?
+  + FindOrderByOfferAsync(offerId, correlationKey) : FlightOrderResult?
+  + QuoteCancellationAsync(orderId) : FlightCancellationResult
+  + ConfirmCancellationAsync(cancellationId) : FlightCancellationResult
+}
+
+class FakeFlightProvider <<SIMULADO · default>> #FFE0B2 {
+  Name = "Fake"
+  sin red · determinístico
+  --
+  escenarios por aeropuerto de origen:
+  XXX sin ofertas · EXP oferta vencida
+  CHG cambio de precio · GON oferta retirada
+  FAI orden rechazada · NET red caída
+  UNK desenlace desconocido (orden existe)
+  UNL desenlace desconocido (no existe)
+  DOC exige documentos · NRF no reembolsable
+  NOC cancelación falla · CNX ya cancelada
+  NIR reembolso no informado
+}
+
+class DuffelFlightProvider <<modo TEST>> #FCE4EC {
+  Name = "Duffel"
+  HttpClient tipado → https://api.duffel.com
+  cabecera Duffel-Version
+  --
+  se niega a arrancar si el token
+  no empieza con "duffel_test_"
+  (Flights:Duffel:RequireTestToken = true)
+}
+
+class FlightsOptions <<Flights>> {
+  Provider = "Fake" | "Duffel"
+  Duffel : DuffelOptions
+}
+class DuffelOptions {
+  AccessToken: User Secrets o Key Vault
+  BaseUrl, ApiVersion
+  TimeoutSeconds = 30
+  RequireTestToken = true
+}
+
+abstract class FlightProviderException
+class FlightProviderUnavailableException {
+  RequestMayHaveBeenSent : bool
+}
+class FlightProviderRequestException
+class FlightProviderAuthException
+class FlightProviderRateLimitException
+class FlightOfferExpiredException
+class FlightProviderResponseException
+
+class PackageFlightService <<cotizar · revalidar>> #E8F5E9
+class FlightBookingOrchestrator <<preflight · emitir · aplicar>> #E8F5E9
+class FlightReconciliationService <<resolver lo desconocido>> #E8F5E9
+class ReservationCancellationService <<Reservations · cancelar pasaje>> #FFF3E0
+
+FakeFlightProvider ..|> IFlightProvider
+DuffelFlightProvider ..|> IFlightProvider
+DuffelFlightProvider --> DuffelOptions
+FlightsOptions *-- DuffelOptions
+PackageFlightService --> IFlightProvider
+FlightBookingOrchestrator --> IFlightProvider
+FlightReconciliationService --> IFlightProvider
+ReservationCancellationService --> IFlightProvider
+
+FlightProviderException <|-- FlightProviderUnavailableException
+FlightProviderException <|-- FlightProviderRequestException
+FlightProviderException <|-- FlightProviderAuthException
+FlightProviderException <|-- FlightProviderRateLimitException
+FlightProviderException <|-- FlightOfferExpiredException
+FlightProviderException <|-- FlightProviderResponseException
+IFlightProvider ..> FlightProviderException : lanza
+
+note bottom of FlightProviderUnavailableException
+  <b>RequestMayHaveBeenSent</b> distingue "la conexión nunca salió"
+  (reintentar es seguro → FlightBooking vuelve a PENDING) de
+  "salió y no hubo respuesta" (la orden puede existir →
+  RECONCILIATION_REQUIRED, nunca se reintenta la compra a ciegas).
+end note
+
+legend bottom right
+  FlightsModuleExtensions registra UNA implementación según Flights:Provider.
+  Default "Fake": tests, entorno desplegado en Azure y demos sin credenciales.
+  Duffel sólo con token de prueba: ofertas de aerolíneas reales con inventario
+  de prueba; las órdenes no son pasajes reales y no se cobra dinero real.
+  Ningún DTO de Duffel sale del adaptador: el dominio sólo ve FlightOffer/FlightOrderResult.
+endlegend
+@enduml

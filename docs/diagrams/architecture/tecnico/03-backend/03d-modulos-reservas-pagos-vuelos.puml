@@ -1,0 +1,101 @@
+@startuml 03d-modulos-reservas-pagos-vuelos
+' Módulos Reservations (incluye Payments y Policies) y Flights, con sus dependencias cruzadas reales.
+' Evidencia: Modules/Reservations/**, Modules/Flights/**, ReservationsModuleExtensions.cs,
+' FlightsModuleExtensions.cs (selección de proveedor por Flights:Provider).
+!pragma layout smetana
+!include ../_tema.iuml
+hide empty members
+hide circle
+left to right direction
+skinparam nodesep 25
+skinparam ranksep 50
+
+title Backend — reservas, pagos simulados y vuelos (con el ciclo Reservations ↔ Flights)
+
+package "Reservations" #FFF8EE {
+  class ReservationsController <<Controller · /api/reservations · TOURIST>> #E3F2FD
+  class CompanyReservationsController <<Controller · /api/companies/me/reservations · PROVIDER>> #E3F2FD
+  class AdminPaymentsController <<Controller · /api/admin · ADMIN>> #E3F2FD
+  class ReservationService <<IReservationService>> #E8F5E9
+  class ReservationBookingService <<IReservationBookingService>> #E8F5E9
+  class ReservationCancellationService <<IReservationCancellationService>> #E8F5E9
+  class ReservationExpirationService <<IReservationExpirationService>> #E8F5E9
+  class AdminPaymentsService <<IAdminPaymentsService>> #E8F5E9
+  class PaymentLedger <<IPaymentLedger>> #E8F5E9
+  class SimulatedPaymentGateway <<IPaymentGateway · SIMULADO>> #FFE0B2
+  class "CancellationPolicy\nCancellationPolicyRules" as Policy <<Policies · estático>> #F5F5F5
+  class ReservationRepository <<IReservationRepository>> #FFF8E1
+  class ReservationItemRepository <<IReservationItemRepository>> #FFF8E1
+}
+
+package "Flights" #FDF0F4 {
+  class PackageFlightRulesController <<Controller · /api/packages/{id}/flight-rule>> #E3F2FD
+  class PackageFlightQuotesController <<Controller · flight-quotes · TOURIST>> #E3F2FD
+  class AirportsController <<Controller · /api/airports · anónimo>> #E3F2FD
+  class PackageFlightService <<IPackageFlightService>> #E8F5E9
+  class FlightBookingOrchestrator <<IFlightBookingOrchestrator>> #E8F5E9
+  class FlightReconciliationService <<IFlightReconciliationService>> #E8F5E9
+  interface IFlightProvider #FFFFFF
+  class FakeFlightProvider <<por defecto · sin red>> #FFE0B2
+  class DuffelFlightProvider <<Flights:Provider=Duffel · sólo token TEST>> #FCE4EC
+  class AirportCatalog <<estático>> #F5F5F5
+}
+
+package "Otros módulos" #FAFAFA {
+  class ExperienceAvailabilityRepository <<Experiences>> #EEEEEE
+  class PackageAvailabilityRepository <<Packages>> #EEEEEE
+  class CompanyOwnershipGuard <<Security>> #E1F5FE
+}
+
+ReservationsController --> ReservationService : crear, listar,\npagar, cancelar
+ReservationsController --> ReservationCancellationService : cancellation-quote
+CompanyReservationsController --> ReservationService : recibidas,\ncancelar ítem
+AdminPaymentsController --> AdminPaymentsService : libro y cola\nde cancelaciones
+AdminPaymentsController --> ReservationCancellationService : POST\ncancellations/resolve
+
+ReservationService --> ReservationRepository
+ReservationService --> ReservationItemRepository
+ReservationService --> ExperienceAvailabilityRepository
+ReservationService --> PackageAvailabilityRepository
+ReservationService --> ReservationBookingService : holds de cupo
+ReservationService --> SimulatedPaymentGateway : Charge / Void
+ReservationService --> PaymentLedger : RecordCharge,\nRecordVoid
+ReservationService --> ReservationCancellationService
+ReservationService --> FlightBookingOrchestrator : Preflight, BeginOrdering,\nPlaceOrder, Apply
+ReservationService --> CompanyOwnershipGuard
+ReservationService ..> Policy : congela la política\nen reservation_items
+
+ReservationBookingService --> ReservationRepository
+ReservationExpirationService --> ReservationRepository
+ReservationExpirationService --> ReservationBookingService : libera cupo
+ReservationCancellationService --> ReservationRepository
+ReservationCancellationService --> ReservationBookingService : libera cupo
+ReservationCancellationService --> IFlightProvider : Quote/Confirm\nCancellation
+ReservationCancellationService --> SimulatedPaymentGateway : Refund
+ReservationCancellationService --> PaymentLedger : RecordRefund
+ReservationCancellationService ..> Policy
+AdminPaymentsService --> PaymentLedger : saldo por moneda
+
+PackageFlightRulesController --> PackageFlightService
+PackageFlightQuotesController --> PackageFlightService : cotizar,\nrevalidar
+AirportsController ..> AirportCatalog
+PackageFlightService --> IFlightProvider : SearchAsync,\nRefreshOfferAsync
+PackageFlightService --> CompanyOwnershipGuard
+FlightBookingOrchestrator --> IFlightProvider : RefreshOffer,\nCreateOrder
+FlightReconciliationService --> IFlightProvider : GetOrder, FindOrderByOffer,\nQuote/ConfirmCancellation
+FlightReconciliationService --> FlightBookingOrchestrator
+FlightReconciliationService --> ReservationBookingService : libera cupo si\nno hubo emisión
+FlightReconciliationService --> SimulatedPaymentGateway : Void
+
+FakeFlightProvider ..|> IFlightProvider
+DuffelFlightProvider ..|> IFlightProvider
+
+legend bottom right
+  Sólo UNA implementación de IFlightProvider se registra, según Flights:Provider (default "Fake").
+  IPaymentGateway tiene una única implementación: SimulatedPaymentGateway (el resultado
+  lo decide el campo "success" de PayReservationRequest; nunca mueve dinero).
+  Dependencia circular entre módulos: Reservations usa IFlightBookingOrchestrator/IFlightProvider
+  y Flights usa IReservationBookingService/IPaymentGateway. La resuelve el contenedor de DI
+  porque ningún constructor depende de sí mismo transitivamente.
+endlegend
+@enduml

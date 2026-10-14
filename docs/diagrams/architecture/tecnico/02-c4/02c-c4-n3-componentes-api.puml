@@ -1,0 +1,82 @@
+@startuml 02c-c4-n3-componentes-api
+' C4 Nivel 3 — Componentes del contenedor "TurisClick API".
+' Un componente = un módulo de src/TurisClick.Api/Modules o una pieza transversal de Infrastructure/Shared.
+' Las relaciones entre módulos son las inyecciones de dependencias REALES de los constructores
+' (Services/Repositories de un módulo usados por otro). El detalle por clase está en 03-backend/.
+!pragma layout smetana
+!include <C4/C4_Component>
+skinparam defaultFontName Arial
+LAYOUT_TOP_DOWN()
+
+AddElementTag("simulado", $bgColor="#E69138", $borderColor="#B45F06", $legendText="simulado (no mueve dinero)")
+AddElementTag("worker", $bgColor="#6AA84F", $borderColor="#38761D", $legendText="proceso en segundo plano (IHostedService)")
+AddElementTag("transversal", $bgColor="#5B7FA6", $borderColor="#3D5A80", $legendText="infraestructura transversal")
+AddRelTag("cruce", $textColor="#B45F06", $lineColor="#B45F06", $legendText="dependencia entre módulos")
+
+title TurisClick V2 — C4 Nivel 3: Componentes de la API (ASP.NET Core 10)
+
+Container(mobile, "Tourist Mobile", "Expo / React Native")
+Container(backoffice, "Backoffice", "React + Vite")
+ContainerDb(db, "PostgreSQL 16", "turisclick_db_v2")
+System_Ext(duffel, "Duffel API (TEST)", "opcional")
+System_Ext(ollama, "Ollama (local)", "opcional")
+
+Container_Boundary(api, "TurisClick API") {
+  Component(pipeline, "Pipeline HTTP y seguridad", "Middleware ASP.NET Core", "GlobalExceptionHandler (ProblemDetails), Serilog, CORS 'Frontend', JwtBearer, políticas RequireAdmin/Provider/Tourist/ProviderOrAdmin + PasswordChangeNotPending.", $tags="transversal")
+  Component(security, "Infrastructure.Security", "C#", "ICurrentUserContext (claims del JWT), ICompanyOwnershipGuard (aislamiento por company_id, UC-SYS-03), IPasswordHasherService (PBKDF2).", $tags="transversal")
+
+  Component(auth, "Auth", "Controller + Services + Repos", "Registro de turistas, login, refresh, logout, cambio de contraseña. JwtTokenService, refresh tokens hasheados.")
+  Component(catalog, "Catálogo maestro: Destinations + Categories", "Controllers públicos y de admin", "Jerarquía País → Departamento → Ciudad y categorías. Lectura anónima, gestión ADMIN.")
+  Component(companies, "Companies", "Controllers + Service + Repo", "Empresa del operador (PROVIDER) y aprobación/rechazo/suspensión (ADMIN).")
+  Component(products, "Experiences + Packages", "Controllers + Services + Repos", "Productos, imágenes, ítems de paquete, publicación y cupos (availability) individuales y masivos.")
+  Component(prefs, "Preferences", "Controller + Service (sin repositorio)", "Perfil de onboarding del turista: ritmo, compañía, presupuesto, categorías.")
+  Component(reservations, "Reservations + Payments", "Controllers + Services + Repos", "Reserva con hold de cupo, pago, libro de pagos, política y cancelación con reembolso, vista de pagos del ADMIN.")
+  Component(gateway, "IPaymentGateway → SimulatedPaymentGateway", "C#", "Charge / Void / Refund simulados. Única clase a reemplazar por una pasarela real.", $tags="simulado")
+  Component(flights, "Flights", "Controllers + Services (sin repositorio)", "Regla de vuelo del paquete, cotización y revalidación, orquestación de la emisión, reconciliación. IFlightProvider: Fake | Duffel.")
+  Component(ai, "Ai", "Controllers + Services + Repos", "Agente conversacional, retrieval estructurado sobre el catálogo, itinerarios versionados, revalidación y reserva del itinerario. IAiModelClient: Deterministic | Ollama | Hybrid.")
+  Component(adminmod, "Admin", "Controllers + Services (sin repositorio)", "Usuarios y sanciones, sanción de contenido, alta de operadores, vista de plataforma.")
+  Component(workers, "Procesos en segundo plano", "BackgroundService x3", "ReservationExpiration (60 s), FlightReconciliation (60 s), CancellationResolution (60 s). Sólo despiertan y delegan.", $tags="worker")
+  Component(dbctx, "TurisClickDbContext", "EF Core 10 + Npgsql", "Un único DbContext (Unit of Work por request). IEntityTypeConfiguration por módulo; 14 migraciones.", $tags="transversal")
+}
+
+Rel(mobile, pipeline, "HTTPS/JSON + JWT")
+Rel(backoffice, pipeline, "HTTPS/JSON + JWT")
+Rel(pipeline, auth, "enruta")
+Rel(pipeline, catalog, "enruta")
+Rel(pipeline, companies, "enruta")
+Rel(pipeline, products, "enruta")
+Rel(pipeline, prefs, "enruta")
+Rel(pipeline, reservations, "enruta")
+Rel(pipeline, flights, "enruta")
+Rel(pipeline, ai, "enruta")
+Rel(pipeline, adminmod, "enruta")
+
+Rel(products, catalog, "IDestinationRepository, ICategoryRepository", $tags="cruce")
+Rel(products, companies, "ICompanyRepository", $tags="cruce")
+Rel(catalog, products, "IExperienceRepository, IPackageRepository (bloqueo de borrado)", $tags="cruce")
+Rel(reservations, products, "I*AvailabilityRepository (holds de cupo)", $tags="cruce")
+Rel(reservations, flights, "IFlightBookingOrchestrator, IFlightProvider", $tags="cruce")
+Rel(flights, reservations, "IReservationBookingService, IPaymentGateway", $tags="cruce")
+Rel(reservations, gateway, "Charge / Void / Refund")
+Rel(ai, reservations, "IReservationBookingService, IReservationService, IReservationRepository", $tags="cruce")
+Rel(ai, catalog, "IDestinationRepository, ICategoryRepository", $tags="cruce")
+Rel(ai, prefs, "ITouristPreferenceService", $tags="cruce")
+
+Rel(workers, reservations, "IReservationExpirationService, IReservationCancellationService")
+Rel(workers, flights, "IFlightReconciliationService")
+
+Rel(flights, duffel, "HTTPS (sólo si Flights:Provider=Duffel)")
+Rel(ai, ollama, "HTTP (sólo si Ai:Provider=Ollama|Hybrid)")
+Rel(dbctx, db, "SQL")
+
+note as N1
+  <b>Todos</b> los módulos usan Infrastructure.Security
+  (ICurrentUserContext / ICompanyOwnershipGuard) y
+  TurisClickDbContext; esas flechas se omiten para
+  no saturar la vista.
+  <b>Ciclo real:</b> Reservations usa Flights
+  y Flights usa Reservations.
+end note
+
+SHOW_LEGEND()
+@enduml

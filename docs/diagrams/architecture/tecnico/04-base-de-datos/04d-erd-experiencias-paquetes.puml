@@ -1,0 +1,143 @@
+@startuml 04d-erd-experiencias-paquetes
+' GENERADO por docs/diagrams/architecture/_herramientas/generar_erd.py a partir del snapshot de EF Core.
+' Para cambiar el contenido, editar la vista en el generador y volver a ejecutarlo.
+!pragma layout smetana
+!include ../_tema.iuml
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 55
+title Experiencias, paquetes y disponibilidad
+
+package "Módulo Experiences" as pkg_Experiences {
+  entity "experiences" as experiences <<Experiences>> #F1F8E9 {
+    * id : uuid <<PK>>
+    --
+    * company_id : uuid <<FK>>
+    * destination_id : uuid <<FK>>
+    * created_at : timestamptz
+    * currency : varchar(3)
+    * description : text
+      duration_label : varchar(100)
+      duration_minutes : integer
+      excludes_text : text
+      includes_text : text
+    * price : numeric(12,2)
+    * status : varchar(20)
+    * title : varchar(200)
+    * updated_at : timestamptz
+  }
+  entity "experience_images" as experience_images <<Experiences>> #F1F8E9 {
+    * id : uuid <<PK>>
+    --
+    * experience_id : uuid <<FK, UK parcial>>
+    * is_cover : boolean
+    * sort_order : integer
+    * url : varchar(500)
+  }
+  entity "experience_availabilities" as experience_availabilities <<Experiences>> #F1F8E9 {
+    * id : uuid <<PK>>
+    --
+    * experience_id : uuid <<FK>>
+    * date : date
+    * reserved_slots : integer
+      start_time : time
+    * status : varchar(20)
+    * total_slots : integer
+  }
+}
+package "Módulo Packages" as pkg_Packages {
+  entity "packages" as packages <<Packages>> #FFFDE7 {
+    * id : uuid <<PK>>
+    --
+    * company_id : uuid <<FK>>
+    * destination_id : uuid <<FK>>
+      cancellation_policy : varchar(60)
+      conditions_text : text
+    * created_at : timestamptz
+    * currency : varchar(3)
+    * description : text
+    * duration_days : integer
+    * includes_flight : boolean
+    * price : numeric(12,2)
+    * status : varchar(20)
+    * title : varchar(200)
+    * updated_at : timestamptz
+  }
+  entity "package_items" as package_items <<Packages>> #FFFDE7 {
+    * id : uuid <<PK>>
+    --
+      experience_id : uuid <<FK>>
+    * package_id : uuid <<FK>>
+    * day_number : integer
+      description : text
+    * kind : varchar(30)
+    * sort_order : integer
+      title : varchar(200)
+  }
+  entity "package_images" as package_images <<Packages>> #FFFDE7 {
+    * id : uuid <<PK>>
+    --
+    * package_id : uuid <<FK, UK parcial>>
+    * is_cover : boolean
+    * sort_order : integer
+    * url : varchar(500)
+  }
+  entity "package_availabilities" as package_availabilities <<Packages>> #FFFDE7 {
+    * id : uuid <<PK>>
+    --
+    * package_id : uuid <<FK>>
+    * departure_date : date
+    * reserved_slots : integer
+    * status : varchar(20)
+    * total_slots : integer
+  }
+}
+entity "companies" as companies <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+entity "destinations" as destinations <<ref>> #EEEEEE {
+  * id : uuid <<PK>>
+}
+
+companies ||--o{ experiences : "company_id\n[RESTRICT]"
+destinations ||--o{ experiences : "destination_id\n[RESTRICT]"
+experiences ||--o{ experience_availabilities : "experience_id\n[CASCADE]"
+experiences ||--o{ experience_images : "experience_id\n[CASCADE]"
+companies ||--o{ packages : "company_id\n[RESTRICT]"
+destinations ||--o{ packages : "destination_id\n[RESTRICT]"
+packages ||--o{ package_availabilities : "package_id\n[CASCADE]"
+packages ||--o{ package_images : "package_id\n[CASCADE]"
+experiences |o--o{ package_items : "experience_id\n[RESTRICT]"
+packages ||--o{ package_items : "package_id\n[CASCADE]"
+legend bottom left
+<b>Notación</b> (Ingeniería de la Información / pata de gallo)
+  ● (punto lleno) columna NOT NULL · <<PK>> clave primaria · <<FK>> clave foránea · <<UK>> única
+  ""||"" exactamente uno · ""|o"" cero o uno · ""o{"" cero o muchos
+  línea continua = FK real en PostgreSQL · línea punteada = referencia lógica sin FK
+  entidades grises = tablas de otras vistas (sólo su PK)
+<b>Dominios de las columnas varchar</b> (enums de C#, guardados como texto)
+  ""experiences.status"" → DRAFT, PUBLISHED, UNPUBLISHED, SUSPENDED
+  ""experience_availabilities.status"" → OPEN, CLOSED
+  ""packages.status"" → DRAFT, PUBLISHED, UNPUBLISHED, SUSPENDED
+  ""package_items.kind"" → EXPERIENCE_REFERENCE, DESCRIPTIVE
+  ""package_availabilities.status"" → OPEN, CLOSED
+endlegend
+
+note as checks
+<b>Restricciones CHECK en la base</b> (expresión completa en turisclick-v2.dbml)
+""ck_experiences_currency""
+""ck_experiences_duration""
+""ck_experiences_price""
+""ck_experience_availabilities_slots""
+""ck_packages_cancellation_policy""
+""ck_packages_currency""
+""ck_packages_duration""
+""ck_packages_price""
+""ck_package_items_day""
+""ck_package_items_descriptive_title""
+""ck_package_items_kind_shape""
+""ck_package_availabilities_slots""
+end note
+@enduml

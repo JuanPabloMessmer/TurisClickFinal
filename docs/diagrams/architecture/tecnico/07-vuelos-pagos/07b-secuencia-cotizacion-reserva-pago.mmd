@@ -1,0 +1,75 @@
+---
+title: Paquete con vuelo — cotización, revalidación, reserva y pago SIMULADO
+---
+%% Evidencia: PackageFlightQuotesController, PackageFlightService.QuoteAsync/RevalidateAsync,
+%% ReservationService.CreateAsync/PayAsync/PlaceFlightOrderAsync, FlightBookingOrchestrator,
+%% SimulatedPaymentGateway, PaymentLedger, índices únicos flight_bookings.flight_quote_id / reservation_id.
+sequenceDiagram
+    autonumber
+    actor T as Turista (Tourist Mobile)
+    participant F as PackageFlightService
+    participant R as ReservationService
+    participant O as FlightBookingOrchestrator
+    participant P as IFlightProvider<br/>(Fake | Duffel TEST)
+    participant G as SimulatedPaymentGateway
+    participant L as PaymentLedger
+    participant DB as PostgreSQL
+
+    rect rgb(252, 228, 236)
+    Note over T,DB: 1 · Cotización (POST /api/packages/{id}/flight-quotes)
+    T->>F: origen, salida del paquete, viajeros
+    F->>DB: paquete PUBLISHED con includes_flight + package_flight_rules
+    F->>P: SearchAsync(origen → destino, fechas = salida ± offsets)
+    P-->>F: ofertas
+    F->>DB: INSERT flight_quotes (QUOTED, expires_at, provider_offer_id)
+    F-->>T: opciones con id de cotización (el cliente nunca manda importes)
+    T->>F: POST /api/flight-quotes/{id}/revalidate
+    F->>P: RefreshOfferAsync(offerId)
+    F->>DB: CONFIRMED | PRICE_CHANGED | EXPIRED | UNAVAILABLE
+    end
+
+    rect rgb(255, 243, 224)
+    Note over T,DB: 2 · Reserva (POST /api/reservations con flightQuoteId)
+    T->>R: packageAvailabilityId, travelers, flightQuoteId
+    R->>O: FindReservationForQuoteAsync (idempotencia: una cotización se reserva una vez)
+    R->>O: PrepareAsync → FlightBooking (sin persistir aún)
+    R->>DB: BEGIN · UPDATE package_availabilities (hold condicional)<br/>INSERT reservations PENDING_PAYMENT (expira en 30 min) + reservation_items<br/>+ flight_bookings PENDING · COMMIT
+    R-->>T: reserva PENDING_PAYMENT
+    end
+
+    rect rgb(232, 245, 233)
+    Note over T,DB: 3 · Pago (POST /api/reservations/{id}/pay) — orden elegido por lo que queda roto si algo falla
+    T->>R: success (simulado), acceptedFlightPrice?, datos de pasajeros
+    R->>DB: revalida precio del paquete (UC-SYS-02)
+    R->>O: PreflightAsync → P.RefreshOfferAsync (ANTES de cobrar)
+    alt precio del vuelo cambió y no se aceptó
+        R-->>T: 200 con ambos importes · no se cobra ni se emite
+    else oferta ya no disponible / no soportada / proveedor caído
+        R-->>T: 410 / 400 / 409 · no se cobra ni se emite
+    end
+    R->>G: ChargeAsync por moneda (SIMULADO, fuera de transacción)
+    R->>L: RecordCharge (aprobado o rechazado: ambos quedan en el libro)
+    alt cobro simulado rechazado
+        R-->>T: 200 paymentApproved=false · sigue PENDING_PAYMENT, reintentable
+    end
+    R->>O: BeginOrderingAsync: UPDATE condicional PENDING → ORDERING (commit ANTES de llamar)
+    R->>O: PlaceOrderAsync
+    O->>P: CreateOrderAsync (sin transacción abierta)
+    P-->>O: CONFIRMED | rechazo | desconocido
+    R->>DB: BEGIN · Apply(outcome)
+    alt emitido
+        R->>DB: reservations PENDING_PAYMENT → CONFIRMED (condicional) · ítems CONFIRMED · COMMIT
+        R-->>T: 200 · reserva CONFIRMED con localizador
+    else rechazo definitivo
+        R->>DB: FlightBooking FAILED · libera cupo · COMMIT
+        R->>G: VoidAsync · L.RecordVoid
+        R-->>T: 409
+    else la solicitud nunca salió
+        R->>DB: FlightBooking vuelve a PENDING · COMMIT
+        R->>G: VoidAsync · L.RecordVoid
+        R-->>T: 409 · se puede reintentar
+    else timeout con la solicitud enviada
+        R->>DB: FlightBooking RECONCILIATION_REQUIRED · COMMIT
+        R-->>T: 200 · reserva aún PENDING_PAYMENT (sin liberar cupo ni revertir cobro)<br/>lo resuelve FlightReconciliationService
+    end
+    end

@@ -1,0 +1,31 @@
+---
+title: Estados de la reserva (ReservationStatus) y de la cancelación (ReservationCancellationStatus)
+---
+%% Evidencia: Modules/Reservations/Entities/ReservationStatus.cs, ReservationCancellation.cs (diagrama en
+%% el comentario del enum), ReservationService, ReservationExpirationService, ReservationCancellationService.
+%% PAYMENT_FAILED existe en el enum pero ningún código lo escribe (backend-architecture.md, deuda técnica).
+stateDiagram-v2
+    direction LR
+    state "Reserva (reservations.status)" as R {
+        [*] --> PENDING_PAYMENT: hold de cupo<br/>(expira en 30 min)
+        PENDING_PAYMENT --> CONFIRMED: pago simulado aprobado<br/>(+ vuelo emitido si hay)
+        PENDING_PAYMENT --> EXPIRED: proceso de expiración<br/>(venció expires_at)
+        PENDING_PAYMENT --> CANCELLED: el turista cancela antes de pagar<br/>o la reconciliación no halla orden aérea
+        CONFIRMED --> CANCELLING: cancelación aceptada
+        CANCELLING --> CANCELLED: cancelado
+        CANCELLING --> CONFIRMED: la aerolínea rechazó<br/>o se agotaron 4 intentos
+        PAYMENT_FAILED: PAYMENT_FAILED<br/>(estado sin uso)
+    }
+    state "Cancelación (reservation_cancellations.status)" as K {
+        [*] --> QUOTED: presupuesto
+        QUOTED --> ACCEPTED: el turista acepta<br/>(commit antes de la aerolínea)
+        K_EXPIRED: EXPIRED
+        QUOTED --> K_EXPIRED: vence o lo reemplaza<br/>un presupuesto nuevo
+        ACCEPTED --> COMPLETED: todo cancelado<br/>y reembolsado
+        ACCEPTED --> REFUND_PENDING: cancelado, algún<br/>reembolso por reintentar
+        ACCEPTED --> REQUIRES_REVIEW: desenlace desconocido<br/>o intentos agotados
+        ACCEPTED --> FAILED: la aerolínea rechazó<br/>(nada cancelado)
+        REFUND_PENDING --> COMPLETED: resolución en segundo plano
+        REQUIRES_REVIEW --> COMPLETED: el proveedor confirma<br/>la cancelación
+        REQUIRES_REVIEW --> REFUND_PENDING: cancelado, falta<br/>el reembolso
+    }

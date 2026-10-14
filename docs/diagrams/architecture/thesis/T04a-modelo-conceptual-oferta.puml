@@ -1,0 +1,38 @@
+@startuml T04a-modelo-conceptual-oferta
+' Modelo conceptual de datos (1/2): la oferta turística. Cada entidad corresponde a tablas reales del snapshot
+' de EF Core y cada relación a una FK real o a una tabla de unión (correspondencia en el README).
+' "Disponibilidad" agrupa experience_availabilities (fechas) y package_availabilities (salidas).
+' Disposición plana: Destino arriba y Categoría abajo del par Experiencia–Paquete, sin cruces.
+!pragma layout smetana
+!include _tema-tesis.iuml
+hide circle
+hide empty members
+skinparam nodesep 70
+skinparam ranksep 45
+skinparam classFontSize 14
+skinparam classBorderColor #455A64
+
+title Modelo conceptual de datos (1/2): oferta turística
+
+entity "Operador\n(Usuario)" as usuario $CLIENTE
+entity "Empresa" as empresa $CLIENTE
+entity "Destino" as destino $BACKEND
+entity "Experiencia" as exp $BACKEND
+entity "Paquete" as paq $BACKEND
+entity "Categoría" as categoria $BACKEND
+entity "Disponibilidad\n(fecha o salida, con cupo)" as disp $BACKEND
+
+empresa ||-left-o{ usuario : emplea
+empresa -[hidden]down- destino
+empresa ||--o{ exp : ofrece
+empresa ||--o{ paq : ofrece
+destino ||--o{ exp : ubica
+destino ||--o{ paq : ubica
+destino |o--o{ destino : contiene
+exp }o-right-o{ paq : incluida en
+exp }o--o{ categoria : clasifica
+paq }o--o{ categoria : clasifica
+categoria -[hidden]down- disp
+exp ||--o{ disp : programa
+paq ||--o{ disp : programa
+@enduml

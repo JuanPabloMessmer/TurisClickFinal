@@ -1,0 +1,26 @@
+---
+title: Máquina de estados de flight_bookings.status (FlightBookingStatus)
+---
+%% Evidencia: Modules/Flights/Entities/FlightEntities.cs (enum y comentario de transiciones),
+%% FlightBookingOrchestrator, ReservationService.PlaceFlightOrderAsync, FlightReconciliationService,
+%% ReservationCancellationService.
+stateDiagram-v2
+    direction LR
+    [*] --> PENDING: reserva creada con flightQuoteId<br/>(cupo retenido, nadie llamó al proveedor)
+    PENDING --> ORDERING: pago autorizado<br/>UPDATE condicional, commit ANTES de llamar
+    ORDERING --> CONFIRMED: CreateOrder OK
+    ORDERING --> FAILED: rechazo definitivo<br/>(libera cupo + Void)
+    ORDERING --> PENDING: la conexión nunca salió<br/>(reintento seguro)
+    ORDERING --> RECONCILIATION_REQUIRED: timeout con la<br/>solicitud enviada
+    RECONCILIATION_REQUIRED --> CONFIRMED: la orden existía<br/>(reconciliación)
+    RECONCILIATION_REQUIRED --> FAILED: no existe orden y se<br/>agotaron 4 intentos
+    RECONCILIATION_REQUIRED --> CANCELLED: la orden existía pero la<br/>reserva ya no la admite
+    CONFIRMED --> CANCELLED: cancelación con reembolso<br/>confirmada por el proveedor
+    FAILED --> [*]
+    CANCELLED --> [*]
+
+    note right of RECONCILIATION_REQUIRED
+        Bloquea reintentar el pago,
+        cancelar y expirar la reserva
+        hasta resolverse.
+    end note

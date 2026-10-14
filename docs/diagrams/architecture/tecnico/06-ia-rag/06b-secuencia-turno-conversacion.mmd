@@ -1,0 +1,45 @@
+---
+title: Secuencia — un turno del asistente (nueva búsqueda, proveedor Hybrid en local)
+---
+%% Evidencia: AiConversationService.SendMessageAsync / GenerateItineraryAsync, HybridAiModelClient,
+%% FallbackAiModelClient, RetrievalService, AiCatalogRepository. En Azure el IAiModelClient es
+%% DeterministicAiModelClient directamente (sin Ollama ni decoradores).
+sequenceDiagram
+    autonumber
+    actor T as Turista (Tourist Mobile)
+    participant C as AiConversationsController
+    participant A as AiConversationService<br/>(agente)
+    participant M as IAiModelClient<br/>Hybrid → Fallback → Ollama
+    participant O as Ollama<br/>qwen2.5:7b-instruct
+    participant R as RetrievalService
+    participant DB as PostgreSQL
+
+    T->>C: POST /api/ai/conversations/{id}/messages (texto libre, JWT TOURIST)
+    C->>A: SendMessageAsync
+    A->>DB: conversación (dueño), historial, destinos CITY y categorías reales
+    A->>M: ExtractPreferencesAsync(mensaje, historial, vocabulario cerrado)
+    M->>M: reglas determinísticas (escalares literales)
+    M->>O: /api/generate · JSON Schema · temperature 0
+    O-->>M: JSON de preferencias
+    M->>M: Fallback valida vocabulario y rangos · Hybrid fusiona (reglas ganan escalares)
+    M-->>A: PreferenceExtractionResult
+    A->>DB: perfil de onboarding (sólo completa lo que falte)
+    alt faltan datos mínimos
+        A->>M: GenerateClarificationReplyAsync
+        A->>DB: guarda mensajes TOURIST y AI
+        A-->>T: 200 · pregunta de aclaración
+    else datos suficientes
+        A->>R: RetrieveAsync(destino, fechas, viajeros, categorías, presupuesto)
+        R->>DB: SQL experiencias y paquetes PUBLISHED con cupo y fecha ≥ hoy (máx. 50/tipo)
+        DB-->>R: filas reales
+        R-->>A: ranking determinístico, máx. 8 + 8 candidatos
+        A->>M: ComposeItineraryAsync(candidatos con id, precio y availabilities)
+        M->>O: /api/generate · JSON Schema
+        O-->>M: ítems por día (productId, availabilityId) + redacción
+        M->>M: Fallback descarta ids no ofrecidos (si ninguno es real → determinístico)
+        M-->>A: ItineraryCompositionResult
+        A->>A: ValidateComposedItems: precio y availability desde RetrievalResult
+        A->>DB: ai_itineraries (versión nueva, DRAFT) + ai_itinerary_items + mensajes
+        A-->>T: 200 · itinerario por día con precios reales y avisos
+    end
+    Note over M,O: Si Ollama está caído, vence el timeout (60 s) o devuelve JSON inválido<br/>tras el reintento, responde DeterministicAiModelClient: nunca un error ni un producto falso.

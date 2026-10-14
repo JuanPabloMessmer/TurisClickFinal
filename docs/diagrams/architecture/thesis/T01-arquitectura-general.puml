@@ -1,0 +1,48 @@
+@startuml T01-arquitectura-general
+' Arquitectura general de TurisClick (vista de tesis).
+' Evidencia: src/TurisClick.Api/Program.cs y Modules/*, frontend/apps/{tourist-mobile,backoffice},
+' Modules/Flights/FlightsModuleExtensions.cs, Modules/Ai/AiModuleExtensions.cs,
+' Modules/Reservations/Payments/SimulatedPaymentGateway.cs.
+!pragma layout smetana
+!include _tema-tesis.iuml
+skinparam nodesep 40
+skinparam ranksep 50
+
+title Arquitectura general de TurisClick
+
+actor "Turista" as turista
+actor "Operador\nturístico" as operador
+actor "Administrador" as admin
+
+rectangle "**App móvil del turista**\nReact Native · Expo" as mobile $CLIENTE
+rectangle "**Backoffice web**\nReact · TypeScript" as backoffice $CLIENTE
+
+rectangle api $BACKEND [
+  **API REST de TurisClick**
+  ASP.NET Core 10 · monolito modular
+  ----
+  Seguridad (JWT y roles)
+  Catálogo y operación
+  Reservas
+  <back:#FDE7D8> Pagos «simulados» </back>
+  Vuelos
+  <back:#EFE4F7> Asistente de IA </back>
+  ----
+  Acceso a datos (EF Core)
+]
+
+rectangle "**Proveedor aéreo**\nDuffel «modo prueba»" as duffel $EXTERNO
+database "**PostgreSQL**" as db
+rectangle "**LLM local**\nQwen 2.5 (Ollama)" as llm $EXTERNO
+
+turista --> mobile
+operador --> backoffice
+admin --> backoffice
+mobile --> api : HTTPS + JWT
+backoffice --> api : HTTPS + JWT
+api --> duffel : vuelos\n(opcional)
+api --> db : datos
+api --> llm : IA\n(sólo local)
+duffel -[hidden]right- db
+db -[hidden]right- llm
+@enduml

@@ -1,0 +1,42 @@
+@startuml 02a-c4-n1-contexto
+' C4 Nivel 1 — Contexto del sistema TurisClick V2.
+' Evidencia: Program.cs (roles ADMIN/PROVIDER/TOURIST), Modules/Flights/FlightsModuleExtensions.cs,
+' Modules/Ai/AiModuleExtensions.cs, Modules/Reservations/Payments/SimulatedPaymentGateway.cs,
+' tools/demo-catalog/images.manifest.json (URLs de upload.wikimedia.org).
+!pragma layout smetana
+!include <C4/C4_Context>
+skinparam defaultFontName Arial
+LAYOUT_TOP_DOWN()
+
+AddElementTag("opcional", $bgColor="#8E7CC3", $borderColor="#5B4A99", $legendText="integración opcional (por configuración)")
+AddElementTag("solo_local", $bgColor="#999999", $borderColor="#666666", $legendText="sólo en desarrollo local, no desplegado")
+
+title TurisClick V2 — C4 Nivel 1: Contexto del sistema
+
+Person(turista, "Turista", "Explora el catálogo, conversa con el asistente de IA, reserva experiencias y paquetes (con vuelo opcional), paga y cancela. Rol TOURIST.")
+Person(operador, "Operador turístico", "Usuario de una empresa proveedora: gestiona su empresa, experiencias, paquetes, cupos, regla de vuelo y reservas recibidas. Rol PROVIDER.")
+Person(admin, "Administrador de la plataforma", "Aprueba empresas, da de alta operadores, gestiona destinos y categorías, sanciona contenido y supervisa pagos y cancelaciones. Rol ADMIN.")
+
+System(turisclick, "TurisClick", "Plataforma de turismo para Bolivia: catálogo de experiencias y paquetes, reservas con control de cupo, pago SIMULADO, cancelación con reembolso y asistente de viajes con IA sobre el catálogo real.")
+
+System_Ext(duffel, "Duffel Flights API", "Proveedor aéreo. Sólo modo TEST (token duffel_test_). Desactivado por defecto: Flights:Provider=Fake usa un proveedor simulado interno.", $tags="opcional")
+System_Ext(ollama, "Ollama + Qwen 2.5 7B Instruct", "Servidor LLM en la máquina de desarrollo (localhost:11434). En Azure no existe: Ai:Provider=Deterministic.", $tags="solo_local")
+System_Ext(commons, "Wikimedia Commons", "Aloja las imágenes del catálogo de demostración; la base guarda sólo la URL y los clientes la descargan.")
+
+Rel(turista, turisclick, "Usa la app móvil Android", "HTTPS")
+Rel(operador, turisclick, "Usa el Backoffice web", "HTTPS")
+Rel(admin, turisclick, "Usa el Backoffice web", "HTTPS")
+Rel(turisclick, duffel, "Busca ofertas, revalida, emite y cancela órdenes de prueba", "HTTPS/JSON")
+Rel(turisclick, ollama, "Extrae preferencias y compone itinerarios (JSON Schema)", "HTTP/JSON")
+Rel_L(turisclick, commons, "Guarda URLs de imágenes (los clientes las descargan)")
+
+note as N1
+<b>Sin pasarela de pago real</b>
+Cobro, reverso y reembolso los resuelve
+SimulatedPaymentGateway dentro del sistema:
+no se mueve dinero ni se piden datos de tarjeta.
+end note
+N1 .. turisclick
+
+SHOW_LEGEND()
+@enduml

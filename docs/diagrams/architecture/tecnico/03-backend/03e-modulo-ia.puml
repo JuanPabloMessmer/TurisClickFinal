@@ -1,0 +1,88 @@
+@startuml 03e-modulo-ia
+' Módulo Ai: componentes, decoradores del cliente de modelo y dependencias hacia otros módulos.
+' Evidencia: Modules/Ai/AiModuleExtensions.cs, Modules/Ai/Services/**, Modules/Ai/Repositories/**.
+!pragma layout smetana
+!include ../_tema.iuml
+hide empty members
+hide circle
+left to right direction
+skinparam nodesep 25
+skinparam ranksep 50
+
+title Backend — módulo de IA (agente, retrieval y cliente de modelo conmutable)
+
+package "Ai  ·  /api/ai/** · TOURIST" #F8F1FA {
+  class AiConversationsController <<Controller · /api/ai/conversations>> #E3F2FD
+  class AiItinerariesController <<Controller · /api/ai/itineraries>> #E3F2FD
+  class AiConversationService <<IAiConversationService · el agente>> #E8F5E9
+  class AiItineraryService <<IAiItineraryService>> #E8F5E9
+  class AiItineraryBookingService <<IAiItineraryBookingService>> #E8F5E9
+  class RetrievalService <<IRetrievalService · la "R" de RAG>> #E8F5E9
+  class ItineraryRevalidationService <<IItineraryRevalidationService · sólo lectura>> #E8F5E9
+  class AiConversationRepository <<IAiConversationRepository>> #FFF8E1
+  class AiItineraryRepository <<IAiItineraryRepository>> #FFF8E1
+  class AiCatalogRepository <<IAiCatalogRepository · SQL sobre el catálogo>> #FFF8E1
+  interface IAiModelClient #FFFFFF
+  class DeterministicAiModelClient <<reglas regex/keywords · siempre registrado>> #E8F5E9
+  class OllamaAiModelClient <<HttpClient tipado · /api/generate>> #E0E0E0
+  class FallbackAiModelClient <<decorador · guardrails + fallback>> #F3E5F5
+  class HybridAiModelClient <<decorador · reglas ganan escalares literales>> #F3E5F5
+  class "UntrustedUserText\nAiJsonSchemas\nAiItineraryMapper" as Helpers <<estáticos>> #F5F5F5
+}
+
+package "Otros módulos" #FAFAFA {
+  class DestinationRepository <<Destinations>> #EEEEEE
+  class CategoryRepository <<Categories>> #EEEEEE
+  class TouristPreferenceService <<Preferences · opcional>> #EEEEEE
+  class ReservationBookingService <<Reservations>> #EEEEEE
+  class ReservationService <<Reservations>> #EEEEEE
+  class ReservationRepository <<Reservations>> #EEEEEE
+}
+
+AiConversationsController --> AiConversationService : crear, mensaje,\nitinerario vigente
+AiItinerariesController --> AiItineraryService : listar, guardar,\nexplicar ítem
+AiItinerariesController --> AiItineraryBookingService : book
+
+AiConversationService --> AiConversationRepository
+AiConversationService --> AiItineraryRepository
+AiConversationService --> RetrievalService
+AiConversationService --> IAiModelClient
+AiConversationService --> ItineraryRevalidationService
+AiConversationService --> DestinationRepository : vocabulario cerrado
+AiConversationService --> CategoryRepository : vocabulario cerrado
+AiConversationService --> TouristPreferenceService : perfil de onboarding
+
+AiItineraryService --> AiItineraryRepository
+AiItineraryService --> AiCatalogRepository
+AiItineraryService --> ItineraryRevalidationService
+AiItineraryService --> IAiModelClient : explicación
+
+AiItineraryBookingService --> AiItineraryRepository
+AiItineraryBookingService --> AiCatalogRepository : relee precio y cupo
+AiItineraryBookingService --> ReservationBookingService : holds (UPDATE condicional)
+AiItineraryBookingService --> ReservationService
+AiItineraryBookingService --> ReservationRepository
+
+RetrievalService --> AiCatalogRepository
+ItineraryRevalidationService --> AiCatalogRepository
+
+DeterministicAiModelClient ..|> IAiModelClient
+OllamaAiModelClient ..|> IAiModelClient
+FallbackAiModelClient ..|> IAiModelClient
+HybridAiModelClient ..|> IAiModelClient
+FallbackAiModelClient o-- OllamaAiModelClient : primario
+FallbackAiModelClient o-- DeterministicAiModelClient : respaldo
+HybridAiModelClient o-- FallbackAiModelClient : lenguaje
+HybridAiModelClient o-- DeterministicAiModelClient : escalares literales
+OllamaAiModelClient ..> Helpers
+DeterministicAiModelClient ..> Helpers
+
+legend bottom right
+  <b>Qué recibe AiConversationService como IAiModelClient</b> (AiModuleExtensions):
+  Ai:Provider = Deterministic (default; Azure) → DeterministicAiModelClient
+  Ai:Provider = Ollama → FallbackAiModelClient(Ollama, Deterministic)
+  Ai:Provider = Hybrid (appsettings.Development) → HybridAiModelClient(Fallback(Ollama, Det.), Det.)
+  Con Ai:FallbackToDeterministic=false se omite el decorador Fallback (sólo para el benchmark).
+  No hay base vectorial, embeddings ni pgvector: el retrieval es SQL sobre PostgreSQL.
+endlegend
+@enduml

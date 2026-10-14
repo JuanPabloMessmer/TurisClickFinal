@@ -1,0 +1,63 @@
+@startuml T05-despliegue
+' Diagrama de despliegue UML de TurisClick V2 (ambiente dev/demo en Azure).
+' Evidencia: infra/terraform/{app-service,database,key-vault,identity,data,locals,variables}.tf,
+' infra/terraform/dev.tfvars (ai_provider = "Deterministic"), infra/README.md (Static Web Apps en East US 2,
+' V1 fuera de Terraform), .github/workflows/backend-v2.yml, frontend/apps/tourist-mobile/eas.json.
+' V1 y V2 comparten el servidor PostgreSQL con bases separadas; V2 nunca accede a turisclick_db. La app V1
+' (otro App Service, East US 2) se omite a propósito: no forma parte de TurisClick V2.
+' Todos los recursos de Azure están en el grupo rg-turisclick-dev; el nombre se omite del rótulo por claridad.
+' Ollama/Qwen no se despliega en Azure (variables.tf: "En Azure no hay Ollama: Deterministic").
+' Sólo muestra la topología. El estado operativo verificado del ambiente está en
+' ../tecnico/HALLAZGOS-Y-DISCREPANCIAS.md (§1), no en este diagrama.
+'
+' Disposición: todas las rutas bajan de un rango al siguiente (cliente → servicio → datos) y la ruta de
+' despliegue entra por el lado izquierdo, así ninguna se cruza con otra.
+!pragma layout smetana
+!include _tema-tesis.iuml
+skinparam nodesep 50
+skinparam ranksep 60
+skinparam nodeBackgroundColor #FFFFFF
+skinparam artifactBackgroundColor #E3F1E6
+skinparam artifactBorderColor #2E7D32
+skinparam artifactFontSize 13
+skinparam nodeFontSize 13
+
+title Diagrama de despliegue de TurisClick
+
+node "GitHub Actions" <<servicio CI/CD>> as gha
+node "Teléfono Android" <<dispositivo>> as phone {
+  artifact "App móvil\nTurisClick (APK)" as apk #DCE8F5
+}
+node "Computadora del operador\no administrador" <<dispositivo>> as pc {
+  node "Navegador web" <<entorno de ejecución>> as browser {
+    artifact "Backoffice React\n(se ejecuta aquí)" as spa #DCE8F5
+  }
+}
+
+
+node "Microsoft\nAzure" <<nube>> as azure {
+  node "App Service Linux\n(Brazil South)" <<servidor de aplicaciones>> as app {
+    artifact "TurisClick.Api (.NET 10)\nIA en modo determinístico" as apiart
+  }
+  node "Static Web Apps\n(East US 2)" <<servicio web>> as swa {
+    artifact "Archivos del Backoffice\n(HTML, JS, CSS)" as spafiles #DCE8F5
+  }
+  node "PostgreSQL Flexible Server\n(Brazil South)" <<servidor de base de datos>> as pg {
+    database "turisclick_db_v2" as db2
+    database "turisclick_db\n(V1, no usada)" as db1 #F2F2F2
+  }
+  node "Key Vault\n(Brazil South)" <<servicio de secretos>> as kv {
+    artifact "Cadena de conexión\ny clave JWT" as secrets #FFF4D6
+  }
+}
+
+
+phone --> app : HTTPS · JSON · JWT
+browser --> app : HTTPS · JSON · JWT
+browser --> swa : descarga\nlos archivos
+app --> pg : TCP 5432\nsólo turisclick_db_v2
+app --> kv : lee secretos\n(identidad administrada)
+gha --> app : despliegue\n(OIDC)
+
+caption El modelo Qwen (Ollama) se usa sólo en desarrollo local; no está desplegado en Azure.
+@enduml

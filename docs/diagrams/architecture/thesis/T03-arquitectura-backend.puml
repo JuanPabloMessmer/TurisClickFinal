@@ -1,0 +1,49 @@
+@startuml T03-arquitectura-backend
+' Arquitectura modular del backend: recorrido de una solicitud y estructura típica de un módulo.
+' Evidencia: Program.cs (pipeline y políticas), Modules/*/{Controllers,Services,Repositories,Persistence},
+' Modules/*/*ModuleExtensions.cs (inyección de dependencias), Infrastructure/{Database,Security}.
+' Desviaciones respecto del patrón: desviaciones-arquitectura-backend.md.
+!pragma layout smetana
+!include _tema-tesis.iuml
+skinparam nodesep 40
+skinparam ranksep 40
+
+title Arquitectura modular del backend (ASP.NET Core 10)
+
+rectangle "**Solicitud HTTP**\ndesde la app o el Backoffice" as req $CLIENTE
+
+rectangle pipe $BACKEND [
+  **Pipeline de ASP.NET Core**
+  errores → CORS →
+  autenticación JWT → autorización
+]
+
+package "Módulo de negocio (estructura típica)" as mod {
+  rectangle "**Controller**\nrecibe la solicitud y valida el DTO" as ctrl $BACKEND
+  rectangle "**Service**\nreglas de negocio y transacciones" as svc $BACKEND
+  rectangle "**Repository**\nconsultas del agregado" as repo $BACKEND
+}
+
+rectangle "**Infraestructura transversal**\nusuario actual · propiedad por empresa\nhash de contraseñas" as infra $BACKEND
+rectangle "**TurisClickDbContext**\nEF Core · unidad de trabajo" as ctx $DATOS
+database "**PostgreSQL**" as db
+
+rectangle modulos [
+  **11 módulos**
+  Auth · Companies · Destinations
+  Categories · Experiences · Packages
+  Reservations · Flights · Ai
+  Preferences · Admin
+]
+
+req --> pipe
+pipe --> ctrl
+ctrl --> svc
+svc --> repo
+repo --> ctx
+svc ..> ctx : consulta directa\n(Flights, Preferences,\nAdmin y otros)
+svc -left-> infra
+ctx --> db
+modulos .. mod
+
+@enduml
