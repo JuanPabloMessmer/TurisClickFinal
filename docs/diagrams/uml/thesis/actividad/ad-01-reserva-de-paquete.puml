@@ -1,0 +1,41 @@
+@startuml ad-01-reserva-de-paquete
+!include ../_estilo-tesis.iuml
+
+title Proceso de reserva de un paquete turístico
+
+start
+:Elegir paquete, fecha de salida y viajeros
+(y una opción de vuelo cotizada si el paquete lo incluye);
+:Verificar paquete publicado y salida abierta;
+if (¿Hay cupo suficiente?) then (no)
+  :Informar que no hay cupo;
+  stop
+else (sí)
+endif
+:Retener el cupo y crear la reserva
+pendiente de pago (vence en 30 minutos);
+:Solicitar el pago y revalidar el precio vigente;
+if (¿El precio cambió y el turista no lo acepta?) then (sí)
+  :La reserva queda pendiente hasta vencer;
+  stop
+else (no)
+endif
+:Cobrar la reserva;
+if (¿Pago aprobado?) then (no)
+  :Puede reintentarse antes del vencimiento;
+  stop
+else (sí)
+endif
+if (¿Incluye vuelo?) then (sí)
+  :Emitir el pasaje con el proveedor aéreo;
+  if (¿Pasaje emitido?) then (no)
+    :Cancelar la reserva, liberar el cupo
+    y revertir el cobro;
+    stop
+  else (sí)
+  endif
+else (no)
+endif
+:Confirmar la reserva;
+stop
+@enduml

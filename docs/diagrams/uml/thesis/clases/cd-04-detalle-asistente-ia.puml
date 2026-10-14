@@ -1,0 +1,49 @@
+@startuml cd-04-detalle-asistente-ia
+!pragma layout smetana
+!include ../_estilo-tesis.iuml
+hide circle
+hide empty methods
+skinparam nodesep 50
+skinparam ranksep 70
+
+title Diseño detallado — Asistente de viaje con IA
+
+class User {
+  role : TOURIST
+}
+class TouristPreference {
+  travelPace, travelParty
+  budgetLevel
+}
+class AiConversation {
+  preferredDestination
+  startDate, endDate
+  travelersCount
+  budgetTotal, budgetCurrency
+}
+class AiMessage {
+  sender : TOURIST | AI
+  content
+}
+class AiItinerary {
+  status : DRAFT | SAVED | BOOKED
+  version
+}
+class AiItineraryItem {
+  dayNumber
+  productType : EXPERIENCE | PACKAGE
+  estimatedUnitPrice  «congelado»
+}
+class "Experience / Package" as Producto
+class Category
+class Reservation
+
+User "1" *-- "0..1" TouristPreference : perfil >
+User "1" -- "0..*" AiConversation : inicia >
+AiConversation "0..*" --> "0..*" Category : intereses >
+AiConversation "1" *-- "0..*" AiMessage
+AiConversation "1" *-- "0..*" AiItinerary : versiones >
+AiItinerary "1" *-- "1..*" AiItineraryItem
+Producto "1" <-- "0..*" AiItineraryItem : referencia <
+AiItinerary "0..1" -- "0..*" Reservation : origina >
+@enduml

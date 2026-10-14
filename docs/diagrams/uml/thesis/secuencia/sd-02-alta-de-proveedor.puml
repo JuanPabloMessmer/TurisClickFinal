@@ -1,0 +1,32 @@
+@startuml sd-02-alta-de-proveedor
+!include ../_estilo-tesis.iuml
+autonumber
+hide footbox
+
+title Alta de una empresa operadora por el administrador
+
+actor "Administrador" as A
+participant "Backoffice" as BO
+participant "Servidor\nTurisClick" as API
+database "Base de\ndatos" as BD
+actor "Proveedor" as P
+
+== Alta ==
+A -> BO : registra datos de la empresa\ny de la persona de contacto
+BO -> API : solicitar alta de operador
+API -> BD : verificar correo y documento legal únicos
+API -> API : generar contraseña temporal
+API -> BD : guardar empresa aprobada y cuenta de proveedor\ncon cambio de contraseña obligatorio
+API --> BO : contraseña temporal (se muestra una sola vez)
+A ->> P : entrega la credencial por un canal externo
+
+== Primer ingreso ==
+P -> BO : inicia sesión con la credencial temporal
+BO -> API : autenticar
+API --> BO : sesión restringida: debe cambiar la contraseña
+P -> BO : define una contraseña nueva
+BO -> API : cambiar contraseña
+API -> BD : guardar contraseña y cerrar otras sesiones
+API --> BO : sesión completa
+BO --> P : acceso al panel del operador
+@enduml

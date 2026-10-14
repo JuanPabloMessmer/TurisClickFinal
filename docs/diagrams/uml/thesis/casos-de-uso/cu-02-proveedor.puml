@@ -1,0 +1,30 @@
+@startuml cu-02-proveedor
+!pragma layout smetana
+!include ../_estilo-tesis.iuml
+left to right direction
+
+title Casos de uso del Proveedor (operador turístico)
+
+actor "Proveedor" as Proveedor
+
+rectangle "TurisClick — Backoffice" {
+  usecase "Gestionar cuenta y sesión" as UC1
+  usecase "Gestionar perfil\nde la empresa" as UC2
+  usecase "Gestionar experiencias" as UC3
+  usecase "Gestionar paquetes y su\npolítica de cancelación" as UC4
+  usecase "Configurar vuelo\ndel paquete" as UC5
+  usecase "Definir disponibilidad\ny cupos" as UC7
+  usecase "Consultar reservas\nrecibidas" as UC8
+  usecase "Cancelar una línea\nde reserva" as UC9
+}
+
+Proveedor -- UC1
+Proveedor -- UC2
+Proveedor -- UC3
+Proveedor -- UC4
+Proveedor -- UC7
+Proveedor -- UC8
+
+UC5 .> UC4 : <<extend>>
+UC9 .> UC8 : <<extend>>
+@enduml

@@ -1,0 +1,31 @@
+@startuml cu-03-administrador
+!pragma layout smetana
+!include ../_estilo-tesis.iuml
+left to right direction
+
+title Casos de uso del Administrador
+
+actor "Administrador" as Admin
+
+rectangle "TurisClick — Backoffice" {
+  usecase "Gestionar cuenta y sesión" as UC1
+  usecase "Dar de alta empresa\noperadora y su cuenta" as UC2
+  usecase "Revisar solicitudes\nde empresas" as UC3
+  usecase "Suspender o reactivar\nempresas" as UC4
+  usecase "Gestionar destinos\ny categorías" as UC5
+  usecase "Moderar usuarios" as UC6
+  usecase "Moderar experiencias\ny paquetes" as UC7
+  usecase "Supervisar la operación\nde la plataforma" as UC8
+  usecase "Supervisar pagos\ny cancelaciones" as UC9
+}
+
+Admin -- UC1
+Admin -- UC2
+Admin -- UC3
+Admin -- UC4
+Admin -- UC5
+Admin -- UC6
+Admin -- UC7
+Admin -- UC8
+Admin -- UC9
+@enduml

@@ -1,0 +1,70 @@
+@startuml cd-02-detalle-catalogo
+!pragma layout smetana
+!include ../_estilo-tesis.iuml
+hide circle
+hide empty methods
+skinparam nodesep 50
+skinparam ranksep 70
+
+title Diseño detallado — Empresas y catálogo turístico
+
+class Company {
+  name
+  legalDocument
+  status : CompanyStatus
+}
+class Destination {
+  name
+  type : COUNTRY | REGION | CITY
+}
+class Category {
+  name
+}
+class Experience {
+  title
+  price, currency
+  durationMinutes
+  status : PublicationStatus
+}
+class Package {
+  title
+  price, currency
+  durationDays
+  status : PublicationStatus
+  includesFlight
+  cancellationPolicy
+}
+class PackageItem {
+  dayNumber
+  kind : EXPERIENCE_REFERENCE | DESCRIPTIVE
+}
+class ExperienceAvailability {
+  date, startTime
+  totalSlots, reservedSlots
+  status : OPEN | CLOSED
+}
+class PackageAvailability {
+  departureDate
+  totalSlots, reservedSlots
+  status : OPEN | CLOSED
+}
+class PackageFlightRule {
+  destinationIata
+  allowedOrigins
+  cabinClass
+  outbound/inboundOffsetDays
+}
+
+Destination "0..1" -- "0..*" Destination : padre de >
+Company "1" -- "0..*" Experience : ofrece >
+Company "1" -- "0..*" Package : ofrece >
+Destination "1" -- "0..*" Experience
+Destination "1" -- "0..*" Package
+Category "0..*" -- "0..*" Experience
+Category "0..*" -- "0..*" Package
+Experience "1" *-- "0..*" ExperienceAvailability
+Package "1" *-- "0..*" PackageItem
+Experience "0..1" <-- "0..*" PackageItem : referencia <
+Package "1" *-- "0..*" PackageAvailability
+Package "1" *-- "0..1" PackageFlightRule
+@enduml

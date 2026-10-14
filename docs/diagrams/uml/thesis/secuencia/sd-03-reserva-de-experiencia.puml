@@ -1,0 +1,36 @@
+@startuml sd-03-reserva-de-experiencia
+!include ../_estilo-tesis.iuml
+autonumber
+hide footbox
+
+title Reserva y pago de una experiencia
+
+actor "Turista" as T
+participant "Aplicación\nmóvil" as App
+participant "Servicio de\nreservas" as R
+database "Base de\ndatos" as BD
+participant "Pasarela de pago\n(simulada)" as PG
+
+== Reserva ==
+T -> App : elige turno y cantidad de viajeros
+App -> R : solicitar reserva
+R -> BD : verificar experiencia publicada y turno abierto
+R -> BD : retener cupo de forma atómica
+R -> BD : crear reserva pendiente de pago\ncon precio congelado (vence en 30 min)
+R --> App : reserva pendiente de pago
+
+== Pago ==
+T -> App : confirma el pago
+App -> R : pagar reserva
+R -> BD : revalidar precio vigente
+R -> PG : cobrar importe
+PG --> R : pago aprobado
+R -> BD : registrar el cobro y confirmar la reserva
+R --> App : reserva confirmada
+App --> T : muestra la reserva en "Mis viajes"
+
+note over R, BD
+  Si no hay cupo, la reserva no se crea. Si el precio cambió, se pide
+  aceptación antes de cobrar. Una reserva impaga vence y libera su cupo.
+end note
+@enduml

@@ -1,0 +1,36 @@
+@startuml cd-01-modelo-conceptual
+!pragma layout smetana
+!include ../_estilo-tesis.iuml
+hide circle
+hide empty members
+skinparam minClassWidth 170
+skinparam nodesep 70
+skinparam ranksep 80
+title Modelo conceptual del dominio
+class "Usuario" as Usuario
+class "Destino" as Destino
+class "Empresa operadora" as Empresa
+class "Itinerario de IA" as Itinerario
+abstract class "Producto turístico" as Producto
+class "Reserva" as Reserva
+class "Experiencia" as Experiencia
+class "Paquete" as Paquete
+class "Disponibilidad" as Disponibilidad
+class "Línea de reserva" as Linea
+class "Movimiento de pago" as Pago
+class "Reserva aérea" as Aereo
+Usuario "0..*" -- "0..1" Empresa : pertenece a >
+Usuario "1" -- "0..*" Itinerario : planifica >
+Destino "1" -- "0..*" Producto : ubica >
+Empresa "1" -- "0..*" Producto : ofrece >
+Itinerario "0..1" -- "0..*" Reserva : origina >
+Producto <|-- Experiencia
+Producto <|-- Paquete
+Paquete "0..*" -left- "0..*" Experiencia : incluye >
+Producto "1" *-- "0..*" Disponibilidad
+Reserva "1" *-- "1..*" Linea
+Reserva "1" *-- "0..*" Pago
+Reserva "1" -- "0..1" Aereo : incluye >
+Linea "0..*" -- "1" Disponibilidad : reserva cupo en >
+Usuario "1" -- "0..*" Reserva : realiza >
+@enduml
