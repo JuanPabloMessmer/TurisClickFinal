@@ -1,0 +1,60 @@
+@startuml T05-despliegue
+' Diagrama de despliegue UML de TurisClick V2 (ambiente dev/demo en Azure).
+' Evidencia: infra/terraform/{app-service,database,key-vault,identity,data,locals}.tf, infra/terraform/dev.tfvars,
+' infra/README.md (Static Web Apps, V1 fuera de Terraform), .github/workflows/backend-v2.yml,
+' frontend/apps/tourist-mobile/eas.json y src/lib/env.ts.
+' V1 y V2 comparten el servidor PostgreSQL con bases separadas; V2 nunca accede a turisclick_db.
+' Sólo muestra la topología. El estado operativo verificado del ambiente está en
+' ../tecnico/HALLAZGOS-Y-DISCREPANCIAS.md (§1), no en este diagrama.
+!pragma layout smetana
+!include _tema-tesis.iuml
+skinparam nodesep 35
+skinparam ranksep 50
+skinparam nodeBackgroundColor #FFFFFF
+skinparam artifactBackgroundColor #E3F1E6
+skinparam artifactBorderColor #2E7D32
+skinparam artifactFontSize 13
+skinparam nodeFontSize 13
+
+title Diagrama de despliegue de TurisClick
+
+node "GitHub Actions" <<servicio CI/CD>> as gha {
+  artifact "Compilación, pruebas\ny publicación" as pipeline #EEEEEE
+}
+node "Teléfono Android" <<dispositivo>> as phone {
+  artifact "App móvil\nTurisClick (APK)" as apk #DCE8F5
+}
+node "Computadora del\noperador o administrador" <<dispositivo>> as pc {
+  node "Navegador web" <<entorno de ejecución>> as browser {
+    artifact "Backoffice\n(SPA React)" as spa #DCE8F5
+  }
+}
+
+cloud "Microsoft Azure" as azure {
+  node "rg-turisclick-dev" <<grupo de recursos>> as rg {
+    node "App Service Linux · plan F1\n(Brazil South)" <<servidor de aplicaciones>> as app {
+      artifact "TurisClick.Api\n(API REST, .NET 10)" as apiart
+    }
+    node "Static Web Apps\n(East US 2)" <<servicio web>> as swa {
+      artifact "Backoffice\n(archivos estáticos)" as spafiles #DCE8F5
+    }
+    node "Key Vault\n(Brazil South)" <<servicio de secretos>> as kv {
+      artifact "Cadena de conexión\ny clave JWT" as secrets #FFF4D6
+    }
+    node "PostgreSQL Flexible Server\n(Brazil South)" <<servidor de base de datos>> as pg {
+      database "turisclick_db_v2\n(TurisClick V2)" as db2
+      database "turisclick_db\n(V1, aislada)" as db1 #EEEEEE
+    }
+    node "App Service V1\n(East US 2)" <<versión anterior, aislada>> as v1 #EEEEEE
+  }
+}
+
+phone --> app : HTTPS · JSON · JWT
+browser --> app : HTTPS · JSON · JWT
+browser --> swa : HTTPS
+app --> pg : TCP 5432\nsólo turisclick_db_v2
+app ..> kv : identidad\nadministrada
+gha --> app : despliegue\n(OIDC)
+v1 ..> pg : sólo\nturisclick_db
+
+@enduml

@@ -29,3 +29,12 @@ echo "4/4 Mermaid (sintaxis + SVG + PNG)"
 mapfile -t MMD < <(find "$HERE" -name '*.mmd' -not -path '*/_herramientas/*' | sort)
 node "$HERE/_herramientas/render-mermaid.mjs" "${MMD[@]}"
 echo "Listo: ${#PUML[@]} PlantUML y ${#MMD[@]} Mermaid."
+
+echo "5/5 Carpeta de presentación de la tesis (sólo PNG, 300 ppp)"
+# Esta sesión aporta sólo el diagrama de despliegue; los diagramas UML los aporta su propia sesión.
+PRES="$HERE/../../Diagramas para Tesis"
+TMP_PNG="$(mktemp -d)"
+mkdir -p "$PRES"
+java -jar "$PLANTUML_JAR" -tpng -Sdpi=300 -o "$TMP_PNG" "$HERE/thesis/T05-despliegue.puml"
+cp "$TMP_PNG/T05-despliegue.png" "$PRES/Diagrama de Despliegue.png"
+rm -rf "$TMP_PNG"
