@@ -3,8 +3,10 @@
 Procedimiento ordenado, con una condición de verificación por paso. Cada paso dice cómo saber que salió bien
 antes de pasar al siguiente; si la verificación falla, se va a la sección 18 y no se sigue.
 
-**Nada de este plan se ejecutó.** El estado actual está en
-[deployment-readiness.md](deployment-readiness.md), y hoy el backend V2 está caído.
+**Pasos 1 a 5: ejecutados el 13 de octubre de 2026** (Oleada 15). La base V2 tiene las 14 migraciones y el
+respaldo previo está verificado; el detalle está en [wave15-readiness.md](wave15-readiness.md). Del paso 6 en
+adelante, nada se ejecutó todavía. El respaldo del paso 3 quedó automatizado en
+`infra/bootstrap/backup-v2-database.ps1`.
 
 ## Reglas que no se negocian
 
@@ -208,11 +210,17 @@ problema que haya que saltear.
 Desde GitHub Actions, **a mano**: Actions → *Backend V2 CI/CD* → *Run workflow*, marcando `deploy` y anotando
 en `migrations_applied` la migración que quedó aplicada en el paso 5.
 
-El workflow, en orden: build y pruebas → **verifica el esquema contra el backend desplegado** → empaqueta →
-despliega → smoke tests. Si la base estuviera atrasada, se detiene en la verificación sin tocar la app.
+El workflow, en orden: build y pruebas → **verificación `pre`** → empaqueta → despliega → smoke tests →
+**verificación `post`**. Las dos las hace `.github/scripts/schema_preflight.py`: la app tiene que ser la V2 y
+apuntar al secreto V2 de Key Vault, `/api/health` tiene que informar `turisclick_db_v2` con exactamente las
+migraciones del commit que se despliega, y cualquier 500 en las sondas detiene el job. Ya no se lee el cuerpo
+de ningún error.
 
-**Verificación:** el job termina en verde y el paso "Verificar que la base V2 tiene las migraciones del
-código" dice `la base V2 responde a las columnas que el código espera`.
+`migrations_applied` sólo se usa si la app desplegada todavía no tiene `/api/health` (el primer deploy después
+de la Oleada 15): en ese caso tiene que ser la última migración del código y queda como advertencia.
+
+**Verificación:** el job termina en verde y la verificación `post` dice
+`turisclick_db_v2 tiene las N migraciones del código`.
 
 ---
 
@@ -234,6 +242,12 @@ curl -s -o /dev/null -w "%{http_code}\n" "$API/swagger/v1/swagger.json"
 ```
 
 **Verificación:** login **401** (no 500), Swagger **404** (está en `Production`, correcto).
+
+```bash
+curl -s "$API/api/health"
+```
+
+**Verificación:** 200 con `"status":"HEALTHY"`, `"database":"turisclick_db_v2"` y `"pendingMigrations":0`.
 
 ---
 
