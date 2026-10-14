@@ -6,6 +6,7 @@ using Microsoft.OpenApi;
 using Serilog;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Database.Seed;
+using TurisClick.Api.Infrastructure.Health;
 using Microsoft.AspNetCore.Authorization;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Admin;
@@ -127,6 +128,9 @@ builder.Services.AddAdminModule();
     builder.Services.AddPreferencesModule();
     builder.Services.AddAiModule(builder.Configuration);
     builder.Services.AddFlightsModule(builder.Configuration);
+
+    // ---- Salud: base real y migraciones (GET /api/health y /api/admin/health/schema) ----
+    builder.Services.AddScoped<DatabaseSchemaInspector>();
 
     // ---- Manejo global de errores ----
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

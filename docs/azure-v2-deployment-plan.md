@@ -3,8 +3,10 @@
 Procedimiento ordenado, con una condición de verificación por paso. Cada paso dice cómo saber que salió bien
 antes de pasar al siguiente; si la verificación falla, se va a la sección 18 y no se sigue.
 
-**Nada de este plan se ejecutó.** El estado actual está en
-[deployment-readiness.md](deployment-readiness.md), y hoy el backend V2 está caído.
+**Pasos 1 a 5: ejecutados el 13 de octubre de 2026** (Oleada 15). La base V2 tiene las 14 migraciones y el
+respaldo previo está verificado; el detalle está en [wave15-readiness.md](wave15-readiness.md). Del paso 6 en
+adelante, nada se ejecutó todavía. El respaldo del paso 3 quedó automatizado en
+`infra/bootstrap/backup-v2-database.ps1`.
 
 ## Reglas que no se negocian
 
@@ -205,14 +207,21 @@ problema que haya que saltear.
 
 ## 8. Desplegar el backend
 
-Desde GitHub Actions, **a mano**: Actions → *Backend V2 CI/CD* → *Run workflow*, marcando `deploy` y anotando
-en `migrations_applied` la migración que quedó aplicada en el paso 5.
+Desde GitHub Actions, **a mano**: Actions → *Backend V2 CI/CD* → *Run workflow*, marcando `deploy`.
 
-El workflow, en orden: build y pruebas → **verifica el esquema contra el backend desplegado** → empaqueta →
-despliega → smoke tests. Si la base estuviera atrasada, se detiene en la verificación sin tocar la app.
+El workflow, en orden: build y pruebas → **verificación `pre`** → empaqueta → despliega → smoke tests →
+**verificación `post`** (obligatoria: corre aunque fallen los pasos anteriores). Las dos las hace
+`.github/scripts/schema_preflight.py`: la app tiene que ser la V2 y apuntar al secreto V2 de Key Vault, la base
+tiene que coincidir con la huella de `turisclick_db_v2` y las migraciones del commit (`/api/health?expect=`), y
+cualquier 500 en las sondas detiene el job. Ya no se lee el cuerpo de ningún error.
 
-**Verificación:** el job termina en verde y el paso "Verificar que la base V2 tiene las migraciones del
-código" dice `la base V2 responde a las columnas que el código espera`.
+**Sólo el primer deploy después de la Oleada 15** (la app que corre todavía no tiene `/api/health`): marcar
+`first_deploy_bootstrap` y poner en `migrations_applied` el id completo
+`20261007024736_0014_Oleada13_AltaDeOperadoresPorAdmin`. La excepción está atada al paquete que corre hoy y a
+esas 14 migraciones; las condiciones y el rollback están en [wave15-readiness.md](wave15-readiness.md).
+
+**Verificación:** el job termina en verde y la verificación `post` dice
+`turisclick_db_v2 tiene las N migraciones del código`.
 
 ---
 
@@ -234,6 +243,13 @@ curl -s -o /dev/null -w "%{http_code}\n" "$API/swagger/v1/swagger.json"
 ```
 
 **Verificación:** login **401** (no 500), Swagger **404** (está en `Production`, correcto).
+
+```bash
+curl -s "$API/api/health"
+```
+
+**Verificación:** 200 con `{"status":"HEALTHY"}` y nada más. El detalle (base, migraciones, pendientes) está
+en `GET /api/admin/health/schema`, sólo con un token de ADMIN.
 
 ---
 
@@ -422,14 +438,17 @@ recién entonces decidir. **No** se usan las migraciones `down` como mecanismo d
 ### Si el deploy sale mal (paso 8)
 
 El esquema nuevo es compatible con el código viejo, así que se puede volver al paquete anterior sin tocar la
-base:
+base. Antes de desplegar se guarda el paquete que corre (Kudu, `/api/zip/site/wwwroot/`, con el token de
+Entra de `az`) y se redepliega ése:
 
 ```bash
-az webapp deployment list-publishing-profiles -g rg-turisclick-dev -n app-turisclick-v2-api -o table
+az webapp deploy -g rg-turisclick-dev -n app-turisclick-v2-api --src-path <paquete-guardado>.zip --type zip --clean true --restart true
 ```
 
-o relanzar el workflow desde el commit anterior. **Verificación:** los cuatro endpoints del paso 9 vuelven a
-200.
+**No** se relanza el workflow con un commit revertido: si el código revertido no tiene `/api/health`, la
+verificación `post` falla a propósito. El procedimiento completo, ensayado, está en
+[wave15-readiness.md](wave15-readiness.md#4-rollback). **Verificación:** los cuatro endpoints del paso 9
+vuelven a 200.
 
 ### Si los smoke tests fallan tras el deploy (paso 9)
 

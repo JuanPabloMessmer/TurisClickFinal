@@ -29,6 +29,7 @@ on:
       - 'tests/**'
       - 'TurisClick.slnx'
       - '.github/workflows/backend-v2.yml'
+      - '.github/scripts/**'
   pull_request:
     branches: [master]
     paths:
@@ -36,14 +37,19 @@ on:
       - 'tests/**'
       - 'TurisClick.slnx'
       - '.github/workflows/backend-v2.yml'
+      - '.github/scripts/**'
   workflow_dispatch:
     inputs:
       deploy:
         description: 'Desplegar a app-turisclick-v2-api. Marcá esto SÓLO si las migraciones pendientes ya se aplicaron a turisclick_db_v2.'
         type: boolean
         default: false
+      first_deploy_bootstrap:
+        description: 'SÓLO para el primer deploy después de la Oleada 15: la app que corre todavía no tiene /api/health. Ver docs/wave15-readiness.md. Falla si no hace falta.'
+        type: boolean
+        default: false
       migrations_applied:
-        description: 'Última migración aplicada en turisclick_db_v2 (ej. 0014). Queda en el registro del deploy.'
+        description: 'Sólo con first_deploy_bootstrap: id COMPLETO de la última migración aplicada en turisclick_db_v2, verificada por fuera del pipeline.'
         type: string
         required: false
 
@@ -91,6 +97,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Tests de la verificación de esquema
+        run: python3 -m unittest discover -s .github/scripts -v
 
       - name: Restore
         run: dotnet restore TurisClick.slnx
@@ -155,50 +164,49 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      # El esquema se revisa ANTES de desplegar. En octubre de 2026 el deploy pisó la app con código que
-      # esperaba columnas inexistentes y el problema se descubrió con los smoke tests, cuando ya estaba
-      # sirviendo. Estas dos llamadas tocan las tablas que las últimas migraciones cambiaron: si la base está
-      # atrasada responden 500 y el deploy se detiene sin haber tocado nada.
+      # El script de verificación y las migraciones del commit que se despliega. Sólo eso: el código ya viene
+      # compilado en el artifact.
+      - uses: actions/checkout@v4
+        with:
+          path: repo
+          sparse-checkout: |
+            .github/scripts
+            src/TurisClick.Api/Infrastructure/Database/Migrations
+
+      # Hasta la Oleada 15 este paso buscaba "does not exist" en el cuerpo de un 500, o sea que dependía de que
+      # el backend publicara el error crudo de PostgreSQL. Ahora manda a /api/health la huella de turisclick_db_v2
+      # con las migraciones de este commit y la app la compara con su base real; verifica que la app apunte al
+      # secreto V2 de Key Vault, y cualquier 500 en las sondas hace fallar el paso. Ver
+      # .github/scripts/schema_preflight.py.
       - name: Verificar que la base V2 tiene las migraciones del código
+        env:
+          FIRST_DEPLOY_BOOTSTRAP: ${{ inputs.first_deploy_bootstrap }}
+          MIGRATIONS_APPLIED: ${{ inputs.migrations_applied }}
         run: |
-          fail=0
-          probe() {
-            local name="$1" path="$2" method="${3:-GET}" data="${4:-}"
-            local status body
-            for attempt in $(seq 1 12); do
-              if [ "$method" = "POST" ]; then
-                status=$(curl -s -o probe.json -w '%{http_code}' --max-time 90 -X POST "$APP_URL$path"                   -H 'Content-Type: application/json' -d "$data" || true)
-              else
-                status=$(curl -s -o probe.json -w '%{http_code}' --max-time 90 "$APP_URL$path" || true)
-              fi
-              # Un 000 o un 503 es la app despertando (F1 no tiene Always On); se reintenta.
-              case "$status" in 000|502|503|504) sleep 15; continue;; esac
-              break
-            done
-            if [ "$status" = "500" ] && grep -q 'does not exist' probe.json; then
-              body=$(head -c 300 probe.json)
-              echo "::error title=Esquema desactualizado::$name -> 500. $body"
-              fail=1
-            else
-              echo "  $name -> $status"
-            fi
-          }
-
-          # Lee packages.cancellation_policy (migración 0012).
-          probe '/api/packages' '/api/packages'
-          # Lee users.must_change_password (migración 0014). Credenciales inválidas a propósito: se espera 401.
-          probe '/api/auth/login' '/api/auth/login' POST '{"email":"schema-probe@invalid.local","password":"NoEsUnaCredencial1"}'
-
-          if [ "$fail" = "1" ]; then
-            echo "::error title=Deploy detenido::Faltan migraciones en turisclick_db_v2. Aplicalas primero (docs/azure-v2-deployment-plan.md) y volvé a lanzar este workflow."
-            exit 1
-          fi
-          echo "::notice title=Esquema::la base V2 responde a las columnas que el código espera"
+          az webapp config appsettings list -g "$RESOURCE_GROUP" -n "$WEB_APP" -o json > "$RUNNER_TEMP/settings.json"
+          # El deployment activo sólo importa para la excepción de primer deploy, atada a un paquete exacto.
+          active=$(az rest --method get \
+            --url "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$WEB_APP/deployments?api-version=2023-12-01" \
+            --query "value[?properties.active].name | [0]" -o tsv | sed 's|.*/||' || true)
+          bootstrap=()
+          if [ "$FIRST_DEPLOY_BOOTSTRAP" = "true" ]; then bootstrap=(--first-deploy-bootstrap); fi
+          # bash -e cortaría acá ante un fallo sin borrar el archivo: el estado se captura a mano.
+          status=0
+          python3 repo/.github/scripts/schema_preflight.py pre \
+            --app-url "$APP_URL" \
+            --migrations-dir repo/src/TurisClick.Api/Infrastructure/Database/Migrations \
+            --app-settings "$RUNNER_TEMP/settings.json" \
+            --active-deployment-id "$active" \
+            --migrations-applied "$MIGRATIONS_APPLIED" \
+            "${bootstrap[@]}" || status=$?
+          rm -f "$RUNNER_TEMP/settings.json"
+          exit $status
 
       - name: Empaquetar
         run: cd publish && zip -qr ../app.zip .
 
       - name: Deploy a app-turisclick-v2-api
+        id: deploy
         run: |
           az webapp deploy \
             --resource-group "$RESOURCE_GROUP" \
@@ -238,3 +246,19 @@ jobs:
           echo "GET /api/packages -> 200"
 
           echo "::notice title=Smoke tests::categories=$categories destinations=$destinations experiences/packages=200"
+
+      # Obligatorio: el código nuevo confirma contra su base real que es turisclick_db_v2 con exactamente las
+      # migraciones de este commit, y que está sano. Corre siempre que el deploy haya llegado a ejecutarse
+      # (también si fallaron los smoke tests o el propio deploy) y su falla hace fallar el workflow. Nunca acepta
+      # la excepción de primer deploy.
+      - name: Verificar el esquema con el código desplegado
+        if: ${{ always() && (steps.deploy.outcome == 'success' || steps.deploy.outcome == 'failure') }}
+        run: |
+          az webapp config appsettings list -g "$RESOURCE_GROUP" -n "$WEB_APP" -o json > "$RUNNER_TEMP/settings.json"
+          status=0
+          python3 repo/.github/scripts/schema_preflight.py post \
+            --app-url "$APP_URL" \
+            --migrations-dir repo/src/TurisClick.Api/Infrastructure/Database/Migrations \
+            --app-settings "$RUNNER_TEMP/settings.json" || status=$?
+          rm -f "$RUNNER_TEMP/settings.json"
+          exit $status

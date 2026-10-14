@@ -1,5 +1,10 @@
 # Estado de preparación para desplegar
 
+> **Actualización, 14 de octubre de 2026 (Oleada 15):** la base V2 se recuperó (migraciones `0010`–`0014`
+> aplicadas el 13 de octubre, con respaldo verificado) y el backend que corre hoy en Azure responde bien. El
+> estado vigente está en [wave15-readiness.md](wave15-readiness.md). Lo que sigue es el diagnóstico de la
+> Oleada 14, conservado como registro del incidente.
+
 Qué está listo, qué no, y qué hay que saber antes de tocar Azure. Escrito el 8 de octubre de 2026, al cerrar
 la oleada de preparación para el despliegue.
 

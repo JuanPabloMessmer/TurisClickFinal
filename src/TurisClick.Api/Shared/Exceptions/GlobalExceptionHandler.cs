@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,11 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
 {
     /// <summary>Código SQLSTATE de Postgres para violación de foreign key (23503).</summary>
     private const string PostgresForeignKeyViolation = "23503";
+
+    public const string GenericServerErrorDetail =
+        "Ocurrió un error inesperado. Si el problema persiste, informá el traceId de esta respuesta.";
+
+    public const string GenericBadRequestDetail = "El servidor no pudo leer la solicitud.";
 
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
@@ -33,11 +39,22 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
                 (StatusCodes.Status409Conflict, "Conflicto",
                     "No se puede completar la operación porque el recurso está siendo utilizado por otros datos."),
 
-            _ => (StatusCodes.Status500InternalServerError, "Error interno del servidor", exception.Message)
+            // Request mal formado que Kestrel/ASP.NET rechaza antes de llegar al Controller (cuerpo
+            // ilegible, demasiado grande). Su mensaje describe el servidor, no el pedido: no se devuelve.
+            BadHttpRequestException bad => (bad.StatusCode, "Solicitud inválida", GenericBadRequestDetail),
+
+            // Todo lo demás es un error que nadie previó. Hasta la Oleada 15 se devolvía exception.Message, y
+            // en Azure eso publicó el texto crudo de PostgreSQL ("42703: column u.must_change_password does
+            // not exist") a cualquiera que intentara iniciar sesión. El detalle va sólo al log, con el traceId
+            // que también recibe el cliente para poder encontrarlo.
+            _ => (StatusCodes.Status500InternalServerError, "Error interno del servidor", GenericServerErrorDetail)
         };
 
-        if (status == StatusCodes.Status500InternalServerError)
-            logger.LogError(exception, "Excepción no controlada en {Path}", httpContext.Request.Path);
+        var traceId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
+
+        if (status >= StatusCodes.Status500InternalServerError)
+            logger.LogError(exception, "Excepción no controlada en {Method} {Path} (traceId {TraceId})",
+                httpContext.Request.Method, httpContext.Request.Path, traceId);
         else
             logger.LogWarning("{ExceptionType} en {Path}: {Message}", exception.GetType().Name, httpContext.Request.Path, exception.Message);
 
@@ -50,6 +67,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             Detail = detail,
             Instance = httpContext.Request.Path
         };
+        problem.Extensions["traceId"] = traceId;
 
         // Código legible por máquina cuando la excepción lo declara (ej. INSUFFICIENT_CAPACITY): permite
         // que el cliente decida qué ofrecer sin parsear el mensaje. Nunca se expone en un 500.
