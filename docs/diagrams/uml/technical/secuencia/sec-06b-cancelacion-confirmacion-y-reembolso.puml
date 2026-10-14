@@ -1,0 +1,99 @@
+@startuml sec-06b-cancelacion-confirmacion-y-reembolso
+!include ../_estilo.iuml
+autonumber "<b>0."
+hide footbox
+
+title Secuencia — Cancelación con reembolso (2/2): confirmación, cancelación del pasaje y reembolsos (UC-T-11, UC-T-22)
+
+actor "Turista" as T
+participant "Tourist Mobile" as M
+box "TurisClick API (ASP.NET Core)" #FAFAFA
+  participant "ReservationsController" as RC
+  participant "ReservationService" as RS
+  participant "ReservationCancellation\nService" as CS
+  participant "ReservationBooking\nService" as BS
+  participant "PaymentLedger" as L
+end box
+participant "IFlightProvider\n(Duffel)" as FP <<externo>>
+participant "SimulatedPayment\nGateway" as PG <<externo>>
+database "PostgreSQL" as DB
+
+T -> M : acepta el presupuesto
+M -> RC : POST /api/reservations/{id}/cancel {cancellationQuoteId}
+activate RC
+RC -> RS : CancelAsync(id, quoteId)
+activate RS
+
+alt reserva PENDING_PAYMENT (UC-T-11, sin dinero de por medio)
+  RS -> DB : UPDATE reservations → CANCELLED (condicional)
+  RS -> BS : ReleaseHoldsAsync(líneas activas)
+  RS -> DB : líneas → CANCELLED; vuelo PENDING → CANCELLED; COMMIT
+else reserva CONFIRMED sin cancellationQuoteId
+  RS --> RC : 409 CANCELLATION_QUOTE_REQUIRED
+else reserva CONFIRMED con presupuesto
+  RS -> CS : ConfirmAsync(id, quoteId)
+  activate CS
+  CS -> DB : carga el presupuesto
+  alt no existe, es de otra reserva o no está QUOTED
+    CS --> RS : 404 / 409 CANCELLATION_QUOTE_INVALID
+  else vencido
+    CS -> DB : presupuesto → EXPIRED
+    CS --> RS : 409 CANCELLATION_QUOTE_EXPIRED
+  else vigente
+    group 1. Aceptación (se commitea antes de tocar la aerolínea)
+      CS -> DB : UPDATE reservations SET status = 'CANCELLING'\nWHERE status = 'CONFIRMED'
+      alt 0 filas (doble toque)
+        CS --> RS : 409 CANCELLATION_IN_PROGRESS
+      else 1 fila
+        CS -> DB : presupuesto → ACCEPTED; COMMIT
+      end
+    end
+    opt 2. Hay línea de vuelo: la aerolínea primero
+      CS -> FP : ConfirmCancellationAsync(providerCancellationId)
+      alt la aerolínea rechaza
+        CS -> DB : reserva CANCELLING → CONFIRMED,\ncancelación → FAILED; COMMIT
+        CS --> RS : "no cancelamos nada"
+      else desenlace desconocido
+        CS -> DB : cancelación → REQUIRES_REVIEW
+        CS --> RS : en revisión (sin liberar cupo)
+      else confirmada
+        CS -> CS : el reembolso confirmado manda\nsobre el presupuestado
+      end
+    end
+    group 3. Transacción local
+      CS -> BS : ReleaseHoldsAsync(líneas CONFIRMED) — una sola vez
+      CS -> DB : líneas → CANCELLED, reserva → CANCELLED,\nvuelo → CANCELLED; COMMIT
+    end
+    group 4. Reembolsos (al final, idempotentes)
+      loop por línea con RefundKnown y monto > 0
+        CS -> L : RefundAlreadyRecordedAsync(clave)
+        alt ya reembolsada
+          CS -> CS : se omite
+        else pendiente
+          CS -> PG : RefundAsync(monto, moneda, clave)
+          CS -> L : RecordRefund(componente, SUCCEEDED | FAILED)
+        end
+      end
+      alt algún reembolso falló
+        CS -> DB : cancelación → REFUND_PENDING (+ próximo reintento)
+      else todos exitosos
+        CS -> DB : cancelación → COMPLETED
+      end
+    end
+    CS --> RS : CancellationResultResponse
+  end
+  deactivate CS
+end
+RS --> RC : ReservationResponse (estado real)
+deactivate RS
+RC --> M : 200 OK
+deactivate RC
+M --> T : reserva cancelada con lo devuelto,\n"reembolso en proceso" o "en revisión"
+
+note over CS, DB
+  CancellationResolutionBackgroundService (cada 60 s) retoma ACCEPTED, REQUIRES_REVIEW y
+  REFUND_PENDING: consulta la orden a la aerolínea antes de reintentar y, agotados 4 intentos,
+  devuelve la reserva a CONFIRMED y deja REQUIRES_REVIEW. El ADMIN puede forzarlo con
+  POST /api/admin/cancellations/resolve.
+end note
+@enduml

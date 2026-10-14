@@ -1,0 +1,42 @@
+@startuml cu-01-turista
+!pragma layout smetana
+!include ../_estilo-tesis.iuml
+left to right direction
+
+title Casos de uso del Turista
+
+actor "Turista" as Turista
+
+rectangle "TurisClick — aplicación móvil" {
+  usecase "Gestionar cuenta\ny sesión" as UC1
+  usecase "Configurar preferencias\nde viaje" as UC2
+  usecase "Explorar experiencias\ny paquetes" as UC3
+  usecase "Planificar viaje con\nel asistente de IA" as UC4
+  usecase "Reservar itinerario\npropuesto" as UC5
+  usecase "Reservar experiencia\no paquete" as UC6
+  usecase "Incluir vuelo\nen el paquete" as UC7
+  usecase "Cancelar reserva" as UC8
+  usecase "Pagar reserva" as UC9
+  usecase "Consultar mis viajes" as UC10
+}
+
+actor "Proveedor aéreo" as Aereo
+actor "Pasarela de pago" as Pasarela
+
+Turista -- UC1
+Turista -- UC2
+Turista -- UC3
+Turista -- UC4
+Turista -- UC5
+Turista -- UC6
+Turista -- UC8
+Turista -- UC9
+Turista -- UC10
+
+UC7 .> UC6 : <<extend>>                                \n[paquete con vuelo]                                
+
+UC7 -- Aereo
+UC8 -- Aereo
+UC8 -- Pasarela
+UC9 -- Pasarela
+@enduml

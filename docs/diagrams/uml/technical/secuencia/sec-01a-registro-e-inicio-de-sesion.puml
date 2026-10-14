@@ -1,0 +1,93 @@
+@startuml sec-01a-registro-e-inicio-de-sesion
+!include ../_estilo.iuml
+autonumber "<b>0."
+hide footbox
+
+title Secuencia — Registro e inicio de sesión del turista (UC-AUTH-01, UC-AUTH-02)
+
+actor "Turista" as T
+box "Tourist Mobile (Expo)" #FAFAFA
+  participant "Pantalla de\nregistro / login" as UI
+  participant "SessionProvider\n+ AuthManager" as AM
+  database "SecureStore" as SS
+end box
+box "TurisClick API (ASP.NET Core)" #FAFAFA
+  participant "AuthController" as C
+  participant "AuthService" as S
+  participant "UserRepository" as UR
+  participant "PasswordHasherService\n(PBKDF2)" as PH
+  participant "JwtTokenService" as JWT
+  participant "RefreshTokenRepository" as RTR
+end box
+database "PostgreSQL" as DB
+
+== Registro (anónimo) ==
+T -> UI : completa nombre, apellido,\nemail y contraseña
+UI -> AM : register(body)
+AM -> C : POST /api/auth/register
+activate C
+C -> S : RegisterTouristAsync(request)
+activate S
+S -> S : normaliza email (trim, minúsculas)
+S -> UR : EmailExistsAsync(email)
+UR -> DB : SELECT users
+alt email ya registrado
+  S --> C : ConflictAppException
+  C --> AM : 409 Conflict
+  AM --> UI : muestra error
+else email libre
+  S -> PH : Hash(password)
+  PH --> S : passwordHash
+  S -> UR : AddAsync(User{Role=TOURIST, Status=ACTIVE})
+  ref over S, JWT, RTR : Emitir tokens (ver abajo)
+  S -> DB : SaveChanges (usuario + refresh token)
+  S --> C : AuthResultResponse
+  deactivate S
+  C --> AM : 201 Created {accessToken, refreshToken,\nexpiresAtUtc, user}
+  deactivate C
+  AM -> AM : applyExternalSession(result)\n+ verifica role = TOURIST
+  AM -> SS : guarda refresh token
+  AM --> UI : sesión iniciada
+end
+
+== Inicio de sesión ==
+T -> UI : email y contraseña
+UI -> AM : login(email, password)
+AM -> C : POST /api/auth/login
+activate C
+C -> S : LoginAsync(request)
+activate S
+S -> UR : GetByEmailAsync(email)
+S -> PH : Verify(hash, password)
+alt usuario inexistente o contraseña inválida
+  S --> C : UnauthorizedAppException
+  C --> AM : 401 "Email o contraseña inválidos"
+else Status = SUSPENDED
+  S --> C : ForbiddenAppException
+  C --> AM : 403 "Esta cuenta está suspendida"
+else credenciales válidas y cuenta activa
+  group Emitir tokens (IssueTokensForUserAsync)
+    S -> JWT : GenerateAccessToken(user)
+    note right of JWT
+      HMAC-SHA256, 15 min.
+      Claims: sub, email, role, jti
+      (+ company_id si PROVIDER,
+       + must_change_password si aplica)
+    end note
+    S -> JWT : GenerateRefreshToken()
+    S -> JWT : HashRefreshToken(plano)
+    S -> RTR : AddAsync(RefreshToken{TokenHash,\nExpiresAt = +30 días})
+  end
+  S -> DB : SaveChanges
+  S --> C : AuthResultResponse
+  deactivate S
+  C --> AM : 200 OK {tokens, user}
+  deactivate C
+  alt role ≠ TOURIST
+    AM -> AM : logout() — la app sólo admite turistas
+  else role = TOURIST
+    AM -> SS : guarda refresh token
+    AM --> UI : navega al catálogo
+  end
+end
+@enduml

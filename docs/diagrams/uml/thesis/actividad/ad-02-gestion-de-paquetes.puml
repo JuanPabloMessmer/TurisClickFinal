@@ -1,0 +1,44 @@
+@startuml ad-02-gestion-de-paquetes
+!include ../_estilo-tesis.iuml
+
+title Gestión de un paquete por el proveedor
+
+start
+if (¿La empresa está aprobada?) then (no)
+  :No puede crear paquetes;
+  stop
+else (sí)
+endif
+repeat
+  :Registrar datos generales, itinerario por días,
+  imágenes y política de cancelación;
+repeat while (¿Datos válidos?) is (no) not (sí)
+:Guardar el paquete como borrador;
+repeat
+  :Definir salidas con fecha y cupo;
+  if (¿El paquete incluye vuelo?) then (sí)
+    :Configurar la regla de búsqueda de vuelos;
+  else (no)
+  endif
+  :Solicitar la publicación;
+repeat while (¿Tiene ítems y una salida futura abierta?) is (no) not (sí)
+:Publicar el paquete;
+note right
+  Queda visible en el catálogo y disponible
+  para el asistente de IA desde ese momento.
+end note
+repeat
+  switch (¿Qué necesita hacer?)
+  case (actualizar)
+    :Editar datos, ítems o política
+    (las reservas existentes no cambian);
+  case (ajustar oferta)
+    :Agregar, cerrar o ajustar salidas
+    (sin bajar del cupo ya reservado);
+  case (atender reservas)
+    :Revisar las reservas recibidas;
+  endswitch
+repeat while (¿Mantener el paquete en venta?) is (sí) not (no)
+:Despublicar el paquete;
+stop
+@enduml

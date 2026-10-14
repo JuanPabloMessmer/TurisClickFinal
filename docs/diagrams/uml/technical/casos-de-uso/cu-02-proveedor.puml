@@ -1,0 +1,96 @@
+@startuml cu-02-proveedor
+!pragma layout smetana
+!include ../_estilo.iuml
+left to right direction
+
+title Diagrama de casos de uso — Proveedor / operador turístico (Backoffice)
+
+actor "Proveedor\n(operador)" as Proveedor
+
+rectangle "TurisClick" {
+
+  package "Cuenta" {
+    usecase "Iniciar sesión\n(UC-AUTH-02)" as UC_LOGIN
+    usecase "Cambiar contraseña temporal\n(parte de UC-P-01)" as UC_PWD
+    usecase "Renovar / cerrar sesión\n(UC-AUTH-03/04)" as UC_SES
+  }
+
+  package "Mi empresa" {
+    usecase "Gestionar perfil de la empresa\n(UC-P-02)" as UC_EMP
+  }
+
+  package "Experiencias" {
+    usecase "Crear experiencia\n(UC-P-04)" as UC_CEXP
+    usecase "Editar experiencia\n(UC-P-05)" as UC_EEXP
+    usecase "Publicar / despublicar\nexperiencia (UC-P-06)" as UC_PEXP
+    usecase "Definir disponibilidad\nde experiencia (UC-P-10)" as UC_DEXP
+  }
+
+  package "Paquetes" {
+    usecase "Crear paquete\n(UC-P-07)" as UC_CPAQ
+    usecase "Editar paquete\n(UC-P-08)" as UC_EPAQ
+    usecase "Publicar / despublicar\npaquete (UC-P-09)" as UC_PPAQ
+    usecase "Definir salidas del paquete\n(UC-P-11)" as UC_DPAQ
+    usecase "Configurar regla de vuelo\n(UC-P-15)" as UC_VUELO
+    usecase "Configurar política de\ncancelación (UC-P-16)" as UC_POL
+  }
+
+  package "Reservas recibidas" {
+    usecase "Ver reservas recibidas\n(UC-P-12)" as UC_VRES
+    usecase "Ver detalle de una reserva\n(UC-P-13)" as UC_DRES
+    usecase "Cancelar su línea de reserva\n(UC-P-14)" as UC_CRES
+  }
+
+  package "Trabajo futuro" {
+    usecase "Agregar usuario adicional\na la empresa (UC-P-03)" <<futuro>> as F_MIEM
+    usecase "Política de cancelación\nen experiencias" <<futuro>> as F_POLEXP
+    usecase "Notificar al turista la\ncancelación de su línea" <<futuro>> as F_NOTI
+  }
+
+  usecase "Validar propiedad de la\nempresa (UC-SYS-03)" <<sistema>> as SYS_PROP
+  usecase "Liberar cupo\n(UC-SYS-08)" <<sistema>> as SYS_LIB
+}
+
+Proveedor --> UC_LOGIN
+Proveedor --> UC_PWD
+Proveedor --> UC_SES
+Proveedor --> UC_EMP
+Proveedor --> UC_CEXP
+Proveedor --> UC_EEXP
+Proveedor --> UC_PEXP
+Proveedor --> UC_DEXP
+Proveedor --> UC_CPAQ
+Proveedor --> UC_EPAQ
+Proveedor --> UC_PPAQ
+Proveedor --> UC_DPAQ
+Proveedor --> UC_VUELO
+Proveedor --> UC_VRES
+Proveedor --> UC_DRES
+Proveedor --> UC_CRES
+
+UC_POL ..> UC_CPAQ : <<extend>>
+UC_POL ..> UC_EPAQ : <<extend>>
+
+UC_EEXP ..> SYS_PROP : <<include>>
+UC_PEXP ..> SYS_PROP : <<include>>
+UC_DEXP ..> SYS_PROP : <<include>>
+UC_EPAQ ..> SYS_PROP : <<include>>
+UC_PPAQ ..> SYS_PROP : <<include>>
+UC_DPAQ ..> SYS_PROP : <<include>>
+UC_VUELO ..> SYS_PROP : <<include>>
+UC_DRES ..> SYS_PROP : <<include>>
+UC_CRES ..> SYS_PROP : <<include>>
+UC_CRES ..> SYS_LIB : <<include>>
+
+
+
+legend right
+  Todas las operaciones requieren el rol PROVIDER (política RequireProvider)
+  y se ejecutan desde el Backoffice web (React + Vite).
+  La cuenta del proveedor la crea un ADMIN (ver cu-03): no existe autorregistro.
+  Con contraseña temporal pendiente (claim must_change_password) todo responde 403.
+  Crear exige Company.Status = APPROVED; publicar exige empresa no suspendida,
+  al menos un ítem y una salida/turno futuro OPEN.
+  <<futuro>> = backlog, no implementado.
+endlegend
+@enduml

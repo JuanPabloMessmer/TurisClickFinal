@@ -1,0 +1,127 @@
+@startuml act-02-gestion-de-paquetes-proveedor
+!include ../_estilo.iuml
+
+title Diagrama de actividad — Gestión de paquetes por el proveedor (UC-P-07..09, UC-P-11, UC-P-15, UC-P-16)
+
+' Nota de autoría: PlantUML arrastra el último carril al branch siguiente, por eso
+' cada rama y cada punto posterior a un endif declara su carril explícitamente.
+
+|Proveedor|
+start
+:Iniciar sesión en el Backoffice;
+if (¿Contraseña temporal pendiente?) then (sí)
+  |Proveedor|
+  :Cambiar la contraseña temporal;
+else (no)
+  |Proveedor|
+endif
+
+|Proveedor|
+:<b>Crear paquete (UC-P-07)</b>
+Datos generales: título, descripción, destino,
+categorías, duración, precio y moneda;
+:Armar el itinerario por días con ítems
+EXPERIENCE_REFERENCE o DESCRIPTIVE;
+:Agregar imágenes (una sola de portada) y,
+opcionalmente, la política de cancelación
+por tramos (UC-P-16);
+
+|Sistema TurisClick|
+if (¿Empresa APPROVED?) then (no)
+  |Sistema TurisClick|
+  :Responder 403;
+  stop
+else (sí)
+  |Sistema TurisClick|
+endif
+|Sistema TurisClick|
+:Validar destino CITY, categorías existentes,
+DayNumber <= DurationDays, experiencias de la
+misma empresa, una portada y tramos coherentes;
+if (¿Datos válidos?) then (no)
+  |Sistema TurisClick|
+  :Responder 400 con los errores;
+  stop
+else (sí)
+  |Sistema TurisClick|
+endif
+|Sistema TurisClick|
+:Crear Package en estado DRAFT;
+
+|Proveedor|
+:<b>Definir salidas (UC-P-11)</b>
+Individuales o en lote: fecha y cupo total;
+|Sistema TurisClick|
+:Validar propiedad (UC-SYS-03), fecha no pasada
+y que no exista otra salida ese día;
+:Crear PackageAvailability OPEN;
+
+|Proveedor|
+if (¿El paquete incluye vuelo?) then (sí)
+  |Proveedor|
+  :<b>Configurar regla de vuelo (UC-P-15)</b>
+  Destino IATA, orígenes permitidos,
+  cabina y desfases de fecha;
+  |Sistema TurisClick|
+  :Guardar PackageFlightRule
+  y marcar IncludesFlight = true;
+else (no)
+  |Sistema TurisClick|
+endif
+
+|Proveedor|
+:<b>Publicar (UC-P-09)</b>;
+|Sistema TurisClick|
+:Validar propiedad (UC-SYS-03);
+if (¿Empresa SUSPENDED?) then (sí)
+  |Sistema TurisClick|
+  :Responder 403 COMPANY_SUSPENDED;
+  stop
+elseif (¿Paquete SUSPENDED por un ADMIN?) then (sí)
+  |Sistema TurisClick|
+  :Responder 409 CONTENT_SUSPENDED;
+  stop
+elseif (¿Sin ítems o sin salida futura OPEN?) then (sí)
+  |Sistema TurisClick|
+  :Responder 409 con el requisito faltante;
+  stop
+else (no)
+  |Sistema TurisClick|
+  :Status = PUBLISHED;
+  note right
+    Visible en el catálogo público y en el
+    retrieval de la IA desde la siguiente
+    consulta (sin reindexar).
+  end note
+endif
+
+|Proveedor|
+repeat :Elegir una acción de mantenimiento;
+  switch (¿Acción?)
+  case (editar)
+    :Modificar datos, ítems,
+    imágenes o política (UC-P-08);
+  case (gestionar salida)
+    :Cerrar / reabrir salida
+    o ajustar su cupo;
+  case (ver reservas)
+    :Consultar reservas recibidas
+    (UC-P-12/13);
+  case (despublicar)
+    :Solicitar despublicación;
+  endswitch
+  |Sistema TurisClick|
+  :Validar propiedad (UC-SYS-03) y aplicar la acción;
+  note right
+    • Editar: reemplaza ítems e imágenes; las reservas
+      existentes conservan precio y política congelados.
+    • Salida: no se reabre una salida pasada ni se fija
+      un cupo menor que los lugares ya reservados.
+    • Reservas: sólo líneas con el company_id del token.
+    • Despublicar: Status = UNPUBLISHED (republicable).
+  end note
+  |Proveedor|
+repeat while (¿Continúa gestionando?) is (sí) not (no)
+stop
+
+@enduml

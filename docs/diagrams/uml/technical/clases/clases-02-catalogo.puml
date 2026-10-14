@@ -1,0 +1,179 @@
+@startuml clases-02-catalogo
+!pragma layout smetana
+!include ../_estilo.iuml
+hide empty methods
+
+title Modelo de dominio — Catálogo turístico: destinos, experiencias y paquetes
+
+class Company <<externo>> {
+  + Id : Guid
+  + Status : CompanyStatus
+}
+
+class Destination <<entidad>> {
+  + Id : Guid
+  + Name : string
+  + Type : DestinationType
+  + ParentId : Guid [0..1]
+  + ImageUrl : string [0..1]
+  + CreatedAt : DateTimeOffset
+}
+
+class Category <<entidad>> {
+  + Id : Guid
+  + Name : string
+  + Description : string [0..1]
+}
+
+class Experience <<entidad>> {
+  + Id : Guid
+  + CompanyId : Guid
+  + DestinationId : Guid
+  + Title : string
+  + Description : string
+  + IncludesText : string [0..1]
+  + ExcludesText : string [0..1]
+  + DurationMinutes : int [0..1]
+  + DurationLabel : string [0..1]
+  + Price : decimal
+  + Currency : string {ISO 4217}
+  + Status : PublicationStatus
+  + CreatedAt, UpdatedAt : DateTimeOffset
+}
+
+class ExperienceImage <<entidad>> {
+  + Url : string
+  + SortOrder : int
+  + IsCover : bool
+}
+
+class ExperienceAvailability <<entidad>> {
+  + Id : Guid
+  + Date : DateOnly
+  + StartTime : TimeOnly [0..1]
+  + TotalSlots : int
+  + ReservedSlots : int
+  + Status : AvailabilitySlotStatus
+  + /AvailableSlots : int
+}
+
+class Package <<entidad>> {
+  + Id : Guid
+  + CompanyId : Guid
+  + DestinationId : Guid
+  + Title : string
+  + Description : string
+  + ConditionsText : string [0..1]
+  + DurationDays : int {1..90}
+  + Price : decimal
+  + Currency : string {ISO 4217}
+  + Status : PublicationStatus
+  + IncludesFlight : bool
+  + CancellationPolicy : string [0..1]
+  + CreatedAt, UpdatedAt : DateTimeOffset
+}
+
+class PackageItem <<entidad>> {
+  + Id : Guid
+  + DayNumber : int
+  + SortOrder : int
+  + Kind : PackageItemKind
+  + ExperienceId : Guid [0..1]
+  + Title : string [0..1]
+  + Description : string [0..1]
+}
+
+class PackageImage <<entidad>> {
+  + Url : string
+  + SortOrder : int
+  + IsCover : bool
+}
+
+class PackageAvailability <<entidad>> {
+  + Id : Guid
+  + DepartureDate : DateOnly
+  + TotalSlots : int
+  + ReservedSlots : int
+  + Status : AvailabilitySlotStatus
+  + /AvailableSlots : int
+}
+
+class PackageFlightRule <<entidad>> {
+  + PackageId : Guid {PK}
+  + DestinationIata : string
+  + AllowedOriginIatas : string {CSV}
+  + CabinClass : FlightCabinClass
+  + OutboundOffsetDays : int
+  + InboundOffsetDays : int
+  + RoundTrip : bool
+  + Origins() : List<string>
+}
+
+enum DestinationType {
+  COUNTRY
+  REGION
+  CITY
+}
+enum PublicationStatus {
+  DRAFT
+  PUBLISHED
+  UNPUBLISHED
+  SUSPENDED
+}
+enum AvailabilitySlotStatus {
+  OPEN
+  CLOSED
+}
+enum PackageItemKind {
+  EXPERIENCE_REFERENCE
+  DESCRIPTIVE
+}
+enum FlightCabinClass {
+  ECONOMY
+  PREMIUM_ECONOMY
+  BUSINESS
+  FIRST
+}
+
+Destination "0..1" -- "0..*" Destination : padre de >
+Company "1" -- "0..*" Experience : publica >
+Company "1" -- "0..*" Package : publica >
+Experience "0..*" --> "1" Destination : ubicada en (CITY) >
+Package "0..*" --> "1" Destination : ubicado en (CITY) >
+Experience "0..*" --> "0..*" Category
+Package "0..*" --> "0..*" Category
+Experience "1" *-- "0..*" ExperienceImage
+Experience "1" *-- "0..*" ExperienceAvailability
+Package "1" *-- "0..*" PackageItem
+Package "1" *-- "0..*" PackageImage
+Package "1" *-- "0..*" PackageAvailability
+Package "1" *-- "0..1" PackageFlightRule
+PackageItem "0..*" --> "0..1" Experience : referencia >
+
+Destination ..> DestinationType
+Experience ..> PublicationStatus
+Package ..> PublicationStatus
+ExperienceAvailability ..> AvailabilitySlotStatus
+PackageAvailability ..> AvailabilitySlotStatus
+PackageItem ..> PackageItemKind
+PackageFlightRule ..> FlightCabinClass
+
+note right of PackageItem
+  Invariante: Kind = EXPERIENCE_REFERENCE
+  exige ExperienceId de la MISMA empresa
+  que el paquete; DESCRIPTIVE exige Title
+  y ExperienceId nulo.
+end note
+
+note bottom of PackageFlightRule
+  Describe cómo buscar el vuelo, no un vuelo
+  concreto. IncludesFlight y la regla se
+  activan y desactivan juntos.
+end note
+
+note bottom of Package
+  CancellationPolicy se serializa por tramos,
+  p. ej. "30:100;15:50;0:0" (días:porcentaje),
+  y se copia a cada ReservationItem al reservar.
+end note
+@enduml

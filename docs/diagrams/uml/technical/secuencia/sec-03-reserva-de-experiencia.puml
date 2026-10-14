@@ -1,0 +1,103 @@
+@startuml sec-03-reserva-de-experiencia
+!include ../_estilo.iuml
+autonumber "<b>0."
+hide footbox
+
+title Secuencia — Reserva y pago de una experiencia (UC-T-08, UC-SYS-01/02/06/07, UC-T-19)
+
+actor "Turista" as T
+participant "Tourist Mobile" as M
+box "TurisClick API (ASP.NET Core)" #FAFAFA
+  participant "ReservationsController" as RC
+  participant "ReservationService" as RS
+  participant "ExperienceAvailability\nRepository" as EAR
+  participant "PaymentLedger" as L
+end box
+participant "SimulatedPaymentGateway" as PG <<externo>>
+database "PostgreSQL" as DB
+
+== Crear la reserva (retención de cupo) ==
+T -> M : elige turno y cantidad de viajeros
+M -> RC : POST /api/reservations\n{experienceAvailabilityId, travelers}
+activate RC
+RC -> RS : CreateAsync(request)
+activate RS
+RS -> EAR : GetByIdWithExperienceAsync(id)
+EAR -> DB : SELECT availability + experience + company
+alt no existe, experiencia no PUBLISHED o empresa SUSPENDED
+  RS --> RC : NotFoundAppException
+  RC --> M : 404
+else turno CLOSED o fecha pasada (UTC)
+  RS --> RC : GoneAppException
+  RC --> M : 410
+else turno válido
+  RS -> DB : BEGIN TRANSACTION
+  RS -> DB : UPDATE experience_availabilities\nSET reserved_slots = reserved_slots + n\nWHERE id = ? AND status = 'OPEN'\nAND reserved_slots + n <= total_slots
+  alt 0 filas afectadas (sin cupo)
+    RS -> DB : ROLLBACK
+    RS --> RC : ConflictAppException
+    RC --> M : 409 "No hay cupo suficiente"
+  else 1 fila afectada
+    RS -> RS : ReservationItem{UnitPrice, Currency\n= snapshot vigente de la Experience,\nCancellationPolicy = null}
+    RS -> RS : Reservation{PENDING_PAYMENT,\nExpiresAt = ahora + 30 min}
+    RS -> DB : INSERT reservation + item
+    RS -> DB : COMMIT
+    RS --> RC : ReservationResponse
+    deactivate RS
+    RC --> M : 201 Created
+    deactivate RC
+    M --> T : reserva pendiente de pago (30 min)
+  end
+end
+
+== Pagar la reserva ==
+T -> M : "Pagar"
+M -> RC : POST /api/reservations/{id}/pay\n{success, acceptPriceChanges}
+activate RC
+RC -> RS : PayAsync(id, request)
+activate RS
+RS -> DB : SELECT reservation + items
+alt no es del turista
+  RC --> M : 403
+else Status = EXPIRED, o PENDING_PAYMENT con ExpiresAt vencido
+  RC --> M : 410 (RESERVATION_NO_LONGER_PAYABLE / sin código)
+else otro estado distinto de PENDING_PAYMENT
+  RC --> M : 409
+else pagable
+  RS -> RS : revalida precio y moneda vigentes\npor línea (UC-SYS-02)
+  alt cambió el precio y acceptPriceChanges = false
+    RS --> RC : requiresPriceAcceptance = true\n(no se cobra ni se guarda nada)
+    RC --> M : 200 OK
+    M --> T : muestra precio nuevo para aceptar
+  else precio igual o aceptado
+    RS -> RS : recongela UnitPrice/Subtotal si cambió
+    loop un cargo por moneda
+      RS -> PG : ChargeAsync(monto, moneda, success)
+      PG --> RS : Approved / FailureReason
+      RS -> L : RecordCharge(SUCCEEDED | FAILED)
+    end
+    RS -> DB : BEGIN TRANSACTION
+    alt cobro aprobado
+      RS -> DB : UPDATE reservations SET status = 'CONFIRMED'\nWHERE id = ? AND status = 'PENDING_PAYMENT'
+      alt 0 filas (la expiración ganó la carrera)
+        RS -> DB : ROLLBACK
+        RC --> M : 410 RESERVATION_NO_LONGER_PAYABLE
+      else 1 fila
+        RS -> RS : ítems → CONFIRMED (UC-SYS-07)
+        RS -> DB : SaveChanges + COMMIT
+        RC --> M : 200 {paymentApproved: true}
+      end
+    else cobro rechazado
+      RS -> DB : SaveChanges + COMMIT\n(sigue PENDING_PAYMENT, reintentable)
+      RC --> M : 200 {paymentApproved: false, paymentFailureReason}
+    end
+  end
+end
+deactivate RS
+deactivate RC
+
+note over RS, DB
+  La pasarela se invoca FUERA de la transacción. Si nunca se paga,
+  ReservationExpirationBackgroundService expira la reserva y libera el cupo (UC-SYS-08).
+end note
+@enduml

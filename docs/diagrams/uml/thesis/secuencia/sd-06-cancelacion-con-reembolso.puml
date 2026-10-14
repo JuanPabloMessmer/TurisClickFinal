@@ -1,0 +1,38 @@
+@startuml sd-06-cancelacion-con-reembolso
+!include ../_estilo-tesis.iuml
+autonumber
+hide footbox
+
+title Cancelación de una reserva confirmada con reembolso
+
+actor "Turista" as T
+participant "Aplicación\nmóvil" as App
+participant "Servidor\nTurisClick" as API
+participant "Proveedor\naéreo" as FA
+participant "Pasarela de pago\n(simulada)" as PG
+
+== Presupuesto ==
+T -> App : solicita cancelar la reserva
+App -> API : pedir presupuesto de cancelación
+API -> API : calcular reembolso del paquete\nsegún la política congelada
+API -> FA : consultar reembolso del pasaje
+FA --> API : importe que devuelve la aerolínea
+API --> App : presupuesto por componente (vence)
+
+== Confirmación ==
+T -> App : acepta el presupuesto
+App -> API : confirmar cancelación
+API -> API : marcar la reserva como "cancelando"
+API -> FA : cancelar el pasaje
+FA --> API : cancelación confirmada
+API -> API : cancelar la reserva y liberar el cupo
+API -> PG : reembolsar cada componente
+API --> App : reserva cancelada con lo reembolsado
+App --> T : muestra el resultado
+
+note over API, PG
+  Sin política de cancelación configurada no se cancela desde la app.
+  Si la aerolínea rechaza, no se cancela nada; si un reembolso falla,
+  queda pendiente y se reintenta automáticamente.
+end note
+@enduml

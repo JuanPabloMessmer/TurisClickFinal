@@ -1,0 +1,64 @@
+@startuml cu-01b-turista-reservas-y-pagos
+!pragma layout smetana
+!include ../_estilo.iuml
+top to bottom direction
+
+title Casos de uso — Turista (2/3): reservas, pagos, vuelos y cancelaciones
+
+actor "Turista" as Turista
+
+rectangle "TurisClick — Tourist Mobile" {
+  usecase "Reservar experiencia\n(UC-T-08)" as UC_REXP
+  usecase "Reservar paquete\n(UC-T-09)" as UC_RPAQ
+  usecase "Reservar paquete + vuelo\n(UC-T-21)" as UC_RPV
+  usecase "Cotizar vuelo del paquete\n(UC-T-19 vuelos)" as UC_COTV
+  usecase "Revalidar cotización\n(UC-T-20)" as UC_REVV
+  usecase "Pagar reserva pendiente\n(UC-T-19)" as UC_PAY
+  usecase "Aceptar cambio de precio" as UC_ACEP
+  usecase "Ver mis reservas\n(UC-T-10)" as UC_MIS
+  usecase "Cancelar reserva pendiente\n(UC-T-11)" as UC_CANP
+  usecase "Cancelar reserva confirmada\ncon reembolso (UC-T-22)" as UC_CANC
+  usecase "Solicitar presupuesto\nde cancelación" as UC_PRES
+
+  usecase "Verificar disponibilidad y\nretener cupo (UC-SYS-01/06)" <<sistema>> as SYS_CUPO
+  usecase "Revalidar precio vigente\n(UC-SYS-02)" <<sistema>> as SYS_PRECIO
+
+  usecase "Pagar con pasarela real" <<futuro>> as F_PAGO
+  usecase "Recibir notificaciones" <<futuro>> as F_NOT
+}
+
+Turista --> UC_REXP
+Turista --> UC_RPAQ
+Turista --> UC_COTV
+Turista --> UC_REVV
+Turista --> UC_PAY
+Turista --> UC_MIS
+Turista --> UC_CANP
+Turista --> UC_CANC
+
+UC_REXP ..> SYS_CUPO : <<include>>
+UC_RPAQ ..> SYS_CUPO : <<include>>
+UC_RPV ..> UC_RPAQ : <<extend>>\n[incluye vuelo]
+UC_RPV ..> UC_COTV : <<include>>
+UC_PAY ..> SYS_PRECIO : <<include>>
+UC_ACEP ..> UC_PAY : <<extend>>\n[precio cambió]
+UC_CANC ..> UC_PRES : <<include>>
+
+rectangle "Sistemas externos" {
+  actor "Proveedor aéreo\n(Duffel, modo prueba)" as Aereo
+  actor "Pasarela de pago\n(simulada)" as Pasarela
+}
+
+UC_COTV --> Aereo
+UC_REVV --> Aereo
+UC_PAY --> Pasarela
+UC_CANC --> Pasarela
+UC_CANC --> Aereo
+
+legend right
+  Requiere sesión con rol TOURIST (política RequireTourist).
+  El pago es simulado: el cliente indica el resultado y no se mueve dinero.
+  Pagar una reserva con vuelo también emite el pasaje con el proveedor aéreo.
+  "UC-T-19 vuelos": use-cases.md reutiliza el código UC-T-19 (colisión documentada).
+endlegend
+@enduml

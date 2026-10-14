@@ -1,0 +1,84 @@
+@startuml cu-03-administrador
+!pragma layout smetana
+!include ../_estilo.iuml
+left to right direction
+
+title Diagrama de casos de uso — Administrador de la plataforma (Backoffice)
+
+actor "Administrador" as Admin
+
+rectangle "TurisClick" {
+
+  package "Cuenta" {
+    usecase "Iniciar / renovar /\ncerrar sesión (UC-AUTH-02..04)" as UC_SES
+  }
+
+  package "Alta de operadores" {
+    usecase "Dar de alta empresa operadora\ny su primera cuenta (UC-P-01)" as UC_ALTA
+    usecase "Regenerar credencial\ntemporal del operador" as UC_RESET
+    usecase "Listar cuentas de\nuna empresa" as UC_LCTA
+  }
+
+  package "Empresas" {
+    usecase "Revisar empresas pendientes\n(UC-A-01)" as UC_REV
+    usecase "Aprobar empresa\n(UC-A-02)" as UC_APR
+    usecase "Rechazar empresa con motivo\n(UC-A-03)" as UC_REC
+    usecase "Suspender / reactivar\nempresa (UC-A-08)" as UC_SUSE
+  }
+
+  package "Catálogos maestros" {
+    usecase "Gestionar destinos\n(UC-A-04)" as UC_DEST
+    usecase "Gestionar categorías\n(UC-A-05)" as UC_CAT
+  }
+
+  package "Moderación" {
+    usecase "Gestionar usuarios:\nlistar, suspender, activar (UC-A-06)" as UC_USR
+    usecase "Suspender / restaurar\nexperiencia o paquete (UC-A-07)" as UC_CONT
+  }
+
+  package "Supervisión de la operación" {
+    usecase "Consultar panorama de la\nplataforma y listados globales" as UC_OVER
+    usecase "Inspeccionar regla de vuelo\nde un paquete (UC-A-09)" as UC_VUELO
+    usecase "Inspeccionar libro de pagos\nde una reserva (UC-A-10)" as UC_LIBRO
+    usecase "Ver cancelaciones a medias\n(UC-A-10)" as UC_COLA
+    usecase "Forzar resolución de\ncancelaciones pendientes" as UC_RESOL
+  }
+
+  package "Trabajo futuro" {
+    usecase "Envío de credenciales\npor correo" <<futuro>> as F_MAIL
+    usecase "Conciliación financiera\ncontable" <<futuro>> as F_CONC
+  }
+}
+
+Admin --> UC_SES
+Admin --> UC_ALTA
+Admin --> UC_RESET
+Admin --> UC_LCTA
+Admin --> UC_REV
+Admin --> UC_APR
+Admin --> UC_REC
+Admin --> UC_SUSE
+Admin --> UC_DEST
+Admin --> UC_CAT
+Admin --> UC_USR
+Admin --> UC_CONT
+Admin --> UC_OVER
+Admin --> UC_VUELO
+Admin --> UC_LIBRO
+Admin --> UC_COLA
+Admin --> UC_RESOL
+
+
+
+legend right
+  Todas las operaciones requieren el rol ADMIN (política RequireAdmin).
+  Las sanciones (empresa, contenido, usuario) actúan como filtro de
+  visibilidad y operación, sin cascada sobre otros estados.
+  El alta crea Company (APPROVED por defecto, o PENDING_APPROVAL) y un User
+  PROVIDER con MustChangePassword = true; la contraseña temporal se muestra
+  una sola vez y el ADMIN la entrega al Proveedor por un canal externo.
+  Aprobar y rechazar parten de la revisión de pendientes; forzar la resolución
+  parte de la cola de cancelaciones a medias.
+  <<futuro>> = backlog, no implementado.
+endlegend
+@enduml

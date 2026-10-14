@@ -1,0 +1,36 @@
+@startuml sd-01-registro-e-inicio-de-sesion
+!include ../_estilo-tesis.iuml
+autonumber
+hide footbox
+
+title Registro e inicio de sesión del turista
+
+actor "Turista" as T
+participant "Aplicación\nmóvil" as App
+participant "Servicio de\nautenticación" as Auth
+database "Base de\ndatos" as BD
+
+== Registro ==
+T -> App : ingresa nombre, correo y contraseña
+App -> Auth : solicitar registro
+Auth -> BD : verificar que el correo no esté registrado
+Auth -> Auth : cifrar la contraseña
+Auth -> BD : guardar usuario con rol Turista
+Auth -> Auth : emitir token de acceso y token de renovación
+Auth -> BD : guardar el token de renovación
+Auth --> App : sesión iniciada
+App -> App : guardar el token de renovación\nen almacenamiento seguro
+App --> T : acceso a la aplicación
+
+== Inicio de sesión posterior ==
+T -> App : ingresa correo y contraseña
+App -> Auth : solicitar inicio de sesión
+Auth -> BD : verificar credenciales y estado de la cuenta
+Auth --> App : nuevos tokens de sesión
+App --> T : acceso a la aplicación
+
+note over App, Auth
+  El token de acceso vence a los 15 minutos; la aplicación lo renueva
+  automáticamente con el token de renovación, que se rota en cada uso.
+end note
+@enduml

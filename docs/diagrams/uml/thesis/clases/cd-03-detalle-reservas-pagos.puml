@@ -1,0 +1,63 @@
+@startuml cd-03-detalle-reservas-pagos
+!pragma layout smetana
+!include ../_estilo-tesis.iuml
+hide circle
+hide empty methods
+skinparam nodesep 50
+skinparam ranksep 70
+
+title Diseño detallado — Reservas, pagos, cancelaciones y vuelos
+
+class User {
+  role : TOURIST
+}
+class Reservation {
+  status : ReservationStatus
+  expiresAt
+  confirmedAt, cancelledAt
+}
+class ReservationItem {
+  productType : EXPERIENCE | PACKAGE
+  travelers
+  unitPrice, currency  «congelados»
+  cancellationPolicy  «congelada»
+  status : ReservationItemStatus
+}
+class "ExperienceAvailability\n/ PackageAvailability" as Availability {
+  totalSlots, reservedSlots
+}
+class PaymentTransaction {
+  type : CHARGE | VOID | REFUND
+  status : PENDING | SUCCEEDED | FAILED
+  amount, currency
+  component
+}
+class ReservationCancellation {
+  status : CancellationStatus
+  expiresAt
+}
+class ReservationCancellationLine {
+  component : PACKAGE | EXPERIENCE | FLIGHT
+  paidAmount, refundAmount
+  refundKnown
+}
+class FlightBooking {
+  status : FlightBookingStatus
+  bookingReference
+  totalAmount, currency
+}
+class FlightQuote {
+  initialAmount, totalAmount
+  expiresAt
+  status : FlightQuoteStatus
+}
+
+User "1" -- "0..*" Reservation : realiza >
+Reservation "1" *-- "1..*" ReservationItem
+Availability "1" <-- "0..*" ReservationItem : retiene cupo en <
+Reservation "1" *-- "0..*" PaymentTransaction : libro de pagos >
+Reservation "1" *-- "0..*" ReservationCancellation
+ReservationCancellation "1" *-- "1..*" ReservationCancellationLine
+Reservation "1" -- "0..1" FlightBooking
+FlightBooking "0..1" --> "1" FlightQuote : se origina en >
+@enduml

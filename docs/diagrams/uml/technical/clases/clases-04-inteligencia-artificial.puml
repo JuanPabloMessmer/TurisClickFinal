@@ -1,0 +1,112 @@
+@startuml clases-04-inteligencia-artificial
+!pragma layout smetana
+!include ../_estilo.iuml
+hide empty methods
+
+title Modelo de dominio — Asistente de viaje (IA)
+
+class User <<externo>>
+class Destination <<externo>>
+class Category <<externo>>
+class Experience <<externo>>
+class Package <<externo>>
+class ExperienceAvailability <<externo>>
+class PackageAvailability <<externo>>
+class Reservation <<externo>>
+
+class AiConversation <<entidad>> {
+  + Id : Guid
+  + TouristId : Guid
+  + Status : AiConversationStatus
+  .. preferencias interpretadas ..
+  + PreferredDestinationId : Guid [0..1]
+  + StartDate, EndDate : DateOnly [0..1]
+  + TravelersCount : int [0..1]
+  + BudgetTotal : decimal [0..1]
+  + BudgetCurrency : string [0..1]
+  + DurationDays : int [0..1]
+  + RestrictionsNotes : string [0..1]
+  + TravelPace : TravelPace [0..1]
+  ..
+  + CreatedAt, UpdatedAt : DateTimeOffset
+}
+
+class AiMessage <<entidad>> {
+  + Id : Guid
+  + Sender : MessageSender
+  + Content : string
+  + CreatedAt : DateTimeOffset
+}
+
+class AiItinerary <<entidad>> {
+  + Id : Guid
+  + TouristId : Guid
+  + Title : string [0..1]
+  + Status : AiItineraryStatus
+  + Version : int
+  + CreatedAt, UpdatedAt : DateTimeOffset
+}
+
+class AiItineraryItem <<entidad>> {
+  + Id : Guid
+  + DayNumber : int
+  + SortOrder : int
+  + ProductType : ProductType
+  + ExperienceId, PackageId : Guid [0..1]
+  + ExperienceAvailabilityId : Guid [0..1]
+  + PackageAvailabilityId : Guid [0..1]
+  + EstimatedUnitPrice : decimal {snapshot, nunca se reescribe}
+  + Currency : string
+}
+
+enum AiConversationStatus {
+  ACTIVE
+  CLOSED
+}
+enum MessageSender {
+  TOURIST
+  AI
+}
+enum AiItineraryStatus {
+  DRAFT
+  SAVED
+  BOOKED
+  DISCARDED
+}
+
+User "1" -- "0..*" AiConversation : turista >
+AiConversation "0..*" --> "0..1" Destination : destino preferido >
+AiConversation "0..*" --> "0..*" Category : intereses >
+AiConversation "1" *-- "0..*" AiMessage : historial >
+AiConversation "1" *-- "0..*" AiItinerary : versiones >
+User "1" -- "0..*" AiItinerary : "Mis itinerarios" >
+AiItinerary "1" *-- "1..*" AiItineraryItem
+AiItineraryItem "0..*" --> "0..1" Experience
+AiItineraryItem "0..*" --> "0..1" Package
+AiItineraryItem "0..*" --> "0..1" ExperienceAvailability
+AiItineraryItem "0..*" --> "0..1" PackageAvailability
+AiItinerary "0..1" -- "0..*" Reservation : origina\n{máx. 1 activa} >
+
+AiConversation ..> AiConversationStatus
+AiMessage ..> MessageSender
+AiItinerary ..> AiItineraryStatus
+
+note right of AiItinerary
+  Cada ajuste inserta una fila NUEVA con
+  Version = anterior + 1 en DRAFT; las versiones
+  previas no se modifican (trazabilidad).
+  Al expirar su reserva vuelve de BOOKED a SAVED.
+end note
+
+note bottom of AiItineraryStatus
+  DISCARDED (itinerario) y CLOSED (conversación)
+  existen en el modelo, pero ningún flujo
+  actual los asigna.
+end note
+
+note bottom of AiItineraryItem
+  Siempre referencia un producto real recuperado
+  de PostgreSQL; precio y moneda salen del retrieval,
+  nunca del texto generado por el modelo.
+end note
+@enduml

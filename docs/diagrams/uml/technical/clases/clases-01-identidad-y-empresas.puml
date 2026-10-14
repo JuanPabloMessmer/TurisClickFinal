@@ -1,0 +1,117 @@
+@startuml clases-01-identidad-y-empresas
+!pragma layout smetana
+!include ../_estilo.iuml
+hide empty methods
+
+title Modelo de dominio — Identidad, autenticación y empresas
+
+class User <<entidad>> {
+  + Id : Guid
+  + FirstName : string
+  + LastName : string
+  + Email : string {único}
+  + PasswordHash : string
+  + Role : UserRole
+  + Status : UserStatus
+  + CompanyId : Guid [0..1]
+  + MustChangePassword : bool
+  + CreatedAt : DateTimeOffset
+  + /FullName : string
+}
+
+class RefreshToken <<entidad>> {
+  + Id : Guid
+  + UserId : Guid
+  + TokenHash : string
+  + ExpiresAt : DateTimeOffset
+  + RevokedAt : DateTimeOffset [0..1]
+  + CreatedAt : DateTimeOffset
+  + /IsActive : bool
+}
+
+class Company <<entidad>> {
+  + Id : Guid
+  + Name : string
+  + Description : string [0..1]
+  + LegalDocument : string {único}
+  + ContactEmail : string
+  + ContactPhone : string [0..1]
+  + Status : CompanyStatus
+  + ApprovedByUserId : Guid [0..1]
+  + ApprovedAt : DateTimeOffset [0..1]
+  + RejectionReason : string [0..1]
+  + CreatedAt : DateTimeOffset
+}
+
+class TouristPreference <<entidad>> {
+  + UserId : Guid {PK}
+  + TravelPace : TravelPace [0..1]
+  + TravelParty : TravelParty [0..1]
+  + BudgetLevel : BudgetLevel [0..1]
+  + OnboardingCompletedAt : DateTimeOffset [0..1]
+  + CreatedAt : DateTimeOffset
+  + UpdatedAt : DateTimeOffset
+}
+
+class Category <<externo>> {
+  + Id : Guid
+  + Name : string
+}
+
+enum UserRole {
+  TOURIST
+  PROVIDER
+  ADMIN
+}
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+enum CompanyStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+enum TravelPace {
+  RELAXED
+  BALANCED
+  INTENSE
+}
+enum TravelParty {
+  SOLO
+  COUPLE
+  FRIENDS
+  FAMILY
+}
+enum BudgetLevel {
+  ECONOMY
+  MODERATE
+  PREMIUM
+}
+
+User "1" *-- "0..*" RefreshToken : sesiones >
+User "0..*" --> "0..1" Company : pertenece a\n(sólo PROVIDER) >
+Company "0..*" --> "0..1" User : aprobada por\n(ADMIN) >
+User "1" *-- "0..1" TouristPreference : perfil de onboarding >
+TouristPreference "0..*" --> "0..*" Category : intereses >
+
+User ..> UserRole
+User ..> UserStatus
+Company ..> CompanyStatus
+TouristPreference ..> TravelPace
+TouristPreference ..> TravelParty
+TouristPreference ..> BudgetLevel
+
+note bottom of User
+  El JWT de acceso (15 min) lleva sub, email, role,
+  company_id (sólo PROVIDER) y must_change_password.
+  El refresh token (30 días) se guarda hasheado y
+  se rota en cada renovación.
+end note
+
+note bottom of Company
+  Diseñada para N usuarios PROVIDER
+  (UC-P-03), hoy se crea con uno solo.
+end note
+@enduml

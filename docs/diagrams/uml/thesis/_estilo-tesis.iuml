@@ -1,0 +1,78 @@
+' Estilo de los diagramas de la tesis: monocromo, tipografía legible a tamaño A4,
+' sin sombras ni íconos decorativos. Un único gris de relleno para diferenciar marcos.
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 14
+skinparam defaultFontColor #111111
+skinparam shadowing false
+skinparam roundCorner 6
+skinparam ArrowColor #222222
+skinparam ArrowThickness 1.1
+skinparam ArrowFontSize 12
+skinparam titleFontSize 17
+skinparam titleFontStyle bold
+skinparam noteBackgroundColor #F5F5F5
+skinparam noteBorderColor #888888
+skinparam noteFontSize 12
+skinparam legendBackgroundColor #FFFFFF
+skinparam legendBorderColor #888888
+skinparam legendFontSize 12
+skinparam nodesep 40
+skinparam ranksep 50
+
+skinparam actor {
+  BorderColor #222222
+  BackgroundColor #FFFFFF
+}
+skinparam usecase {
+  BorderColor #222222
+  BackgroundColor #FFFFFF
+}
+skinparam rectangle {
+  BorderColor #444444
+  BackgroundColor #FFFFFF
+  FontStyle bold
+}
+skinparam class {
+  BorderColor #222222
+  BackgroundColor #FFFFFF
+  HeaderBackgroundColor #EFEFEF
+  AttributeFontSize 13
+}
+skinparam enum {
+  BorderColor #222222
+  HeaderBackgroundColor #EFEFEF
+}
+skinparam package {
+  BorderColor #888888
+  BackgroundColor #FFFFFF
+  FontStyle bold
+}
+skinparam sequence {
+  ParticipantBorderColor #222222
+  ParticipantBackgroundColor #FFFFFF
+  ParticipantFontSize 14
+  ActorBorderColor #222222
+  LifeLineBorderColor #888888
+  LifeLineBackgroundColor #EFEFEF
+  GroupBorderColor #666666
+  GroupBackgroundColor #F5F5F5
+  GroupHeaderFontStyle bold
+  DividerBackgroundColor #F5F5F5
+  DividerBorderColor #888888
+  MessageAlignment left
+}
+skinparam database {
+  BorderColor #222222
+  BackgroundColor #FFFFFF
+}
+skinparam activity {
+  BorderColor #222222
+  BackgroundColor #FFFFFF
+  DiamondBorderColor #222222
+  DiamondBackgroundColor #FFFFFF
+  StartColor #111111
+  EndColor #111111
+  BarColor #111111
+}

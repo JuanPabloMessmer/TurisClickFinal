@@ -1,0 +1,34 @@
+@startuml sd-05-recomendacion-con-ia
+!include ../_estilo-tesis.iuml
+autonumber
+hide footbox
+
+title Recomendación de itinerario con el asistente de IA
+
+actor "Turista" as T
+participant "Aplicación\nmóvil" as App
+participant "Agente de\nviaje" as AG
+participant "Modelo de\nlenguaje" as LLM
+database "Catálogo\n(PostgreSQL)" as BD
+
+T -> App : describe el viaje en lenguaje natural
+App -> AG : enviar mensaje
+AG -> LLM : interpretar preferencias\n(sobre destinos y categorías reales)
+LLM --> AG : preferencias estructuradas
+AG -> AG : combinar con la conversación\ny el perfil del turista
+AG -> BD : recuperar productos publicados\ncon cupo en las fechas pedidas
+BD --> AG : candidatos reales
+AG -> AG : ordenar candidatos por afinidad
+AG -> LLM : componer itinerario con los candidatos
+LLM --> AG : itinerario propuesto y explicación
+AG -> AG : validar productos, precios y cupos\ncontra el catálogo
+AG -> BD : guardar nueva versión del itinerario
+AG --> App : itinerario por día con precios reales
+App --> T : muestra la propuesta
+
+note over AG, LLM
+  Si faltan datos, el agente pregunta en lugar de buscar. Si el modelo
+  no responde o propone productos inexistentes, responde la versión
+  determinística por reglas (configuración usada en producción).
+end note
+@enduml

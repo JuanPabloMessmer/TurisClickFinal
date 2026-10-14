@@ -1,0 +1,63 @@
+@startuml sec-06a-cancelacion-presupuesto
+!include ../_estilo.iuml
+autonumber "<b>0."
+hide footbox
+
+title Secuencia — Cancelación con reembolso (1/2): presupuesto por componente (UC-T-22)
+
+actor "Turista" as T
+participant "Tourist Mobile" as M
+box "TurisClick API (ASP.NET Core)" #FAFAFA
+  participant "ReservationsController" as RC
+  participant "ReservationCancellation\nService" as CS
+  participant "CancellationPolicy" as POL
+end box
+participant "IFlightProvider\n(Duffel)" as FP <<externo>>
+database "PostgreSQL" as DB
+
+T -> M : "Cancelar" sobre una reserva CONFIRMED
+M -> RC : POST /api/reservations/{id}/cancellation-quote
+activate RC
+RC -> CS : QuoteAsync(id)
+activate CS
+CS -> DB : carga reserva + ítems (403 si no es del turista)
+alt Status = CANCELLING
+  CS --> RC : 409 CANCELLATION_IN_PROGRESS
+else Status ≠ CONFIRMED
+  CS --> RC : 409 RESERVATION_NOT_CANCELLABLE
+else vuelo ORDERING o RECONCILIATION_REQUIRED
+  CS --> RC : 409 FLIGHT_BOOKING_IN_PROGRESS
+else cancelable
+  loop por cada ReservationItem CONFIRMED
+    CS -> POL : TryParse(item.CancellationPolicy)\n(snapshot congelado al reservar)
+    alt sin política (p. ej. experiencias)
+      CS --> RC : 409 CANCELLATION_POLICY_MISSING\n"escribile al operador"
+    else política válida
+      CS -> POL : ResolvePercentage(días de anticipación)
+      CS -> CS : línea PACKAGE/EXPERIENCE:\nreembolso = Subtotal × % (redondeo hacia cero)
+    end
+  end
+  opt la reserva tiene vuelo CONFIRMED
+    CS -> FP : QuoteCancellationAsync(orderId)
+    alt proveedor no responde
+      CS --> RC : 409 FLIGHT_PROVIDER_UNREACHABLE
+    else respuesta
+      FP --> CS : cancellationId, refundAmount?, moneda, expiresAt
+      CS -> CS : línea FLIGHT: RefundKnown = false si la\naerolínea no informó o informó otra moneda
+    end
+  end
+  CS -> CS : ExpiresAt = min(ahora + 15 min,\nvencimiento de la aerolínea)
+  CS -> DB : presupuestos QUOTED anteriores → EXPIRED
+  CS -> DB : INSERT ReservationCancellation{QUOTED}\n+ líneas por componente
+  CS --> RC : CancellationQuoteResponse
+end
+deactivate CS
+RC --> M : 200 OK
+deactivate RC
+M --> T : desglose por componente y moneda\n("A confirmar" si RefundKnown = false)
+
+note over T, DB
+  Nada se cancela en este paso. El cliente nunca envía importes:
+  para confirmar sólo envía el id del presupuesto (ver sec-06b).
+end note
+@enduml

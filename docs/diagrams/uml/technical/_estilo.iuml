@@ -1,0 +1,85 @@
+' Estilo común de los diagramas UML de TurisClick.
+' Sobrio y legible en impresión (tesis): fondo blanco, escala de grises con un acento.
+' Los elementos de trabajo futuro usan el estereotipo <<futuro>> y se ven atenuados.
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #333333
+skinparam ArrowThickness 1
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam legendBackgroundColor #FAFAFA
+skinparam legendBorderColor #999999
+skinparam legendFontSize 11
+skinparam noteBackgroundColor #FFFBE6
+skinparam noteBorderColor #C9B458
+skinparam noteFontSize 11
+
+skinparam actor {
+  BorderColor #333333
+  BackgroundColor #FFFFFF
+}
+skinparam usecase {
+  BorderColor #2F5D8A
+  BackgroundColor #EAF1F8
+  BorderColor<<futuro>> #AAAAAA
+  BackgroundColor<<futuro>> #F4F4F4
+  FontColor<<futuro>> #888888
+  StereotypeFontColor<<futuro>> #888888
+  BorderColor<<sistema>> #6B8E23
+  BackgroundColor<<sistema>> #F1F6E8
+}
+skinparam rectangle {
+  BorderColor #555555
+  BackgroundColor #FFFFFF
+}
+skinparam package {
+  BorderColor #777777
+  BackgroundColor #FFFFFF
+  FontStyle bold
+}
+skinparam class {
+  BorderColor #2F5D8A
+  BackgroundColor #FFFFFF
+  HeaderBackgroundColor #EAF1F8
+  ArrowColor #333333
+  BorderColor<<externo>> #999999
+  HeaderBackgroundColor<<externo>> #F4F4F4
+  BackgroundColor<<externo>> #FAFAFA
+}
+skinparam enum {
+  BorderColor #6B8E23
+  HeaderBackgroundColor #F1F6E8
+}
+skinparam sequence {
+  LifeLineBorderColor #777777
+  ParticipantBorderColor #2F5D8A
+  ParticipantBackgroundColor #EAF1F8
+  ActorBorderColor #333333
+  BoxBorderColor #BBBBBB
+  BoxBackgroundColor #FAFAFA
+  GroupBorderColor #777777
+  GroupBackgroundColor #F4F4F4
+  DividerBackgroundColor #EEEEEE
+  ReferenceBackgroundColor #F4F4F4
+}
+skinparam participant {
+  BorderColor<<externo>> #999999
+  BackgroundColor<<externo>> #F4F4F4
+}
+skinparam database {
+  BorderColor #2F5D8A
+  BackgroundColor #EAF1F8
+}
+skinparam activity {
+  BorderColor #2F5D8A
+  BackgroundColor #EAF1F8
+  DiamondBorderColor #2F5D8A
+  DiamondBackgroundColor #FFFFFF
+}
+skinparam partition {
+  BorderColor #999999
+}

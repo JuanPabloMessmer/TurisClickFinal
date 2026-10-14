@@ -1,0 +1,52 @@
+@startuml cu-01c-turista-asistente-ia
+!pragma layout smetana
+!include ../_estilo.iuml
+top to bottom direction
+
+title Casos de uso — Turista (3/3): asistente de viaje con IA
+
+actor "Turista" as Turista
+
+rectangle "TurisClick — Tourist Mobile" {
+  usecase "Conversar con el asistente\n(UC-T-12 / UC-T-13)" as UC_CHAT
+  usecase "Ajustar itinerario\n(UC-T-15)" as UC_AJU
+  usecase "Ver propuesta de itinerario\n(UC-T-14)" as UC_VITI
+  usecase "Pedir explicación de\nun componente (UC-AI-06)" as UC_EXPL
+  usecase "Guardar itinerario\n(UC-T-16)" as UC_GUA
+  usecase "Retomar itinerario guardado\n(UC-T-17)" as UC_RET
+  usecase "Reservar itinerario completo\n(UC-T-18)" as UC_RITI
+
+  usecase "Interpretar preferencias y\ncomponer itinerario (UC-AI-01..05)" <<sistema>> as SYS_AGENTE
+  usecase "Recuperar catálogo real\n(UC-AI-02, retrieval SQL)" <<sistema>> as SYS_RAG
+  usecase "Revalidar contra el catálogo\nvigente (sin escribir)" <<sistema>> as SYS_REVAL
+  usecase "Retener cupo y crear reserva\npadre + líneas (UC-SYS-05/06)" <<sistema>> as SYS_BOOK
+}
+
+rectangle "Sistemas externos" {
+  actor "Modelo de lenguaje\n(Ollama o reglas)" as LLM
+}
+
+
+Turista --> UC_CHAT
+Turista --> UC_VITI
+Turista --> UC_EXPL
+Turista --> UC_GUA
+Turista --> UC_RET
+Turista --> UC_RITI
+
+UC_AJU ..> UC_CHAT : <<extend>>\n[hay itinerario vigente]
+UC_CHAT ..> SYS_AGENTE : <<include>>
+SYS_AGENTE ..> SYS_RAG : <<include>>
+UC_VITI ..> SYS_REVAL : <<include>>
+UC_RET ..> SYS_REVAL : <<include>>
+UC_RITI ..> SYS_BOOK : <<include>>
+
+SYS_AGENTE --> LLM
+UC_EXPL --> LLM
+
+legend right
+  El modelo sólo interpreta y redacta: ids, precios, cupos y fechas salen
+  siempre de PostgreSQL. Sin LLM disponible responde DeterministicAiModelClient
+  (es la configuración de producción en Azure).
+endlegend
+@enduml

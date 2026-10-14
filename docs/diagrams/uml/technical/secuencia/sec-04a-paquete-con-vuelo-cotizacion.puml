@@ -1,0 +1,80 @@
+@startuml sec-04a-paquete-con-vuelo-cotizacion
+!include ../_estilo.iuml
+autonumber "<b>0."
+hide footbox
+
+title Secuencia — Paquete + vuelo (1/2): cotización y revalidación del vuelo (UC-T-19 vuelos, UC-T-20)
+
+actor "Turista" as T
+participant "Tourist Mobile" as M
+box "TurisClick API (ASP.NET Core)" #FAFAFA
+  participant "PackageFlight\nQuotesController" as QC
+  participant "PackageFlightService" as FS
+  participant "FlightDateCalculator\n+ AirportCatalog" as FDC
+end box
+participant "IFlightProvider\n(DuffelFlightProvider)" as FP <<externo>>
+database "PostgreSQL" as DB
+
+T -> M : en el detalle del paquete elige salida,\naeropuerto de origen y viajeros
+M -> QC : POST /api/packages/{packageId}/flight-quotes\n{packageAvailabilityId, originIata, travelers}
+activate QC
+note right of QC : política RequireTourist
+QC -> FS : QuoteAsync(packageId, request)
+activate FS
+FS -> DB : SELECT package + flight rule + availabilities
+alt paquete no PUBLISHED
+  FS --> QC : 404
+else no incluye vuelo / origen no permitido por la regla
+  FS --> QC : 400
+else salida ajena (404) o sin cupo para esos viajeros (409)
+  FS --> QC : 404 / 409
+else datos válidos
+  FS -> FDC : Calculate(regla, fecha de salida, DurationDays)\n→ fechas de ida y vuelta (desfases)
+  FS -> FP : SearchAsync(tramos, viajeros, cabina, máx. opciones)
+  alt proveedor no responde
+    FP --> FS : FlightProviderException
+    FS --> QC : 200 sólo precio terrestre +\n"No pudimos consultar vuelos"
+  else sin ofertas
+    FS --> QC : 200 + aviso "No encontramos vuelos"
+  else ofertas
+    FP --> FS : ofertas (id, precio, moneda, vencimiento)
+    loop por oferta, de menor a mayor precio
+      FS -> FS : FlightQuote{TouristId, ProviderOfferId,\nInitialAmount = TotalAmount, ExpiresAt,\nStatus = QUOTED}
+    end
+    FS -> DB : INSERT flight_quotes
+    FS --> QC : PackageFlightQuoteResponse\n(precio del paquete + opciones de vuelo)
+  end
+end
+deactivate FS
+QC --> M : 200 OK
+deactivate QC
+M --> T : muestra opciones de vuelo
+
+== Revalidar antes de reservar ==
+T -> M : elige una opción
+M -> QC : POST /api/flight-quotes/{quoteId}/revalidate
+activate QC
+QC -> FS : RevalidateAsync(quoteId)
+activate FS
+FS -> DB : SELECT quote (debe pertenecer al turista, si no 404)
+alt cotización vencida
+  FS -> DB : Status = EXPIRED
+  FS --> QC : outcome EXPIRED
+else vigente
+  FS -> FP : RefreshOfferAsync(providerOfferId)
+  alt la oferta ya no existe
+    FS -> DB : Status = UNAVAILABLE
+    FS --> QC : outcome UNAVAILABLE
+  else precio distinto
+    FS -> DB : TotalAmount = nuevo, Status = PRICE_CHANGED\n(InitialAmount intacto)
+    FS --> QC : outcome PRICE_CHANGED, requiresAcceptance
+  else mismo precio
+    FS -> DB : Status = CONFIRMED, nuevo ExpiresAt
+    FS --> QC : outcome CONFIRMED
+  end
+end
+deactivate FS
+QC --> M : 200 OK
+deactivate QC
+M --> T : precio vigente del vuelo + total
+@enduml

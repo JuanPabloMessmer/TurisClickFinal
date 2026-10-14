@@ -1,0 +1,36 @@
+@startuml sd-04-reserva-de-paquete-con-vuelo
+!include ../_estilo-tesis.iuml
+autonumber
+hide footbox
+
+title Reserva de un paquete con vuelo
+
+actor "Turista" as T
+participant "Aplicación\nmóvil" as App
+participant "Servidor\nTurisClick" as API
+participant "Proveedor\naéreo" as FA
+participant "Pasarela de pago\n(simulada)" as PG
+
+== Cotización ==
+T -> App : elige salida, aeropuerto de origen y viajeros
+App -> API : cotizar vuelo del paquete
+API -> FA : buscar ofertas según la regla de vuelo
+FA --> API : ofertas con precio y vencimiento
+API --> App : opciones de vuelo
+
+== Reserva ==
+T -> App : elige un vuelo
+App -> API : reservar paquete con el vuelo cotizado
+API -> API : verificar la cotización, retener cupo\nde la salida y crear reserva pendiente
+API --> App : reserva pendiente de pago
+
+== Pago y emisión ==
+T -> App : ingresa datos de pasajeros y paga
+App -> API : pagar reserva
+API -> FA : revalidar precio de la oferta
+API -> PG : cobrar paquete y vuelo (un cargo por moneda)
+API -> FA : emitir el pasaje
+FA --> API : localizador de la reserva aérea
+API -> API : confirmar la reserva
+API --> App : reserva confirmada con localizador
+@enduml
