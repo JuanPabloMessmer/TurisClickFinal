@@ -66,6 +66,39 @@ public class ProviderAccountCreatedResponse
     public bool MustChangePassword { get; set; } = true;
 }
 
+/// <summary>
+/// Lo que un administrador carga para dar de alta a otro administrador. Igual que en el alta de operadores,
+/// no hay contraseña: la genera el servidor.
+/// </summary>
+public class CreateAdminAccountRequest
+{
+    [Required, MinLength(2), MaxLength(100)]
+    public string FirstName { get; set; } = string.Empty;
+
+    [Required, MinLength(2), MaxLength(100)]
+    public string LastName { get; set; } = string.Empty;
+
+    [Required, EmailAddress, MaxLength(150)]
+    public string Email { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Resultado del alta de un administrador. La contraseña temporal viaja **una sola vez**, en esta respuesta;
+/// de ella sólo queda el hash.
+/// </summary>
+public class AdminAccountCreatedResponse
+{
+    public Guid UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+
+    /// <summary>Contraseña temporal. No vuelve a estar disponible.</summary>
+    public string TemporaryPassword { get; set; } = string.Empty;
+
+    /// <summary>Siempre true al crear: la cuenta no puede operar hasta cambiarla.</summary>
+    public bool MustChangePassword { get; set; } = true;
+}
+
 /// <summary>Regenerar la credencial temporal de un operador que perdió la suya.</summary>
 public class ResetProviderPasswordResponse
 {

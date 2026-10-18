@@ -17,6 +17,8 @@ export type AdminPackageRowResponse = Schemas['AdminPackageRowResponse']
 export type AdminReservationRowResponse = Schemas['AdminReservationRowResponse']
 export type CreateProviderAccountRequest = Schemas['CreateProviderAccountRequest']
 export type ProviderAccountCreatedResponse = Schemas['ProviderAccountCreatedResponse']
+export type CreateAdminAccountRequest = Schemas['CreateAdminAccountRequest']
+export type AdminAccountCreatedResponse = Schemas['AdminAccountCreatedResponse']
 export type ResetProviderPasswordResponse = Schemas['ResetProviderPasswordResponse']
 export type CompanyUserResponse = Schemas['CompanyUserResponse']
 export type ReservationPaymentsResponse = Schemas['ReservationPaymentsResponse']
@@ -59,6 +61,13 @@ export const listUnresolvedCancellations = (http: AxiosInstance, params?: { limi
  */
 export const createProviderAccount = (http: AxiosInstance, body: CreateProviderAccountRequest) =>
   http.post<ProviderAccountCreatedResponse>('/api/admin/provider-accounts', body).then((r) => r.data)
+
+/**
+ * Da de alta a otro administrador. Igual que con los operadores, la contraseña temporal viene en la respuesta
+ * **una sola vez**, y la cuenta no puede operar hasta cambiarla. Un email ya registrado responde 409.
+ */
+export const createAdminAccount = (http: AxiosInstance, body: CreateAdminAccountRequest) =>
+  http.post<AdminAccountCreatedResponse>('/api/admin/admin-accounts', body).then((r) => r.data)
 
 /** Regenera la credencial temporal de un operador. Corta sus sesiones abiertas. */
 export const resetProviderPassword = (http: AxiosInstance, userId: string) =>

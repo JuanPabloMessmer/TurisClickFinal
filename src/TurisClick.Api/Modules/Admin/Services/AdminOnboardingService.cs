@@ -1,5 +1,6 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Admin.Dtos;
@@ -14,6 +15,8 @@ public interface IAdminOnboardingService
 {
     Task<ProviderAccountCreatedResponse> CreateProviderAccountAsync(
         CreateProviderAccountRequest request, CancellationToken ct);
+
+    Task<AdminAccountCreatedResponse> CreateAdminAccountAsync(CreateAdminAccountRequest request, CancellationToken ct);
 
     Task<ResetProviderPasswordResponse> ResetProviderPasswordAsync(Guid userId, CancellationToken ct);
 
@@ -38,8 +41,13 @@ public interface IAdminOnboardingService
 /// </summary>
 public class AdminOnboardingService(
     TurisClickDbContext db,
-    IPasswordHasherService passwordHasher) : IAdminOnboardingService
+    IPasswordHasherService passwordHasher,
+    ICurrentUserContext currentUser,
+    ILogger<AdminOnboardingService> logger) : IAdminOnboardingService
 {
+    /// <summary>Código SQLSTATE de Postgres para violación de unicidad (23505).</summary>
+    private const string PostgresUniqueViolation = "23505";
+
     public async Task<ProviderAccountCreatedResponse> CreateProviderAccountAsync(
         CreateProviderAccountRequest request, CancellationToken ct)
     {
@@ -101,6 +109,63 @@ public class AdminOnboardingService(
                 Name = company.Name,
                 Status = company.Status.ToString(),
             },
+            UserId = user.Id,
+            Email = user.Email,
+            FullName = user.FullName,
+            TemporaryPassword = temporaryPassword,
+        };
+    }
+
+    /// <summary>
+    /// Alta de otro administrador. Mismas reglas que el alta de operadores —contraseña temporal generada por
+    /// el servidor y mostrada una sola vez, cambio obligatorio antes de operar— sin empresa.
+    ///
+    /// Dar el rol más alto es la operación más sensible del sistema, así que queda en el log quién lo dio y a
+    /// quién (por id: el log nunca lleva la contraseña).
+    /// </summary>
+    public async Task<AdminAccountCreatedResponse> CreateAdminAccountAsync(
+        CreateAdminAccountRequest request, CancellationToken ct)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+
+        // Si el email ya existe no se toca esa cuenta, sea del rol que sea: ni se la promueve ni se le cambia
+        // la contraseña. Promover a alguien existente sería otra operación, y no esta.
+        if (await db.Users.AnyAsync(u => u.Email == email, ct))
+            throw new ConflictAppException("Ya existe una cuenta con ese email.");
+
+        var temporaryPassword = GenerateTemporaryPassword();
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
+            Email = email,
+            PasswordHash = passwordHasher.Hash(temporaryPassword),
+            Role = UserRole.ADMIN,
+            Status = UserStatus.ACTIVE,
+            MustChangePassword = true,
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+
+        db.Users.Add(user);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresUniqueViolation })
+        {
+            // Dos altas simultáneas con el mismo email: el índice único decide, y la segunda recibe lo mismo que
+            // si hubiera llegado después.
+            throw new ConflictAppException("Ya existe una cuenta con ese email.");
+        }
+
+        logger.LogInformation("El administrador {CreatedBy} dio de alta al administrador {UserId}",
+            currentUser.UserId, user.Id);
+
+        return new AdminAccountCreatedResponse
+        {
             UserId = user.Id,
             Email = user.Email,
             FullName = user.FullName,

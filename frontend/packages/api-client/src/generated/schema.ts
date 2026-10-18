@@ -4,6 +4,60 @@
  */
 
 export interface paths {
+    "/api/admin/admin-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateAdminAccountRequest"];
+                    "text/json": components["schemas"]["CreateAdminAccountRequest"];
+                    "application/*+json": components["schemas"]["CreateAdminAccountRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AdminAccountCreatedResponse"];
+                        "application/json": components["schemas"]["AdminAccountCreatedResponse"];
+                        "text/json": components["schemas"]["AdminAccountCreatedResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/companies": {
         parameters: {
             query?: never;
@@ -403,6 +457,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/health/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SchemaHealthResponse"];
+                        "application/json": components["schemas"]["SchemaHealthResponse"];
+                        "text/json": components["schemas"]["SchemaHealthResponse"];
+                    };
+                };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SchemaHealthResponse"];
+                        "application/json": components["schemas"]["SchemaHealthResponse"];
+                        "text/json": components["schemas"]["SchemaHealthResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/reservations/{id}/payments": {
         parameters: {
             query?: never;
@@ -475,6 +577,45 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/cancellations/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: {
+                    batchSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ResolvePendingCancellationsResponse"];
+                        "application/json": components["schemas"]["ResolvePendingCancellationsResponse"];
+                        "text/json": components["schemas"]["ResolvePendingCancellationsResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2583,6 +2724,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    expect?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PublicHealthResponse"];
+                        "application/json": components["schemas"]["PublicHealthResponse"];
+                        "text/json": components["schemas"]["PublicHealthResponse"];
+                    };
+                };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PublicHealthResponse"];
+                        "application/json": components["schemas"]["PublicHealthResponse"];
+                        "text/json": components["schemas"]["PublicHealthResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/packages/{packageId}/availability": {
         parameters: {
             query?: never;
@@ -3686,6 +3877,14 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AdminAccountCreatedResponse: {
+            /** Format: uuid */
+            userId?: string;
+            email?: string | null;
+            fullName?: string | null;
+            temporaryPassword?: string | null;
+            mustChangePassword?: boolean;
+        };
         AdminContentResponse: {
             /** Format: uuid */
             id?: string;
@@ -4078,6 +4277,12 @@ export interface components {
             totalCount?: number;
             /** Format: int32 */
             readonly totalPages?: number;
+        };
+        CreateAdminAccountRequest: {
+            firstName: string;
+            lastName: string;
+            /** Format: email */
+            email: string;
         };
         CreateCategoryRequest: {
             name: string;
@@ -4697,6 +4902,10 @@ export interface components {
             /** Format: int32 */
             publishedPackageCount?: number;
         };
+        PublicHealthResponse: {
+            status?: string | null;
+            schemaMatches?: boolean | null;
+        };
         RefreshTokenRequest: {
             refreshToken: string;
         };
@@ -4819,6 +5028,14 @@ export interface components {
             email?: string | null;
             temporaryPassword?: string | null;
         };
+        ResolvePendingCancellationsResponse: {
+            /** Format: int32 */
+            attempted?: number;
+            /** Format: int32 */
+            completed?: number;
+            /** Format: int32 */
+            stillPending?: number;
+        };
         SavedItinerarySummaryResponse: {
             /** Format: uuid */
             id?: string;
@@ -4846,6 +5063,17 @@ export interface components {
             totalCount?: number;
             /** Format: int32 */
             readonly totalPages?: number;
+        };
+        SchemaHealthResponse: {
+            status?: string | null;
+            database?: string | null;
+            databaseMatchesExpected?: boolean;
+            /** Format: int32 */
+            appliedMigrations?: number;
+            latestMigration?: string | null;
+            /** Format: int32 */
+            pendingMigrations?: number;
+            fingerprint?: string | null;
         };
         SendMessageRequest: {
             content: string;
