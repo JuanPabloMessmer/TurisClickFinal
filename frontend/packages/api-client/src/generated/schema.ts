@@ -2785,6 +2785,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/flights/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SearchFlightsRequest"];
+                    "text/json": components["schemas"]["SearchFlightsRequest"];
+                    "application/*+json": components["schemas"]["SearchFlightsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SearchFlightsResponse"];
+                        "application/json": components["schemas"]["SearchFlightsResponse"];
+                        "text/json": components["schemas"]["SearchFlightsResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -4554,6 +4597,12 @@ export interface components {
             statusMessage?: string | null;
             inProgress?: boolean;
         };
+        FlightOptionResponse: {
+            price?: components["schemas"]["MoneyResponse"];
+            carrierName?: string | null;
+            carrierIata?: string | null;
+            slices?: components["schemas"]["FlightSliceResponse"][] | null;
+        };
         FlightOriginResponse: {
             iata?: string | null;
             label?: string | null;
@@ -4580,6 +4629,16 @@ export interface components {
             expiresAt?: string | null;
             message?: string | null;
             requiresAcceptance?: boolean;
+        };
+        FlightRoutePackageResponse: {
+            /** Format: uuid */
+            id?: string;
+            title?: string | null;
+            destinationName?: string | null;
+            /** Format: int32 */
+            durationDays?: number;
+            price?: components["schemas"]["MoneyResponse"];
+            coverImageUrl?: string | null;
         };
         FlightSegmentResponse: {
             originIata?: string | null;
@@ -5143,6 +5202,35 @@ export interface components {
             /** Format: int32 */
             pendingMigrations?: number;
             fingerprint?: string | null;
+        };
+        SearchFlightsRequest: {
+            originIata: string;
+            destinationIata: string;
+            /** Format: date */
+            departureDate?: string;
+            /** Format: date */
+            returnDate?: string | null;
+            /** Format: int32 */
+            passengers?: number;
+            /** Format: Enumeration */
+            cabinClass?: string | null;
+        };
+        SearchFlightsResponse: {
+            originIata?: string | null;
+            originLabel?: string | null;
+            destinationIata?: string | null;
+            destinationLabel?: string | null;
+            /** Format: date */
+            departureDate?: string;
+            /** Format: date */
+            returnDate?: string | null;
+            /** Format: int32 */
+            passengers?: number;
+            cabinClass?: string | null;
+            options?: components["schemas"]["FlightOptionResponse"][] | null;
+            packages?: components["schemas"]["FlightRoutePackageResponse"][] | null;
+            notice?: string | null;
+            testMode?: boolean;
         };
         SendMessageRequest: {
             content: string;

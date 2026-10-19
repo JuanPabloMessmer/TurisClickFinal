@@ -328,30 +328,7 @@ public class PackageFlightService(
         CarrierName = offer.OwnerName,
         CarrierIata = offer.OwnerIataCode,
         ExpiresAt = offer.ExpiresAt,
-        Slices =
-        [
-            .. offer.Slices.Select(slice => new FlightSliceResponse
-            {
-                OriginIata = slice.OriginIata,
-                DestinationIata = slice.DestinationIata,
-                DurationMinutes = slice.Duration is { } duration ? (int)duration.TotalMinutes : null,
-                Stops = Math.Max(slice.Segments.Count - 1, 0),
-                Segments =
-                [
-                    .. slice.Segments.Select(segment => new FlightSegmentResponse
-                    {
-                        OriginIata = segment.OriginIata,
-                        DestinationIata = segment.DestinationIata,
-                        DepartingAt = segment.DepartingAt,
-                        ArrivingAt = segment.ArrivingAt,
-                        CarrierIata = segment.MarketingCarrierIata,
-                        CarrierName = segment.MarketingCarrierName,
-                        FlightNumber = segment.FlightNumber,
-                        CheckedBags = segment.CheckedBags,
-                    }),
-                ],
-            }),
-        ],
+        Slices = FlightResponseMapper.ToSlices(offer),
     };
 
     /// <summary>

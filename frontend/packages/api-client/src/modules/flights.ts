@@ -14,6 +14,10 @@ export type PackageFlightQuoteResponse = components['schemas']['PackageFlightQuo
 export type FlightQuoteOptionResponse = components['schemas']['FlightQuoteOptionResponse']
 export type FlightQuoteRevalidationResponse = components['schemas']['FlightQuoteRevalidationResponse']
 export type AirportResponse = components['schemas']['AirportResponse']
+export type SearchFlightsRequest = components['schemas']['SearchFlightsRequest']
+export type SearchFlightsResponse = components['schemas']['SearchFlightsResponse']
+export type FlightOptionResponse = components['schemas']['FlightOptionResponse']
+export type FlightRoutePackageResponse = components['schemas']['FlightRoutePackageResponse']
 
 export const getPackageFlightRule = (http: AxiosInstance, packageId: string) =>
   http
@@ -35,3 +39,12 @@ export const revalidateFlightQuote = (http: AxiosInstance, quoteId: string) =>
 
 export const listAirports = (http: AxiosInstance, params?: { country?: string }) =>
   http.get<AirportResponse[]>('/api/airports', { params }).then((r) => r.data)
+
+/**
+ * Búsqueda suelta de vuelos — el explorador de la app.
+ *
+ * No devuelve nada reservable a propósito: en TurisClick el pasaje se vende dentro de un paquete. Lo que sí
+ * trae son los paquetes que vuelan esa ruta, que es lo único comprable.
+ */
+export const searchFlights = (http: AxiosInstance, body: SearchFlightsRequest) =>
+  http.post<SearchFlightsResponse>('/api/flights/search', body).then((r) => r.data)
