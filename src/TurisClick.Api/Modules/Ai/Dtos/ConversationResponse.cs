@@ -34,6 +34,13 @@ public class MessageResponse
     public string Sender { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// La propuesta que generó esta respuesta del asistente, si generó una. Cada ajuste crea una versión nueva
+    /// y la anterior queda intacta, así que cada respuesta conserva sus propias recomendaciones en el historial.
+    /// Null en los mensajes del turista y en las respuestas que sólo preguntan o explican.
+    /// </summary>
+    public Guid? ItineraryId { get; set; }
 }
 
 /// <summary>

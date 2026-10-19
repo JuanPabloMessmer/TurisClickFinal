@@ -56,6 +56,13 @@ public class AiItineraryRepository(TurisClickDbContext db) : IAiItineraryReposit
         return (items, totalCount);
     }
 
+    public Task<List<ItineraryVersionStamp>> ListVersionStampsAsync(Guid conversationId, CancellationToken ct) =>
+        db.AiItineraries
+            .AsNoTracking()
+            .Where(i => i.AiConversationId == conversationId)
+            .Select(i => new ItineraryVersionStamp(i.Id, i.CreatedAt, i.Version))
+            .ToListAsync(ct);
+
     public async Task AddAsync(AiItinerary itinerary, CancellationToken ct) =>
         await db.AiItineraries.AddAsync(itinerary, ct);
 }

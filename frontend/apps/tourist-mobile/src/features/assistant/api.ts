@@ -73,11 +73,16 @@ export function useConversation(id: string) {
 /** La propuesta vigente, revalidada por el backend. Todavía no haber propuesta (404) no es un error: es null. */
 export function useLatestItinerary(conversationId: string) {
   const userId = useTouristId()
+  const queryClient = useQueryClient()
   return useQuery({
     queryKey: aiKeys.latestItinerary(userId ?? 'anonymous', conversationId),
     queryFn: async (): Promise<ItineraryResponse | null> => {
       try {
-        return await aiApi.getLatestItinerary(httpClient, conversationId)
+        const latest = await aiApi.getLatestItinerary(httpClient, conversationId)
+        // También bajo su propio id: cuando llegue una propuesta nueva, el turno que la generó la sigue
+        // mostrando sin parpadear a un esqueleto mientras se vuelve a pedir.
+        if (userId && latest?.id) queryClient.setQueryData(aiKeys.itinerary(userId, latest.id), latest)
+        return latest
       } catch (error) {
         if (toApiError(error).status === 404) return null
         throw error
@@ -123,6 +128,7 @@ export function useStartConversation() {
       void queryClient.invalidateQueries({ queryKey: aiKeys.conversations(userId) })
       if (reply) queryClient.setQueryData(aiKeys.lastReply(userId, conversation.id), reply)
       if (reply?.itinerary) queryClient.setQueryData(aiKeys.latestItinerary(userId, conversation.id), reply.itinerary)
+      if (reply?.itinerary?.id) queryClient.setQueryData(aiKeys.itinerary(userId, reply.itinerary.id), reply.itinerary)
     },
   })
 }
@@ -156,6 +162,9 @@ export function useSendMessage(conversationId: string) {
       if (!userId) return
       queryClient.setQueryData(aiKeys.lastReply(userId, conversationId), reply)
       if (reply.itinerary) queryClient.setQueryData(aiKeys.latestItinerary(userId, conversationId), reply.itinerary)
+      // Cada propuesta queda también bajo su propio id: cuando deja de ser la vigente, su turno de la
+      // conversación la sigue mostrando sin volver a pedirla.
+      if (reply.itinerary?.id) queryClient.setQueryData(aiKeys.itinerary(userId, reply.itinerary.id), reply.itinerary)
       void queryClient.invalidateQueries({ queryKey: aiKeys.conversations(userId) })
     },
     onSettled: () => {

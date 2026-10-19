@@ -4706,6 +4706,8 @@ export interface components {
             content?: string | null;
             /** Format: date-time */
             createdAt?: string;
+            /** Format: uuid */
+            itineraryId?: string | null;
         };
         MoneyLineResponse: {
             /** Format: double */

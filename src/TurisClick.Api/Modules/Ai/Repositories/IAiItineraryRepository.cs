@@ -19,5 +19,13 @@ public interface IAiItineraryRepository
     /// <summary>UC-T-17 — "Mis itinerarios guardados": solo los SAVED del turista dueño, más recientes primero.</summary>
     Task<(List<AiItinerary> Items, int TotalCount)> ListSavedByTouristAsync(Guid touristId, int page, int pageSize, CancellationToken ct);
 
+    /// <summary>
+    /// Todas las versiones de propuesta de una conversación, sólo id, instante de creación y versión: lo justo
+    /// para saber qué respuesta del asistente generó cada una.
+    /// </summary>
+    Task<List<ItineraryVersionStamp>> ListVersionStampsAsync(Guid conversationId, CancellationToken ct);
+
     Task AddAsync(AiItinerary itinerary, CancellationToken ct);
 }
+
+public sealed record ItineraryVersionStamp(Guid Id, DateTimeOffset CreatedAt, int Version);

@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { RequireTourist } from '@/auth/RequireTourist'
-import { useConversation, useLastReply, useLatestItinerary, useSendMessage } from '@/features/assistant/api'
+import type { ItineraryResponse } from '@turisclick/api-client'
+import { useConversation, useItinerary, useLastReply, useLatestItinerary, useSendMessage } from '@/features/assistant/api'
 import {
   ChatBubble,
   ItineraryView,
@@ -39,6 +40,36 @@ export default function AssistantChatScreen() {
   )
 }
 
+/**
+ * La propuesta de un turno de la conversación, debajo de la respuesta que la generó. La vigente ya viene
+ * cargada; las anteriores se leen por id (y se revalidan, como al retomar un itinerario guardado). Si una no
+ * carga, sólo esa muestra el error: nada de lo que ya se ve en la conversación desaparece.
+ */
+function TurnItinerary({ itineraryId, latest }: { itineraryId: string; latest: ItineraryResponse | null }) {
+  const own = useItinerary(latest ? '' : itineraryId)
+  const data = latest ?? own.data
+
+  if (data) {
+    return (
+      <View className="mb-4 mt-2">
+        <ItineraryView itinerary={data}>
+          <ItineraryActions itinerary={data} />
+        </ItineraryView>
+      </View>
+    )
+  }
+
+  if (own.isError) {
+    return (
+      <View className="mb-4 mt-2">
+        <ErrorState message="No pudimos cargar esta propuesta." onRetry={own.refetch} />
+      </View>
+    )
+  }
+
+  return <Skeleton className="mb-4 mt-2 h-40 w-full" />
+}
+
 function Chat({ conversationId }: { conversationId: string }) {
   const insets = useSafeAreaInsets()
   const conversation = useConversation(conversationId)
@@ -51,6 +82,7 @@ function Chat({ conversationId }: { conversationId: string }) {
 
   const messages = conversation.data?.messages ?? []
   const anchor = lastAssistantIndex(messages)
+  const perTurn = messages.some((message) => Boolean(message.itineraryId))
   const reply = lastReply.data
   const destinationNames = useMemo(() => byPublishedContent(cities.data).map((c) => c.name ?? '').filter(Boolean), [cities.data])
   const quickReplies = reply?.clarificationNeeded
@@ -94,18 +126,27 @@ function Chat({ conversationId }: { conversationId: string }) {
         {messages.map((message, index) => (
           <View key={message.id ?? index}>
             <ChatBubble message={message} />
-            {index === anchor ? (
+            {index === anchor && reply ? (
               <>
-                {reply ? <ProfileHints hints={reply.profileHints} /> : null}
-                {reply ? <WarningsList warnings={reply.warnings} /> : null}
-                {itinerary.data ? (
-                  <View className="mb-4 mt-2">
-                    <ItineraryView itinerary={itinerary.data}>
-                      <ItineraryActions itinerary={itinerary.data} />
-                    </ItineraryView>
-                  </View>
-                ) : null}
+                <ProfileHints hints={reply.profileHints} />
+                <WarningsList warnings={reply.warnings} />
               </>
+            ) : null}
+            {/* Cada respuesta conserva la propuesta que generó. Un backend anterior a `itineraryId` no lo dice
+                en ningún mensaje: entonces se muestra sólo la vigente bajo la última respuesta, como antes. */}
+            {perTurn ? (
+              message.itineraryId ? (
+                <TurnItinerary
+                  itineraryId={message.itineraryId}
+                  latest={itinerary.data?.id === message.itineraryId ? itinerary.data : null}
+                />
+              ) : null
+            ) : index === anchor && itinerary.data ? (
+              <View className="mb-4 mt-2">
+                <ItineraryView itinerary={itinerary.data}>
+                  <ItineraryActions itinerary={itinerary.data} />
+                </ItineraryView>
+              </View>
             ) : null}
           </View>
         ))}

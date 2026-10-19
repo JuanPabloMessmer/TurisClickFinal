@@ -79,7 +79,15 @@ public class AiConversationService(
 
         EnsureOwnsConversation(conversation.TouristId);
 
-        return ToResponse(conversation);
+        // Qué propuesta generó cada respuesta. No hay una columna que lo diga: la propuesta y el mensaje que la
+        // anuncia se guardan juntos con el mismo instante (PersistProposalAsync), así que se reconocen por eso.
+        // Vale también para las conversaciones que ya existían, sin migrar nada.
+        var versions = await itineraryRepository.ListVersionStampsAsync(id, ct) ?? [];
+        var itineraryByInstant = versions
+            .GroupBy(i => i.CreatedAt)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(i => i.Version).First().Id);
+
+        return ToResponse(conversation, itineraryByInstant);
     }
 
     public async Task<SendMessageResponse> SendMessageAsync(Guid conversationId, SendMessageRequest request, CancellationToken ct)
@@ -93,10 +101,13 @@ public class AiConversationService(
         var userMessage = request.Content.Trim();
 
         // Historial ANTES de agregar el mensaje nuevo — se manda aparte como LatestMessage.
+        // Mismo desempate que en ToResponse: pregunta y respuesta comparten instante.
         var history = conversation.Messages
             .OrderByDescending(m => m.CreatedAt)
+            .ThenByDescending(m => m.Sender)
             .Take(MaxHistoryTurns)
             .OrderBy(m => m.CreatedAt)
+            .ThenBy(m => m.Sender)
             .Select(m => new ConversationTurn(m.Sender.ToString(), m.Content))
             .ToList();
 
@@ -868,14 +879,28 @@ public class AiConversationService(
         UpdatedAt = conversation.UpdatedAt
     };
 
-    private static ConversationResponse ToResponse(AiConversation conversation) => new()
+    private static ConversationResponse ToResponse(
+        AiConversation conversation, IReadOnlyDictionary<DateTimeOffset, Guid> itineraryByInstant) => new()
     {
         Id = conversation.Id,
         Status = conversation.Status.ToString(),
         Preferences = ToPreferencesResponse(conversation),
+        // El mensaje del turista y la respuesta se guardan con el mismo instante: sin desempate el orden entre
+        // los dos quedaba librado a la base y la respuesta podía aparecer arriba de la pregunta. TOURIST va antes
+        // que AI en el enum, que es el orden en que ocurrieron.
         Messages = conversation.Messages
             .OrderBy(m => m.CreatedAt)
-            .Select(m => new MessageResponse { Id = m.Id, Sender = m.Sender.ToString(), Content = m.Content, CreatedAt = m.CreatedAt })
+            .ThenBy(m => m.Sender)
+            .Select(m => new MessageResponse
+            {
+                Id = m.Id,
+                Sender = m.Sender.ToString(),
+                Content = m.Content,
+                CreatedAt = m.CreatedAt,
+                ItineraryId = m.Sender == MessageSender.AI && itineraryByInstant.TryGetValue(m.CreatedAt, out var itineraryId)
+                    ? itineraryId
+                    : null
+            })
             .ToList(),
         CreatedAt = conversation.CreatedAt,
         UpdatedAt = conversation.UpdatedAt

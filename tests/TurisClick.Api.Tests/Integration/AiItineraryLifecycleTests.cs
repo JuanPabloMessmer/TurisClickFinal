@@ -139,6 +139,64 @@ public class AiItineraryLifecycleTests
         Assert.Equal(2, previous!.Items.Count);
     }
 
+    /// <summary>
+    /// Encontrado probando en un iPhone: al mandar un ajuste ("menos aventura"), las recomendaciones de la
+    /// respuesta anterior desaparecían, porque la conversación no decía qué propuesta había generado cada
+    /// respuesta y la app sólo podía mostrar la última. Cada respuesta tiene que conservar la suya, también al
+    /// volver a leer la conversación, y el orden tiene que ser pregunta → respuesta en cada turno.
+    /// </summary>
+    [Fact]
+    public async Task History_EachAssistantReplyKeepsItsOwnItinerary_AfterReloadingTheConversation()
+    {
+        var catalog = await SeedCatalogAsync("ai-history");
+        var (tourist, conversation, first) = await StartConversationWithItineraryAsync(catalog, "ai-history-t");
+        var removed = first.Items.First();
+
+        var second = (await (await tourist.PostAsJsonAsync($"/api/ai/conversations/{conversation.Id}/messages",
+            new { content = $"Quitá {removed.ExperienceTitle}." })).Content.ReadFromJsonAsync<SendMessageResponse>(JsonOptions))!
+            .Itinerary!;
+        Assert.NotEqual(first.Id, second.Id);
+
+        // Se relee dos veces: el resultado tiene que ser estable, no depender de cómo la base devuelva empates.
+        for (var read = 0; read < 2; read++)
+        {
+            var reloaded = (await (await tourist.GetAsync($"/api/ai/conversations/{conversation.Id}"))
+                .Content.ReadFromJsonAsync<ConversationResponse>(JsonOptions))!;
+
+            Assert.Equal(["TOURIST", "AI", "TOURIST", "AI"], reloaded.Messages.Select(m => m.Sender).ToArray());
+            Assert.Null(reloaded.Messages[0].ItineraryId);
+            Assert.Equal(first.Id, reloaded.Messages[1].ItineraryId);
+            Assert.Null(reloaded.Messages[2].ItineraryId);
+            Assert.Equal(second.Id, reloaded.Messages[3].ItineraryId);
+        }
+
+        // Y cada propuesta sigue siendo la suya: la primera con los dos productos, la segunda sin el quitado.
+        var firstAgain = await (await tourist.GetAsync($"/api/ai/itineraries/{first.Id}"))
+            .Content.ReadFromJsonAsync<ItineraryResponse>(JsonOptions);
+        var secondAgain = await (await tourist.GetAsync($"/api/ai/itineraries/{second.Id}"))
+            .Content.ReadFromJsonAsync<ItineraryResponse>(JsonOptions);
+        Assert.Equal(2, firstAgain!.Items.Count);
+        Assert.DoesNotContain(secondAgain!.Items, i => i.ExperienceId == removed.ExperienceId);
+    }
+
+    [Fact]
+    public async Task History_AReplyThatOnlyAsksForMoreInformationHasNoItinerary()
+    {
+        var tourist = _factory.CreateClient();
+        UseBearerToken(tourist, await RegisterAndLoginTouristAsync(tourist, "ai-history-ask"));
+        var conversation = (await (await tourist.PostAsync("/api/ai/conversations", null))
+            .Content.ReadFromJsonAsync<ConversationResponse>(JsonOptions))!;
+
+        var reply = (await (await tourist.PostAsJsonAsync($"/api/ai/conversations/{conversation.Id}/messages",
+            new { content = "Hola, quiero viajar." })).Content.ReadFromJsonAsync<SendMessageResponse>(JsonOptions))!;
+        Assert.True(reply.ClarificationNeeded);
+
+        var reloaded = (await (await tourist.GetAsync($"/api/ai/conversations/{conversation.Id}"))
+            .Content.ReadFromJsonAsync<ConversationResponse>(JsonOptions))!;
+        Assert.Equal(["TOURIST", "AI"], reloaded.Messages.Select(m => m.Sender).ToArray());
+        Assert.All(reloaded.Messages, m => Assert.Null(m.ItineraryId));
+    }
+
     [Fact]
     public async Task Iterate_ReplacesOneDay_KeepingTheOtherItemUntouched()
     {
