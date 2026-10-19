@@ -32,3 +32,8 @@ export function useDeleteDestination() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
   })
 }
+
+/** Sube el archivo y devuelve la URL pública; el destino se guarda después con el POST/PUT de siempre. */
+export function uploadDestinationImage(file: File, onProgress?: (percent: number) => void) {
+  return destinationsApi.uploadDestinationImage(httpClient, file, onProgress)
+}

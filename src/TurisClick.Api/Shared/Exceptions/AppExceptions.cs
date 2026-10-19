@@ -122,3 +122,9 @@ public class GoneAppException(string message, string? errorCode = null) : Except
 {
     public string? ErrorCode { get; } = errorCode;
 }
+
+/// <summary>
+/// Una dependencia de infraestructura no está disponible o no está configurada (ej. el almacenamiento de
+/// imágenes). Se mapea a 503: el pedido era válido y se puede reintentar más tarde.
+/// </summary>
+public class ServiceUnavailableAppException(string message) : Exception(message);

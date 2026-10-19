@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { DestinationResponse } from '@turisclick/api-client'
 import { MapPinned, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { PageHeader } from '@/components/PageHeader'
@@ -16,12 +16,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableEmptyRow, TableHead, TableHeader, TableLoadingRow, TableRow } from '@/components/ui/table'
 import { getErrorMessage } from '@/lib/errors'
 import { useCreateDestination, useDeleteDestination, useDestinations, useUpdateDestination } from './api'
+import { DestinationImageField } from './DestinationImageField'
+import type { ImageSelection } from './imageFile'
+import { useDestinationImageUpload } from './useDestinationImageUpload'
 
 const createSchema = z.object({
   name: z.string().min(2).max(150),
   type: z.enum(['COUNTRY', 'REGION', 'CITY']),
   parentId: z.string().optional(),
-  imageUrl: z.union([z.literal(''), z.url({ protocol: /^https?$/ }).max(500)]).optional(),
 })
 type CreateFormValues = z.infer<typeof createSchema>
 
@@ -38,7 +40,7 @@ export function DestinationsPage() {
   const deleteMutation = useDeleteDestination()
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
-  const [renaming, setRenaming] = useState<DestinationResponse | null>(null)
+  const [editing, setEditing] = useState<DestinationResponse | null>(null)
 
   const onDelete = async (id: string) => {
     setDeleteError(null)
@@ -100,7 +102,7 @@ export function DestinationsPage() {
                 <TableCell className="text-muted-foreground">{destination.parentName ?? '—'}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setRenaming(destination)}>
+                    <Button variant="outline" size="sm" onClick={() => setEditing(destination)}>
                       <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       Editar
                     </Button>
@@ -117,57 +119,95 @@ export function DestinationsPage() {
       </Card>
 
       <CreateDialog open={creating} onClose={() => setCreating(false)} destinations={destinations} />
-      <RenameDialog destination={renaming} onClose={() => setRenaming(null)} />
+      <EditDialog destination={editing} onClose={() => setEditing(null)} />
     </div>
   )
 }
 
+/**
+ * Mientras se sube la imagen o se guarda, el diálogo no se cierra (Esc, clic afuera o la X): cerrar a mitad de
+ * camino dejaría una imagen subida sin destino, o un guardado que el usuario cree cancelado.
+ */
+function useBusyGuard(onClose: () => void) {
+  const [busy, setBusy] = useState(false)
+  const onOpenChange = (open: boolean) => {
+    if (!open && !busy) onClose()
+  }
+  return { setBusy, onOpenChange }
+}
+
+/**
+ * Evita el doble envío: el estado de React tarda un render en deshabilitar el botón, y un doble clic rápido
+ * alcanza a disparar dos subidas y dos altas. La referencia corta el segundo envío en el mismo instante.
+ */
+function useSingleFlight(onBusyChange: (busy: boolean) => void) {
+  const inFlight = useRef(false)
+  const [running, setRunning] = useState(false)
+  const run = async (task: () => Promise<void>) => {
+    if (inFlight.current) return
+    inFlight.current = true
+    setRunning(true)
+    onBusyChange(true)
+    try {
+      await task()
+    } finally {
+      inFlight.current = false
+      setRunning(false)
+      onBusyChange(false)
+    }
+  }
+  return { running, run }
+}
+
 function CreateDialog({ open, onClose, destinations }: { open: boolean; onClose: () => void; destinations: DestinationResponse[] }) {
+  const { setBusy, onOpenChange } = useBusyGuard(onClose)
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(open) => {
-        if (!open) onClose()
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       {/* El unmount/mount natural del "open &&" ya resetea el form cada vez que se vuelve a abrir. */}
-      {open && <CreateDialogContent onClose={onClose} destinations={destinations} />}
+      {open && <CreateDialogContent onClose={onClose} onBusyChange={setBusy} destinations={destinations} />}
     </Dialog>
   )
 }
 
 function CreateDialogContent({
   onClose,
+  onBusyChange,
   destinations,
 }: {
   onClose: () => void
+  onBusyChange: (busy: boolean) => void
   destinations: DestinationResponse[]
 }) {
   const createMutation = useCreateDestination()
+  const { progress, resolveImageUrl } = useDestinationImageUpload()
+  const { running, run } = useSingleFlight(onBusyChange)
+  const [image, setImage] = useState<ImageSelection>({ kind: 'current' })
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const form = useForm<CreateFormValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: '', type: 'COUNTRY', parentId: undefined, imageUrl: '' },
+    defaultValues: { name: '', type: 'COUNTRY', parentId: undefined },
   })
   const selectedType = form.watch('type')
   const requiredParentType = parentTypeFor[selectedType]
   const parentOptions = destinations.filter((d) => d.type === requiredParentType)
 
-  const onSubmit = async (values: CreateFormValues) => {
-    setSubmitError(null)
-    try {
-      await createMutation.mutateAsync({
-        name: values.name,
-        type: values.type,
-        parentId: requiredParentType ? values.parentId : undefined,
-        imageUrl: values.imageUrl || undefined,
-      })
-      onClose()
-    } catch (error) {
-      setSubmitError(getErrorMessage(error))
-    }
-  }
+  const onSubmit = (values: CreateFormValues) =>
+    run(async () => {
+      setSubmitError(null)
+      try {
+        const imageUrl = await resolveImageUrl(image)
+        await createMutation.mutateAsync({
+          name: values.name,
+          type: values.type,
+          parentId: requiredParentType ? values.parentId : undefined,
+          imageUrl: imageUrl ?? undefined,
+        })
+        onClose()
+      } catch (error) {
+        setSubmitError(getErrorMessage(error))
+      }
+    })
 
   return (
     <DialogContent>
@@ -176,14 +216,15 @@ function CreateDialogContent({
       </DialogHeader>
       <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
         <div className="flex flex-col gap-1.5">
-          <Label>Nombre</Label>
-          <Input {...form.register('name')} autoFocus />
+          <Label htmlFor="destination-name">Nombre</Label>
+          <Input id="destination-name" {...form.register('name')} autoFocus disabled={running} />
           {form.formState.errors.name && <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>Tipo</Label>
           <Select
             value={selectedType}
+            disabled={running}
             onValueChange={(value) => {
               form.setValue('type', value as CreateFormValues['type'])
               form.setValue('parentId', undefined)
@@ -199,15 +240,10 @@ function CreateDialogContent({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label>Imagen representativa (URL, opcional)</Label>
-          <Input placeholder="https://upload.wikimedia.org/…" {...form.register('imageUrl')} />
-          {form.formState.errors.imageUrl && <p className="text-xs text-destructive">Ingresá una URL http(s) válida.</p>}
-        </div>
         {requiredParentType && (
           <div className="flex flex-col gap-1.5">
             <Label>Padre ({requiredParentType === 'COUNTRY' ? 'País' : 'Región'})</Label>
-            <Select value={form.watch('parentId')} onValueChange={(value) => form.setValue('parentId', value)}>
+            <Select value={form.watch('parentId')} disabled={running} onValueChange={(value) => form.setValue('parentId', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccioná el padre" />
               </SelectTrigger>
@@ -221,13 +257,14 @@ function CreateDialogContent({
             </Select>
           </div>
         )}
+        <DestinationImageField value={image} onChange={setImage} progress={progress} disabled={running} />
         {submitError && <Alert variant="destructive">{submitError}</Alert>}
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={running}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting || (!!requiredParentType && !form.watch('parentId'))}>
-            Crear
+          <Button type="submit" loading={running} disabled={!!requiredParentType && !form.watch('parentId')}>
+            {progress !== null ? 'Subiendo imagen…' : running ? 'Guardando…' : 'Crear'}
           </Button>
         </DialogFooter>
       </form>
@@ -235,69 +272,81 @@ function CreateDialogContent({
   )
 }
 
-function RenameDialog({ destination, onClose }: { destination: DestinationResponse | null; onClose: () => void }) {
+function EditDialog({ destination, onClose }: { destination: DestinationResponse | null; onClose: () => void }) {
+  const { setBusy, onOpenChange } = useBusyGuard(onClose)
   return (
-    <Dialog
-      open={!!destination}
-      onOpenChange={(open) => {
-        if (!open) onClose()
-      }}
-    >
-      {/* key fuerza un remount por cada destino distinto, así el estado local del input arranca limpio. */}
-      {destination && <RenameDialogContent key={destination.id} destination={destination} onClose={onClose} />}
+    <Dialog open={!!destination} onOpenChange={onOpenChange}>
+      {/* key fuerza un remount por cada destino distinto, así el estado local arranca limpio. */}
+      {destination && <EditDialogContent key={destination.id} destination={destination} onClose={onClose} onBusyChange={setBusy} />}
     </Dialog>
   )
 }
 
-function RenameDialogContent({ destination, onClose }: { destination: DestinationResponse; onClose: () => void }) {
+function EditDialogContent({
+  destination,
+  onClose,
+  onBusyChange,
+}: {
+  destination: DestinationResponse
+  onClose: () => void
+  onBusyChange: (busy: boolean) => void
+}) {
   const updateMutation = useUpdateDestination()
+  const { progress, resolveImageUrl } = useDestinationImageUpload()
+  const { running, run } = useSingleFlight(onBusyChange)
   const [name, setName] = useState(destination.name ?? '')
-  // El PUT reemplaza nombre e imagen juntos: se precarga la actual para no borrarla al renombrar.
-  const [imageUrl, setImageUrl] = useState(destination.imageUrl ?? '')
+  // El PUT reemplaza nombre e imagen juntos: por defecto se conserva la imagen actual (sea una URL externa
+  // previa o una subida), para no borrarla al sólo renombrar.
+  const [image, setImage] = useState<ImageSelection>({ kind: 'current' })
   const [error, setError] = useState<string | null>(null)
 
-  const onSave = async () => {
-    setError(null)
-    try {
-      await updateMutation.mutateAsync({ id: destination.id!, body: { name, imageUrl: imageUrl.trim() || null } })
-      onClose()
-    } catch (err) {
-      setError(getErrorMessage(err))
-    }
-  }
+  const onSave = () =>
+    run(async () => {
+      setError(null)
+      try {
+        const imageUrl = await resolveImageUrl(image, destination.imageUrl)
+        await updateMutation.mutateAsync({ id: destination.id!, body: { name, imageUrl } })
+        onClose()
+      } catch (err) {
+        setError(getErrorMessage(err))
+      }
+    })
 
   return (
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Editar destino</DialogTitle>
       </DialogHeader>
-      <div className="flex flex-col gap-1.5">
-        <Label>Nombre</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-        <p className="text-xs text-muted-foreground">Tipo y padre son estructurales y no se editan.</p>
-      </div>
-      <div className="mt-3 flex flex-col gap-1.5">
-        <Label>Imagen representativa (URL)</Label>
-        <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" />
-        {imageUrl.trim() ? (
-          <img src={imageUrl.trim()} alt="Vista previa" className="mt-1 h-32 w-full rounded-md object-cover" />
-        ) : (
-          <p className="text-xs text-muted-foreground">Sin imagen: la app muestra un fondo neutro.</p>
-        )}
-      </div>
-      {error && (
-        <Alert variant="destructive" className="mt-2">
-          {error}
-        </Alert>
-      )}
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button onClick={() => void onSave()} disabled={updateMutation.isPending}>
-          Guardar
-        </Button>
-      </DialogFooter>
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void onSave()
+        }}
+        noValidate
+      >
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="destination-edit-name">Nombre</Label>
+          <Input id="destination-edit-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus disabled={running} />
+          <p className="text-xs text-muted-foreground">Tipo y padre son estructurales y no se editan.</p>
+        </div>
+        <DestinationImageField
+          currentUrl={destination.imageUrl}
+          value={image}
+          onChange={setImage}
+          progress={progress}
+          disabled={running}
+        />
+        {error && <Alert variant="destructive">{error}</Alert>}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={running}>
+            Cancelar
+          </Button>
+          <Button type="submit" loading={running}>
+            {progress !== null ? 'Subiendo imagen…' : running ? 'Guardando…' : 'Guardar'}
+          </Button>
+        </DialogFooter>
+      </form>
     </DialogContent>
   )
 }

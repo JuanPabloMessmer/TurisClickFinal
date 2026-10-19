@@ -30,6 +30,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             UnauthorizedAppException => (StatusCodes.Status401Unauthorized, "No autorizado", exception.Message),
             ValidationAppException => (StatusCodes.Status400BadRequest, "Solicitud inválida", exception.Message),
             GoneAppException => (StatusCodes.Status410Gone, "Recurso ya no disponible", exception.Message),
+            ServiceUnavailableAppException => (StatusCodes.Status503ServiceUnavailable, "Servicio no disponible", exception.Message),
 
             // Red de seguridad genérica: si algún Service todavía no valida explícitamente una FK antes
             // de borrar/modificar (como sí hace DestinationService.DeleteAsync para experiences/packages),

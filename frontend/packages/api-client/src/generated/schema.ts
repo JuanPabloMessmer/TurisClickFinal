@@ -2290,6 +2290,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/destinations/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": {
+                        /** Format: binary */
+                        file?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["UploadedImageResponse"];
+                        "application/json": components["schemas"]["UploadedImageResponse"];
+                        "text/json": components["schemas"]["UploadedImageResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/experiences/{experienceId}/availability": {
         parameters: {
             query?: never;
@@ -5238,6 +5300,9 @@ export interface components {
             travelParty?: string | null;
             budgetLevel?: string | null;
             completeOnboarding?: boolean;
+        };
+        UploadedImageResponse: {
+            url?: string | null;
         };
         /**
          * Format: int32

@@ -14,6 +14,7 @@ rg-turisclick-dev (compartido con V1)
 ├── app-turisclick-v2-api .......... Terraform (.NET 10, HTTPS)
 ├── id-turisclick-v2-app ........... Terraform (user-assigned)
 ├── kv-turisclick-v2-dev ........... Terraform (RBAC, prevent_destroy, sin secretos)
+├── stturisclickv2imgjpm / images .. Terraform (imágenes subidas) — definido, PENDIENTE de apply
 └── swa-turisclick-v2-backoffice ... az CLI, FUERA del state (Static Web Apps, Free, East US 2)
 
 rg-turisclick-tfstate
@@ -92,6 +93,51 @@ push a master (src/, tests/, TurisClick.slnx, el workflow) · workflow_dispatch
 - **Pull requests:** corren build y tests, sin deploy.
 - **Fuera del workflow:** migraciones y seed (`bootstrap/`), infraestructura (Terraform).
 - La identidad de deploy se creó con script, fuera de Terraform (el state sigue con los 6 recursos de V2).
+
+## Imágenes subidas (Blob Storage) — pendiente de apply
+
+El Backoffice sube la imagen de cada destino a `POST /api/admin/destinations/images` (sólo ADMIN) y la API
+la guarda en Blob Storage; en la base sólo queda la URL HTTPS pública, en el mismo `ImageUrl` de siempre, así
+que la app móvil no cambia. Nunca se guarda en el App Service: el directorio de despliegue se reemplaza en
+cada deploy.
+
+**Estado:** los recursos están definidos en `terraform/storage.tf` pero **no se aplicaron**. Hasta que exista
+la cuenta, la API desplegada responde 503 ("No se pudo guardar la imagen…") a la subida y todo lo demás
+—incluidas las URLs externas ya guardadas— sigue funcionando igual.
+
+| Recurso | Configuración |
+|---|---|
+| `stturisclickv2imgjpm` | StorageV2, Standard **LRS**, Hot, Brazil South, TLS 1.2, sólo HTTPS, **shared keys deshabilitadas**, soft delete 7 días, `prevent_destroy` |
+| contenedor `images` | Lectura anónima **de blobs** (cada foto por su URL), no de listados |
+| `Storage Blob Data Contributor` | Sólo para `id-turisclick-v2-app`, sólo sobre el contenedor `images` |
+| App settings nuevos | `ImageStorage__Provider=AzureBlob`, `ImageStorage__AzureBlob__ServiceUri`, `__ContainerName`, `__ManagedIdentityClientId` |
+
+Sin claves ni SAS en ningún lado: la API escribe con la identidad administrada y el frontend nunca habla con
+Storage directamente. Los nombres de blob los genera el servidor (`destinations/AAAA/MM/<guid>.<ext>`) y se
+sirven con `Cache-Control: immutable`.
+
+**Costo estimado (verificar en la calculadora de Azure antes de aplicar):** a escala de demo (cientos de
+imágenes de ≤ 5 MB, es decir, menos de 1 GB) el almacenamiento Hot LRS cuesta centavos de dólar por mes; las
+operaciones de escritura/lectura y la salida de datos a ese volumen también son de centavos. Se espera menos
+de US$ 1/mes. No hay costo fijo por la cuenta. Un CDN delante (`ImageStorage__AzureBlob__PublicBaseUrl`) es
+opcional y no hace falta para la demo.
+
+**Para activarlo** (desde `infra/terraform`, con `az login`):
+
+1. `terraform plan -var-file=dev.tfvars -out=images.tfplan`. Excepción a la regla de "sólo creaciones": el
+   plan debe mostrar **3 creaciones** (cuenta, contenedor, role assignment) y **1 update in-place** de
+   `azurerm_linux_web_app.api` (sólo los 4 app settings `ImageStorage__*`). Nada más.
+2. Si alguna Azure Policy de la subscription prohíbe `allow_nested_items_to_be_public`, el apply falla: en ese
+   caso hay que decidir entre una excepción a la política o servir las imágenes por CDN/SAS.
+3. `terraform apply images.tfplan`. El cambio de app settings reinicia la Web App.
+4. Smoke test: subir una imagen desde el Backoffice y abrir la URL devuelta en un navegador sin sesión.
+
+**Desarrollo local:** `appsettings.Development.json` usa `ImageStorage:Provider=Local`, que guarda en
+`%LOCALAPPDATA%/TurisClick/uploads` y la API lo sirve en `/uploads`. Fuera de Development la API se niega a
+arrancar con `Local`.
+
+**Limitaciones conocidas:** reemplazar o quitar la imagen de un destino no borra el blob anterior (quedan
+huérfanos, de costo despreciable); la subida tampoco redimensiona ni recomprime.
 
 ## Plan de servicio: F1
 
