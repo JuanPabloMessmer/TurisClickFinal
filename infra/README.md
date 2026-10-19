@@ -126,7 +126,9 @@ opcional y no hace falta para la demo.
 
 1. `terraform plan -var-file=dev.tfvars -out=images.tfplan`. Excepción a la regla de "sólo creaciones": el
    plan debe mostrar **3 creaciones** (cuenta, contenedor, role assignment) y **1 update in-place** de
-   `azurerm_linux_web_app.api` (sólo los 4 app settings `ImageStorage__*`). Nada más.
+   `azurerm_linux_web_app.api` (sólo los 4 app settings `ImageStorage__*`). Nada más. El diff de settings
+   aparece como "known after apply"; el mapa final se ve con `echo 'local.app_settings' | terraform console
+   -var-file=dev.tfvars` y tiene que conservar los 8 settings actuales, incluido `Cors__AllowedOrigins__2`.
 2. Si alguna Azure Policy de la subscription prohíbe `allow_nested_items_to_be_public`, el apply falla: en ese
    caso hay que decidir entre una excepción a la política o servir las imágenes por CDN/SAS.
 3. `terraform apply images.tfplan`. El cambio de app settings reinicia la Web App.
@@ -166,4 +168,7 @@ transferencia. No se creó ningún recurso pago.
 `rg-turisclick-dev` y luego `terraform import`. No se hizo ahora para no tocar el state en esta oleada.
 
 **CORS:** el dominio publicado está en el app setting `Cors__AllowedOrigins__2` de `app-turisclick-v2-api`
-(los otros dos son los orígenes de desarrollo). Es configuración de la Web App, no código.
+(los otros dos son los orígenes de desarrollo). Se cargó a mano, pero desde la Oleada 16 también está en
+`cors_allowed_origins` de `dev.tfvars`: Terraform reescribe todos los app settings, y sin esa línea el primer
+`apply` lo habría borrado y el Backoffice publicado habría perdido acceso a la API. Cualquier app setting nuevo
+(por ejemplo Duffel, con la variable `flights_provider`) va por Terraform, nunca a mano.

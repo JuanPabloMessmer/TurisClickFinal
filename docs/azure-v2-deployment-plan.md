@@ -165,12 +165,19 @@ az keyvault secret set --vault-name kv-turisclick-v2-dev --name duffel-test-toke
 El token se tipea en ese momento, se usa `--output none` para que no se imprima, y **tiene que empezar con
 `duffel_test_`**.
 
+Los app settings van por Terraform, **no** con `az webapp config appsettings set`: Terraform reescribe todos
+los app settings en cada apply y borraría los que se cargaron a mano (Oleada 16, ver
+[integration-oleada-16.md](integration-oleada-16.md)). Desde `infra/terraform`:
+
 ```bash
-az webapp config appsettings set -g rg-turisclick-dev -n app-turisclick-v2-api --settings \
-  "Flights__Provider=Duffel" \
-  "Flights__Duffel__AccessToken=@Microsoft.KeyVault(VaultName=kv-turisclick-v2-dev;SecretName=duffel-test-token)" \
-  --output none
+terraform plan -var-file=dev.tfvars -var flights_provider=Duffel -out=duffel.tfplan
+# Debe mostrar sólo el update in-place de la Web App con Flights__Provider y Flights__Duffel__AccessToken
+# (referencia a Key Vault, SecretName=duffel-test-token). Recién entonces:
+terraform apply duffel.tfplan
 ```
+
+Para dejarlo fijo, `flights_provider = "Duffel"` en `dev.tfvars`; si no, el siguiente apply sin la variable
+vuelve a `Fake`.
 
 **Verificación:**
 

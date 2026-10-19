@@ -80,3 +80,14 @@ variable "images_container_name" {
   type        = string
   default     = "images"
 }
+
+variable "flights_provider" {
+  description = "Proveedor aéreo de la API: \"Fake\" (default, sin red) o \"Duffel\" (sólo modo TEST). Con Duffel, el token se lee de Key Vault."
+  type        = string
+  default     = "Fake"
+
+  validation {
+    condition     = contains(["Fake", "Duffel"], var.flights_provider)
+    error_message = "flights_provider admite sólo Fake o Duffel."
+  }
+}
