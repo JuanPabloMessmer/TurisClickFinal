@@ -58,6 +58,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/admin-accounts/{userId}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ResetAdminPasswordResponse"];
+                        "application/json": components["schemas"]["ResetAdminPasswordResponse"];
+                        "text/json": components["schemas"]["ResetAdminPasswordResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/companies": {
         parameters: {
             query?: never;
@@ -4045,6 +4106,7 @@ export interface components {
             email?: string | null;
             role?: string | null;
             status?: string | null;
+            mustChangePassword?: boolean;
             /** Format: uuid */
             companyId?: string | null;
             companyName?: string | null;
@@ -5021,6 +5083,13 @@ export interface components {
             currency?: string | null;
             /** Format: double */
             amount?: number;
+        };
+        ResetAdminPasswordResponse: {
+            /** Format: uuid */
+            userId?: string;
+            email?: string | null;
+            temporaryPassword?: string | null;
+            mustChangePassword?: boolean;
         };
         ResetProviderPasswordResponse: {
             /** Format: uuid */

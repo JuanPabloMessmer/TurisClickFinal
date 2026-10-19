@@ -86,6 +86,7 @@ public class AdminUserService(
         Email = user.Email,
         Role = user.Role.ToString(),
         Status = user.Status.ToString(),
+        MustChangePassword = user.MustChangePassword,
         CompanyId = user.CompanyId,
         CompanyName = user.Company?.Name,
         CreatedAt = user.CreatedAt

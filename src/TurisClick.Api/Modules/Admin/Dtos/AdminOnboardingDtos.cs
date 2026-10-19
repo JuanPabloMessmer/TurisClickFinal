@@ -99,6 +99,20 @@ public class AdminAccountCreatedResponse
     public bool MustChangePassword { get; set; } = true;
 }
 
+/// <summary>
+/// Regenerar la credencial temporal de otro administrador. Como al darlo de alta, la contraseña viaja una sola
+/// vez y la cuenta no puede operar hasta cambiarla.
+/// </summary>
+public class ResetAdminPasswordResponse
+{
+    public Guid UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string TemporaryPassword { get; set; } = string.Empty;
+
+    /// <summary>Siempre true: la cuenta vuelve a tener que elegir su contraseña.</summary>
+    public bool MustChangePassword { get; set; } = true;
+}
+
 /// <summary>Regenerar la credencial temporal de un operador que perdió la suya.</summary>
 public class ResetProviderPasswordResponse
 {

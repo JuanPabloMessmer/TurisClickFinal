@@ -20,6 +20,8 @@ public interface IAdminOnboardingService
 
     Task<ResetProviderPasswordResponse> ResetProviderPasswordAsync(Guid userId, CancellationToken ct);
 
+    Task<ResetAdminPasswordResponse> ResetAdminPasswordAsync(Guid userId, CancellationToken ct);
+
     Task<List<CompanyUserResponse>> ListCompanyUsersAsync(Guid companyId, CancellationToken ct);
 }
 
@@ -181,20 +183,7 @@ public class AdminOnboardingService(
         if (user.Role != UserRole.PROVIDER)
             throw new ValidationAppException("Sólo se puede regenerar la credencial de una cuenta de operador.");
 
-        var temporaryPassword = GenerateTemporaryPassword();
-
-        user.PasswordHash = passwordHasher.Hash(temporaryPassword);
-        user.MustChangePassword = true;
-
-        // Las sesiones abiertas con la contraseña vieja dejan de poder renovarse: regenerar una credencial sin
-        // cortar lo que ya estaba andando no cambiaría nada para quien la tenga.
-        var tokens = await db.RefreshTokens
-            .Where(t => t.UserId == userId && t.RevokedAt == null)
-            .ToListAsync(ct);
-
-        foreach (var token in tokens) token.RevokedAt = DateTimeOffset.UtcNow;
-
-        await db.SaveChangesAsync(ct);
+        var temporaryPassword = await IssueTemporaryPasswordAsync(user, ct);
 
         return new ResetProviderPasswordResponse
         {
@@ -202,6 +191,61 @@ public class AdminOnboardingService(
             Email = user.Email,
             TemporaryPassword = temporaryPassword,
         };
+    }
+
+    /// <summary>
+    /// Regenera la credencial temporal de otro administrador que perdió la suya. Mismas reglas que con los
+    /// operadores: contraseña nueva generada por el servidor, mostrada una sola vez, sesiones abiertas cortadas y
+    /// cambio obligatorio en el próximo ingreso. Sólo cambia la contraseña: ni el rol, ni el email, ni el estado.
+    ///
+    /// La propia no se regenera por acá: quien ya está adentro la cambia con su contraseña actual, que es lo que
+    /// prueba que es él. Regenerarla desde la sesión la dejaría en manos de cualquiera que tenga esa sesión abierta.
+    /// </summary>
+    public async Task<ResetAdminPasswordResponse> ResetAdminPasswordAsync(Guid userId, CancellationToken ct)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new NotFoundAppException("Cuenta no encontrada.");
+
+        if (user.Role != UserRole.ADMIN)
+            throw new ValidationAppException("Sólo se puede regenerar la credencial de una cuenta de administrador.");
+
+        if (user.Id == currentUser.UserId)
+            throw new ValidationAppException("Tu propia contraseña se cambia desde tu cuenta, con la contraseña actual.");
+
+        var temporaryPassword = await IssueTemporaryPasswordAsync(user, ct);
+
+        logger.LogInformation("El administrador {ResetBy} regeneró la credencial del administrador {UserId}",
+            currentUser.UserId, user.Id);
+
+        return new ResetAdminPasswordResponse
+        {
+            UserId = user.Id,
+            Email = user.Email,
+            TemporaryPassword = temporaryPassword,
+        };
+    }
+
+    /// <summary>
+    /// Contraseña temporal nueva: se guarda sólo su hash, la cuenta vuelve a tener que cambiarla, y las sesiones
+    /// abiertas con la anterior dejan de poder renovarse —regenerar una credencial sin cortar lo que ya estaba
+    /// andando no cambiaría nada para quien la tenga—. No toca ningún otro dato de la cuenta.
+    /// </summary>
+    private async Task<string> IssueTemporaryPasswordAsync(User user, CancellationToken ct)
+    {
+        var temporaryPassword = GenerateTemporaryPassword();
+
+        user.PasswordHash = passwordHasher.Hash(temporaryPassword);
+        user.MustChangePassword = true;
+
+        var tokens = await db.RefreshTokens
+            .Where(t => t.UserId == user.Id && t.RevokedAt == null)
+            .ToListAsync(ct);
+
+        foreach (var token in tokens) token.RevokedAt = DateTimeOffset.UtcNow;
+
+        await db.SaveChangesAsync(ct);
+
+        return temporaryPassword;
     }
 
     public async Task<List<CompanyUserResponse>> ListCompanyUsersAsync(Guid companyId, CancellationToken ct) =>

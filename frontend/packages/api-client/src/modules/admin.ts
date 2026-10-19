@@ -19,6 +19,9 @@ export type CreateProviderAccountRequest = Schemas['CreateProviderAccountRequest
 export type ProviderAccountCreatedResponse = Schemas['ProviderAccountCreatedResponse']
 export type CreateAdminAccountRequest = Schemas['CreateAdminAccountRequest']
 export type AdminAccountCreatedResponse = Schemas['AdminAccountCreatedResponse']
+export type ResetAdminPasswordResponse = Schemas['ResetAdminPasswordResponse']
+export type AdminUserResponse = Schemas['AdminUserResponse']
+export type AdminUserResponsePagedResult = Schemas['AdminUserResponsePagedResult']
 export type ResetProviderPasswordResponse = Schemas['ResetProviderPasswordResponse']
 export type CompanyUserResponse = Schemas['CompanyUserResponse']
 export type ReservationPaymentsResponse = Schemas['ReservationPaymentsResponse']
@@ -68,6 +71,22 @@ export const createProviderAccount = (http: AxiosInstance, body: CreateProviderA
  */
 export const createAdminAccount = (http: AxiosInstance, body: CreateAdminAccountRequest) =>
   http.post<AdminAccountCreatedResponse>('/api/admin/admin-accounts', body).then((r) => r.data)
+
+/**
+ * Las cuentas de administrador, con si todavía tienen la contraseña temporal. Son pocas: alcanza con una
+ * página de 100.
+ */
+export const listAdministrators = (http: AxiosInstance) =>
+  http
+    .get<AdminUserResponsePagedResult>('/api/admin/users', { params: { role: 'ADMIN', pageSize: 100 } })
+    .then((r) => r.data)
+
+/**
+ * Regenera la credencial temporal de otro administrador: la nueva viene **una sola vez**, se cortan sus sesiones
+ * y tiene que elegir una propia en el próximo ingreso. La propia no se regenera por acá (400).
+ */
+export const resetAdminPassword = (http: AxiosInstance, userId: string) =>
+  http.post<ResetAdminPasswordResponse>(`/api/admin/admin-accounts/${userId}/reset-password`).then((r) => r.data)
 
 /** Regenera la credencial temporal de un operador. Corta sus sesiones abiertas. */
 export const resetProviderPassword = (http: AxiosInstance, userId: string) =>

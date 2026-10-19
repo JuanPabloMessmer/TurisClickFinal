@@ -45,7 +45,7 @@ const adminNav = [
     links: [
       { to: '/admin/destinations', label: 'Destinos', icon: MapPinned },
       { to: '/admin/categories', label: 'Categorías', icon: Tags },
-      { to: '/admin/administrators/new', label: 'Administradores', icon: ShieldCheck },
+      { to: '/admin/administrators', label: 'Administradores', icon: ShieldCheck },
     ],
   },
 ]

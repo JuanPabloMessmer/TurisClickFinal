@@ -10,6 +10,9 @@ public class AdminUserResponse
     public string Role { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
 
+    /// <summary>true si la cuenta todavía tiene la contraseña temporal con la que se la creó o se la regeneró.</summary>
+    public bool MustChangePassword { get; set; }
+
     /// <summary>Presente solo para usuarios PROVIDER.</summary>
     public Guid? CompanyId { get; set; }
     public string? CompanyName { get; set; }

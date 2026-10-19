@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { adminApi } from '@turisclick/api-client'
-import { Copy, KeyRound } from 'lucide-react'
+import { ArrowLeft, Copy, KeyRound } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
@@ -102,8 +102,8 @@ export function NewAdminAccountPage() {
             </p>
 
             <div className="flex flex-wrap gap-2">
-              <Link to="/dashboard">
-                <Button variant="outline">Volver a Hoy</Button>
+              <Link to="/admin/administrators">
+                <Button variant="outline">Ver administradores</Button>
               </Link>
               <Button
                 variant="ghost"
@@ -124,10 +124,19 @@ export function NewAdminAccountPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Dar de alta un administrador"
-        description="Un administrador ve y gestiona toda la plataforma: empresas, catálogo, reservas y pagos. Al guardar se genera una contraseña temporal para entregarle."
-      />
+      <div className="flex flex-col gap-2">
+        <Link
+          to="/admin/administrators"
+          className="flex items-center gap-1.5 text-label font-medium text-primary hover:underline"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Administradores
+        </Link>
+        <PageHeader
+          title="Dar de alta un administrador"
+          description="Un administrador ve y gestiona toda la plataforma: empresas, catálogo, reservas y pagos. Al guardar se genera una contraseña temporal para entregarle."
+        />
+      </div>
 
       <form className="flex flex-col gap-6" onSubmit={form.handleSubmit((values) => create.mutate(values))} noValidate>
         <Card>
@@ -167,7 +176,7 @@ export function NewAdminAccountPage() {
           <Button type="submit" loading={create.isPending}>
             Dar de alta y generar credenciales
           </Button>
-          <Link to="/dashboard">
+          <Link to="/admin/administrators">
             <Button type="button" variant="ghost">
               Cancelar
             </Button>

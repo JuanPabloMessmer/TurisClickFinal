@@ -7,6 +7,7 @@ import { RequireRole } from '@/auth/RequireRole'
 import { RootRedirect } from '@/auth/RootRedirect'
 import { AppLayout } from '@/layout/AppLayout'
 import { queryClient } from '@/lib/queryClient'
+import { AdministratorsPage } from '@/modules/administrators/AdministratorsPage'
 import { NewAdminAccountPage } from '@/modules/administrators/NewAdminAccountPage'
 import { ExperienceAvailabilityPage } from '@/modules/availability/ExperienceAvailabilityPage'
 import { CategoriesPage } from '@/modules/categories/CategoriesPage'
@@ -53,6 +54,7 @@ export default function App() {
               <Route element={<AppLayout />}>
                 <Route path="/admin/destinations" element={<DestinationsPage />} />
                 <Route path="/admin/categories" element={<CategoriesPage />} />
+                <Route path="/admin/administrators" element={<AdministratorsPage />} />
                 <Route path="/admin/administrators/new" element={<NewAdminAccountPage />} />
                 <Route path="/admin/companies" element={<CompaniesApprovalPage />} />
                 <Route path="/admin/companies/new" element={<NewProviderAccountPage />} />

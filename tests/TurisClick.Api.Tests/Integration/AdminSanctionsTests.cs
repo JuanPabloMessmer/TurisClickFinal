@@ -173,7 +173,10 @@ public class AdminSanctionsTests
     public async Task AdminCannotSuspendItsOwnAccount()
     {
         var adminClient = await AdminClientAsync();
-        var admins = await (await adminClient.GetAsync("/api/admin/users?role=ADMIN"))
+        // Por email y no por "la primera página": la base de tests persiste entre corridas y acumula
+        // administradores creados por otras pruebas, que quedan antes por fecha.
+        var admins = await (await adminClient.GetAsync(
+                $"/api/admin/users?role=ADMIN&search={Uri.EscapeDataString(TurisClickApiFactory.AdminEmail)}"))
             .Content.ReadFromJsonAsync<PagedResult<AdminUserResponse>>(JsonOptions);
         var adminId = admins!.Items.Single(u => u.Email == TurisClickApiFactory.AdminEmail).Id;
 

@@ -24,4 +24,16 @@ public class AdminAccountsController(IAdminOnboardingService onboarding) : Contr
     public async Task<ActionResult<AdminAccountCreatedResponse>> Create(
         [FromBody] CreateAdminAccountRequest request, CancellationToken ct)
         => StatusCode(StatusCodes.Status201Created, await onboarding.CreateAdminAccountAsync(request, ct));
+
+    /// <summary>
+    /// Regenera la credencial temporal de otro administrador. Devuelve la contraseña nueva **una sola vez**, corta
+    /// sus sesiones abiertas y lo obliga a elegir una propia. No cambia ningún otro dato de la cuenta. La propia no
+    /// se regenera por acá (400): se cambia con la contraseña actual.
+    /// </summary>
+    [HttpPost("admin-accounts/{userId:guid}/reset-password")]
+    [ProducesResponseType(typeof(ResetAdminPasswordResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ResetAdminPasswordResponse>> ResetPassword(Guid userId, CancellationToken ct)
+        => Ok(await onboarding.ResetAdminPasswordAsync(userId, ct));
 }
