@@ -18,6 +18,11 @@ jest.mock('expo-router', () => ({
 }))
 jest.mock('@/auth/session', () => ({ useSession: jest.fn() }))
 
+// Fechas relativas a hoy: con fechas fijas el test caducó solo. Una fecha pasada que no está disponible se
+// anuncia "La fecha ya pasó" (a propósito, ver availabilityBadge), así que "Sin cupo" dejó de aparecer en cuanto
+// el calendario superó la fecha sembrada.
+const isoDaysFromToday = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
+
 const itinerary = {
   id: 'it-1',
   aiConversationId: 'conv-1',
@@ -28,12 +33,12 @@ const itinerary = {
   items: [
     {
       id: 'item-1', dayNumber: 1, sortOrder: 0, productType: 'EXPERIENCE', experienceId: 'exp-1', experienceTitle: 'Tiwanaku y la Puerta del Sol',
-      date: '2026-10-07', estimatedUnitPrice: 380, currency: 'BOB', travelers: 1, subtotal: 380, currentPrice: 380, currentCurrency: 'BOB',
+      date: isoDaysFromToday(30), estimatedUnitPrice: 380, currency: 'BOB', travelers: 1, subtotal: 380, currentPrice: 380, currentCurrency: 'BOB',
       currentAvailableSlots: 16, availabilityState: 'AVAILABLE', isStillAvailable: true,
     },
     {
       id: 'item-2', dayNumber: 2, sortOrder: 0, productType: 'EXPERIENCE', experienceId: 'exp-2', experienceTitle: 'Chacaltaya a 5.300 m',
-      date: '2026-10-08', estimatedUnitPrice: 320, currency: 'BOB', travelers: 1, subtotal: 320, currentPrice: 320, currentCurrency: 'BOB',
+      date: isoDaysFromToday(31), estimatedUnitPrice: 320, currency: 'BOB', travelers: 1, subtotal: 320, currentPrice: 320, currentCurrency: 'BOB',
       currentAvailableSlots: 0, availabilityState: 'SOLD_OUT', isStillAvailable: false,
     },
   ],
