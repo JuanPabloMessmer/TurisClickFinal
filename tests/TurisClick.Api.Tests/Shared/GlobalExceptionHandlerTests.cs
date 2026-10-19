@@ -107,6 +107,7 @@ public class GlobalExceptionHandlerTests
         { nameof(UnauthorizedAppException), StatusCodes.Status401Unauthorized },
         { nameof(ValidationAppException), StatusCodes.Status400BadRequest },
         { nameof(GoneAppException), StatusCodes.Status410Gone },
+        { nameof(ServiceUnavailableAppException), StatusCodes.Status503ServiceUnavailable },
     };
 
     [Theory]
@@ -120,6 +121,7 @@ public class GlobalExceptionHandlerTests
             nameof(ForbiddenAppException) => new ForbiddenAppException(message),
             nameof(UnauthorizedAppException) => new UnauthorizedAppException(message),
             nameof(ValidationAppException) => new ValidationAppException(message),
+            nameof(ServiceUnavailableAppException) => new ServiceUnavailableAppException(message),
             _ => new GoneAppException(message),
         };
 

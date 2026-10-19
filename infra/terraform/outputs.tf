@@ -31,3 +31,7 @@ output "database_name" {
 output "postgres_server_fqdn" {
   value = data.azurerm_postgresql_flexible_server.existing.fqdn
 }
+
+output "images_blob_endpoint" {
+  value = azurerm_storage_account.images.primary_blob_endpoint
+}

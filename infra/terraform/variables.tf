@@ -68,3 +68,15 @@ variable "ai_provider" {
   type        = string
   default     = "Deterministic"
 }
+
+variable "images_storage_account_name" {
+  description = "Cuenta de Storage (3-24 minúsculas y dígitos, única global) para las imágenes subidas desde el Backoffice."
+  type        = string
+  default     = "stturisclickv2imgjpm"
+}
+
+variable "images_container_name" {
+  description = "Contenedor de blobs con lectura pública de blobs (no de listados)."
+  type        = string
+  default     = "images"
+}

@@ -18,6 +18,7 @@ export type DestinationResponse = Schemas['DestinationResponse']
 export type PublicDestinationResponse = Schemas['PublicDestinationResponse']
 export type CreateDestinationRequest = Schemas['CreateDestinationRequest']
 export type UpdateDestinationRequest = Schemas['UpdateDestinationRequest']
+export type UploadedImageResponse = Schemas['UploadedImageResponse']
 
 export type CategoryResponse = Schemas['CategoryResponse']
 export type CreateCategoryRequest = Schemas['CreateCategoryRequest']

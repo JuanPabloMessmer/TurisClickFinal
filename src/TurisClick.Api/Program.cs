@@ -9,6 +9,7 @@ using TurisClick.Api.Infrastructure.Database.Seed;
 using TurisClick.Api.Infrastructure.Health;
 using Microsoft.AspNetCore.Authorization;
 using TurisClick.Api.Infrastructure.Security;
+using TurisClick.Api.Infrastructure.Storage;
 using TurisClick.Api.Modules.Admin;
 using TurisClick.Api.Modules.Ai;
 using TurisClick.Api.Modules.Flights;
@@ -117,6 +118,7 @@ try
 
     // ---- Infraestructura + módulos ----
     builder.Services.AddSecurityInfrastructure();
+    builder.Services.AddImageStorage(builder.Configuration, builder.Environment);
     builder.Services.AddAuthModule();
     builder.Services.AddDestinationsModule();
     builder.Services.AddCategoriesModule();
@@ -173,6 +175,9 @@ builder.Services.AddAdminModule();
     app.UseHttpsRedirection();
 
     app.UseCors("Frontend");
+
+    // Sólo con ImageStorage:Provider=Local (desarrollo): sirve la carpeta de imágenes subidas.
+    app.UseLocalImageStorageFiles();
 
     app.UseAuthentication();
     app.UseAuthorization();

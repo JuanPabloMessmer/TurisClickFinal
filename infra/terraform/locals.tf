@@ -23,6 +23,12 @@ locals {
       # identidad de la app. Ningún secreto entra en la configuración ni en el state.
       ConnectionStrings__DefaultConnection = "@Microsoft.KeyVault(VaultName=${var.key_vault_name};SecretName=${local.key_vault_secret_names.db_connection_string})"
       Jwt__Key                             = "@Microsoft.KeyVault(VaultName=${var.key_vault_name};SecretName=${local.key_vault_secret_names.jwt_key})"
+
+      # Imágenes subidas: Blob Storage con la identidad de la app. Ninguna clave: sólo el endpoint público.
+      ImageStorage__Provider                           = "AzureBlob"
+      ImageStorage__AzureBlob__ServiceUri              = azurerm_storage_account.images.primary_blob_endpoint
+      ImageStorage__AzureBlob__ContainerName           = azurerm_storage_container.images.name
+      ImageStorage__AzureBlob__ManagedIdentityClientId = azurerm_user_assigned_identity.app.client_id
     },
     { for index, origin in var.cors_allowed_origins : "Cors__AllowedOrigins__${index}" => origin },
   )
