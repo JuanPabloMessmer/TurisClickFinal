@@ -225,27 +225,38 @@ public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProv
 
         var price = 120m + index * 35m;
 
-        return new FlightOffer(
-            EncodeOffer(request, index),
-            new FlightPrice(price * request.Adults, "USD"),
-            [
-                new FlightSlice(
-                    slice.OriginIata,
-                    slice.DestinationIata,
+        // Un tramo por cada tramo pedido. Antes devolvía siempre uno solo, así que una ida y vuelta se veía
+        // igual que un viaje de ida: el proveedor real devuelve un slice por slice pedido, y los tests que
+        // dependían de eso no estaban probando lo que creían.
+        var slices = request.Slices
+            .Select((leg, legIndex) =>
+            {
+                var legDeparture = leg.DepartureDate.ToDateTime(new TimeOnly(8 + index * 4, 15), DateTimeKind.Unspecified);
+                var legArrival = legDeparture.AddHours(1).AddMinutes(25);
+
+                return new FlightSlice(
+                    leg.OriginIata,
+                    leg.DestinationIata,
                     TimeSpan.FromMinutes(85),
                     [
                         new FlightSegment(
-                            slice.OriginIata,
-                            slice.DestinationIata,
-                            departure,
-                            arrival,
+                            leg.OriginIata,
+                            leg.DestinationIata,
+                            legDeparture,
+                            legArrival,
                             "ZZ",
                             "Fake Airways",
-                            $"{100 + index}",
+                            $"{100 + index + legIndex * 10}",
                             "Airbus A320",
                             CheckedBags: index == 0 ? 1 : 0),
-                    ]),
-            ],
+                    ]);
+            })
+            .ToList();
+
+        return new FlightOffer(
+            EncodeOffer(request, index),
+            new FlightPrice(price * request.Adults, "USD"),
+            slices,
             expired ? _time.GetUtcNow().AddMinutes(-1) : _time.GetUtcNow().AddMinutes(20),
             IdentityDocumentsRequired: slice.OriginIata == DocumentsRequiredOrigin,
             InstantPaymentRequired: true,

@@ -32,6 +32,7 @@ public static class FlightsModuleExtensions
         }
 
         services.AddScoped<IPackageFlightService, PackageFlightService>();
+        services.AddScoped<IFlightSearchService, FlightSearchService>();
         services.AddScoped<IFlightBookingOrchestrator, FlightBookingOrchestrator>();
         services.AddScoped<IFlightReconciliationService, FlightReconciliationService>();
 

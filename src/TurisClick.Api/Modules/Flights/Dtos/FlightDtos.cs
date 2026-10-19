@@ -294,3 +294,105 @@ public class FlightBookingResponse
     /// <summary>true mientras el desenlace esté sin resolver: la app vuelve a consultar en vez de ofrecer reintentar.</summary>
     public bool InProgress { get; set; }
 }
+
+// ───────────────────────── Explorador de vuelos (Oleada 16) ─────────────────────────
+
+/// <summary>
+/// Búsqueda suelta de vuelos, sin paquete de por medio.
+///
+/// Es **exploración, no compra**: no persiste cotizaciones y por eso su respuesta no trae ningún id
+/// reservable. En TurisClick un pasaje se vende como parte de un paquete —la reserva aérea cuelga de una
+/// reserva de paquete— así que una búsqueda suelta que devolviera algo "reservable" estaría prometiendo una
+/// capacidad que el dominio no tiene. Lo que sí hace es decir con qué paquetes se vuela esa misma ruta.
+/// </summary>
+public class SearchFlightsRequest : IValidatableObject
+{
+    [Required, StringLength(3, MinimumLength = 3)]
+    public string OriginIata { get; set; } = string.Empty;
+
+    [Required, StringLength(3, MinimumLength = 3)]
+    public string DestinationIata { get; set; } = string.Empty;
+
+    public DateOnly DepartureDate { get; set; }
+
+    /// <summary>Opcional: sin vuelta, se busca sólo la ida.</summary>
+    public DateOnly? ReturnDate { get; set; }
+
+    [Range(1, 9)]
+    public int Passengers { get; set; } = 1;
+
+    [EnumDataType(typeof(FlightCabinClass))]
+    public string CabinClass { get; set; } = nameof(FlightCabinClass.ECONOMY);
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var origin = AirportCatalog.Normalize(OriginIata);
+        var destination = AirportCatalog.Normalize(DestinationIata);
+
+        if (origin == destination)
+            yield return new ValidationResult(
+                "El origen y el destino no pueden ser el mismo aeropuerto.", [nameof(DestinationIata)]);
+
+        if (AirportCatalog.Find(origin) is null)
+            yield return new ValidationResult($"No conocemos el aeropuerto {origin}.", [nameof(OriginIata)]);
+
+        if (AirportCatalog.Find(destination) is null)
+            yield return new ValidationResult($"No conocemos el aeropuerto {destination}.", [nameof(DestinationIata)]);
+
+        // La fecha se compara contra la del servidor: un teléfono con el reloj atrasado no puede pedirle al
+        // proveedor un vuelo de ayer.
+        if (DepartureDate < DateOnly.FromDateTime(DateTime.UtcNow.Date))
+            yield return new ValidationResult("La fecha de ida ya pasó.", [nameof(DepartureDate)]);
+
+        if (ReturnDate is { } back && back < DepartureDate)
+            yield return new ValidationResult("La vuelta no puede ser anterior a la ida.", [nameof(ReturnDate)]);
+    }
+}
+
+/// <summary>Resultado de la búsqueda suelta. Sin ids de cotización: desde acá no se reserva.</summary>
+public class SearchFlightsResponse
+{
+    public string OriginIata { get; set; } = string.Empty;
+    public string OriginLabel { get; set; } = string.Empty;
+    public string DestinationIata { get; set; } = string.Empty;
+    public string DestinationLabel { get; set; } = string.Empty;
+
+    public DateOnly DepartureDate { get; set; }
+    public DateOnly? ReturnDate { get; set; }
+    public int Passengers { get; set; }
+    public string CabinClass { get; set; } = string.Empty;
+
+    public List<FlightOptionResponse> Options { get; set; } = [];
+
+    /// <summary>Paquetes publicados que vuelan esta misma ruta. Es lo único que sí se puede comprar.</summary>
+    public List<FlightRoutePackageResponse> Packages { get; set; } = [];
+
+    /// <summary>Aviso cuando el proveedor no devolvió nada o falló. La pantalla lo muestra en vez de quedar vacía.</summary>
+    public string? Notice { get; set; }
+
+    /// <summary>true si las ofertas son de un entorno de prueba. La app lo rotula; nunca se disimula.</summary>
+    public bool TestMode { get; set; }
+}
+
+/// <summary>
+/// Una oferta de la búsqueda suelta. Igual que FlightQuoteOptionResponse pero **sin QuoteId**, porque no se
+/// guardó nada: lo que no se puede reservar no lleva identificador de reserva.
+/// </summary>
+public class FlightOptionResponse
+{
+    public MoneyResponse Price { get; set; } = new();
+    public string? CarrierName { get; set; }
+    public string? CarrierIata { get; set; }
+    public List<FlightSliceResponse> Slices { get; set; } = [];
+}
+
+/// <summary>Un paquete que vuela la ruta buscada, para pasar de mirar vuelos a comprar algo real.</summary>
+public class FlightRoutePackageResponse
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string DestinationName { get; set; } = string.Empty;
+    public int DurationDays { get; set; }
+    public MoneyResponse Price { get; set; } = new();
+    public string? CoverImageUrl { get; set; }
+}

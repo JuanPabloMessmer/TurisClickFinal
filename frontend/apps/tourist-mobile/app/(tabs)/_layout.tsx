@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router'
-import { Home, Luggage, Search, Sparkles, User } from 'lucide-react-native'
+import { Home, Luggage, Plane, Search, Sparkles, User } from 'lucide-react-native'
 import type { LucideIcon } from 'lucide-react-native'
 import type { ColorValue } from 'react-native'
 import { colors } from '@/theme/colors'
@@ -44,6 +44,13 @@ export default function TabsLayout() {
         options={{
           title: 'Explorar',
           tabBarIcon: ({ color, focused }) => <TabIcon icon={Search} color={color} focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="flights"
+        options={{
+          title: 'Vuelos',
+          tabBarIcon: ({ color, focused }) => <TabIcon icon={Plane} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen

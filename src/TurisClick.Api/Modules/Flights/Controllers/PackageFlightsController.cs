@@ -69,6 +69,27 @@ public class PackageFlightQuotesController(IPackageFlightService service) : Cont
         => Ok(await service.RevalidateAsync(quoteId, ct));
 }
 
+/// <summary>
+/// Búsqueda de vuelos sin paquete, para el explorador de la app.
+///
+/// Exige sesión por la misma razón que la cotización de un paquete: pedirle inventario a un proveedor
+/// externo no es leer el catálogo, y dejarlo anónimo convierte cada visita en consultas a Duffel.
+///
+/// No devuelve ningún identificador reservable, a propósito: desde acá no se compra. Lo que se puede
+/// comprar son los paquetes que vuelan la ruta, y vienen en la misma respuesta.
+/// </summary>
+[ApiController]
+[Route("api/flights")]
+[Authorize(Policy = "RequireTourist")]
+public class FlightSearchController(IFlightSearchService service) : ControllerBase
+{
+    [HttpPost("search")]
+    [ProducesResponseType(typeof(SearchFlightsResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SearchFlightsResponse>> Search(
+        [FromBody] SearchFlightsRequest request, CancellationToken ct)
+        => Ok(await service.SearchAsync(request, ct));
+}
+
 /// <summary>Catálogo de aeropuertos conocidos, para que el Backoffice no tenga que hardcodear la lista.</summary>
 [ApiController]
 [Route("api/airports")]
