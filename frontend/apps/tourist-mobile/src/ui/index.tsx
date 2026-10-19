@@ -6,6 +6,7 @@ import { useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -211,18 +212,25 @@ export function CatalogImage({
     )
   }
 
+  // El tamaño lo pone un View con `className` y la foto lo llena con un `style` explícito. NativeWind sólo
+  // traduce `className` a `style` en los componentes que tiene registrados (los de React Native), y el
+  // `Image` de expo-image no es uno de ellos: con `className` directo, en iOS y Android la foto se dibujaba
+  // de 0×0 —cargaba bien, así que tampoco caía al fallback— y en su lugar quedaba un hueco. En la web sí se
+  // veía, por eso no apareció hasta probar en un teléfono.
   return (
-    <Image
-      source={{ uri }}
-      className={className}
-      contentFit="cover"
-      // La foto entra con un crossfade corto: sin esto, el salto del placeholder a la imagen es lo
-      // primero que se nota en una pantalla donde la fotografía es el contenido.
-      transition={200}
-      // Se guarda la URL que falló, no un booleano: así el placeholder no queda pegado si el producto
-      // cambia de foto y la nueva sí carga.
-      onError={() => setFailedUri(uri)}
-    />
+    <View className={`overflow-hidden ${className}`}>
+      <Image
+        source={{ uri }}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        // La foto entra con un crossfade corto: sin esto, el salto del placeholder a la imagen es lo
+        // primero que se nota en una pantalla donde la fotografía es el contenido.
+        transition={200}
+        // Se guarda la URL que falló, no un booleano: así el placeholder no queda pegado si el producto
+        // cambia de foto y la nueva sí carga.
+        onError={() => setFailedUri(uri)}
+      />
+    </View>
   )
 }
 

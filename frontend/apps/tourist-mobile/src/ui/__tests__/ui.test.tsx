@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native'
 import { Image } from 'expo-image'
+import { StyleSheet, View } from 'react-native'
 import { Badge, Button, CatalogImage, FormError, Price, SegmentedControl, TextField } from '@/ui'
 
 describe('Price', () => {
@@ -101,6 +102,30 @@ describe('CatalogImage', () => {
     fireEvent(screen.UNSAFE_getByType(Image), 'error')
 
     expect(screen.getByText('Uyuni')).toBeTruthy()
+  })
+
+  /**
+   * Encontrado probando en un iPhone: NativeWind no traduce `className` en el Image de expo-image (no es un
+   * componente de React Native), así que con el tamaño puesto por clase la foto se dibujaba de 0×0 en iOS y
+   * Android. El tamaño tiene que ir en un contenedor y la foto llenarlo con un `style` explícito.
+   */
+  it('la foto no depende de className para tener tamaño en iOS y Android', () => {
+    render(<CatalogImage uri="https://cdn.example.com/foto.jpg" className="h-44 w-full rounded-md" />)
+
+    const image = screen.UNSAFE_getByType(Image)
+    expect(image.props.className).toBeUndefined()
+    expect(StyleSheet.flatten(image.props.style)).toMatchObject({
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    })
+
+    // Las clases de tamaño las recibe el contenedor, que además recorta las esquinas redondeadas.
+    const container = screen.UNSAFE_getAllByType(View).find((v) => v.props.className?.includes('h-44'))
+    expect(container?.props.className).toContain('h-44 w-full rounded-md')
+    expect(container?.props.className).toContain('overflow-hidden')
   })
 
   it('vuelve a intentar si el producto cambia de foto', () => {
