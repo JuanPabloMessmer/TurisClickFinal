@@ -1,5 +1,5 @@
 import { formatDateTime } from '@turisclick/utils'
-import { ArrowLeft, Check, X } from 'lucide-react'
+import { ArrowLeft, Ban, Check, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FullScreenSpinner } from '@/components/FullScreenSpinner'
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getErrorMessage } from '@/lib/errors'
 import { RejectDialog } from './RejectDialog'
+import { SuspensionDialog, type SuspensionAction } from './SuspensionDialog'
 import { useApproveCompany, useCompany } from './api'
 import { statusLabel, statusVariant } from './CompaniesApprovalPage'
 
@@ -20,6 +21,7 @@ export function CompanyDetailPage() {
   const approveMutation = useApproveCompany()
   const [actionError, setActionError] = useState<string | null>(null)
   const [rejecting, setRejecting] = useState(false)
+  const [suspensionAction, setSuspensionAction] = useState<SuspensionAction | null>(null)
 
   if (isLoading || !company) return <FullScreenSpinner />
 
@@ -88,15 +90,36 @@ export function CompanyDetailPage() {
         </div>
       )}
 
-      {(company.status === 'APPROVED' || company.status === 'SUSPENDED') && (
-        <Alert variant="info">
-          {company.status === 'APPROVED'
-            ? 'Suspender una empresa saca su catálogo de circulación. Todavía no se puede hacer desde acá.'
-            : 'Reactivar una empresa suspendida todavía no se puede hacer desde acá.'}
+      {company.status === 'SUSPENDED' && (
+        <Alert variant="info" className="mb-4">
+          Su catálogo está fuera de circulación: los viajeros y el asistente no ven sus experiencias ni paquetes, y no
+          admite reservas nuevas. Las reservas existentes se mantienen.
         </Alert>
       )}
 
+      {company.status === 'APPROVED' && (
+        <Button variant="destructive" onClick={() => setSuspensionAction('suspend')}>
+          <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+          Suspender empresa
+        </Button>
+      )}
+
+      {company.status === 'SUSPENDED' && (
+        <Button onClick={() => setSuspensionAction('reactivate')}>
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+          Reactivar empresa
+        </Button>
+      )}
+
       <RejectDialog companyId={rejecting ? (id ?? null) : null} onClose={() => setRejecting(false)} />
+      {id && (
+        <SuspensionDialog
+          companyId={id}
+          companyName={company.name}
+          action={suspensionAction}
+          onClose={() => setSuspensionAction(null)}
+        />
+      )}
     </div>
   )
 }
