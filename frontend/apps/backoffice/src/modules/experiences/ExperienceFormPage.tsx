@@ -13,7 +13,14 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { getErrorMessage } from '@/lib/errors'
-import { useCityDestinations, useCreateExperience, useMyExperience, useUpdateExperience } from './api'
+import { cn } from '@/lib/utils'
+import {
+  useCityDestinations,
+  useCreateExperience,
+  useMyExperience,
+  usePublicCategories,
+  useUpdateExperience,
+} from './api'
 import { KNOWN_CURRENCIES } from './currencies'
 
 const schema = z.object({
@@ -27,6 +34,8 @@ const schema = z.object({
   includesText: z.string().optional().or(z.literal('')),
   excludesText: z.string().optional().or(z.literal('')),
   coverImageUrl: z.string().url('Ingresá una URL válida.').optional().or(z.literal('')),
+  // Opcional, igual que en el backend (CreateExperienceRequest.CategoryIds puede ir vacío).
+  categoryIds: z.array(z.string()),
 })
 // z.coerce hace que el tipo de entrada (lo que RHF maneja en los inputs) difiera del de salida
 // (lo que recibe el submit ya validado) — RHF necesita los dos generics para no chocar de tipos.
@@ -58,10 +67,23 @@ export function ExperienceFormPage() {
           includesText: experience.includesText ?? '',
           excludesText: experience.excludesText ?? '',
           coverImageUrl: experience.images?.find((i) => i.isCover)?.url ?? experience.images?.[0]?.url ?? '',
+          categoryIds: (experience.categories ?? []).map((category) => category.id!).filter(Boolean),
         }
       : undefined,
-    defaultValues: { title: '', description: '', destinationId: '', price: 0, currency: 'USD' },
+    defaultValues: { title: '', description: '', destinationId: '', price: 0, currency: 'USD', categoryIds: [] },
   })
+
+  const { data: categories = [] } = usePublicCategories()
+  const selectedCategoryIds = form.watch('categoryIds') ?? []
+
+  const toggleCategory = (categoryId: string) => {
+    const current = form.getValues('categoryIds') ?? []
+    form.setValue(
+      'categoryIds',
+      current.includes(categoryId) ? current.filter((id) => id !== categoryId) : [...current, categoryId],
+      { shouldDirty: true },
+    )
+  }
 
   if (isEdit && loadingExperience) return <FullScreenSpinner />
 
@@ -71,7 +93,7 @@ export function ExperienceFormPage() {
       title: values.title,
       description: values.description,
       destinationId: values.destinationId,
-      categoryIds: [] as string[],
+      categoryIds: values.categoryIds ?? [],
       price: values.price,
       currency: values.currency,
       durationMinutes: values.durationMinutes === '' ? undefined : Number(values.durationMinutes),
@@ -95,9 +117,6 @@ export function ExperienceFormPage() {
   return (
     <div className="max-w-2xl">
       <PageHeader title={isEdit ? 'Editar experiencia' : 'Nueva experiencia'} description={isEdit ? 'Editá los datos que ve el viajero antes de reservar.' : 'Cargá una actividad de un día: qué incluye, dónde es y cuánto cuesta.'} />
-      <Alert variant="info" className="mb-6">
-        Las categorías todavía no están disponibles desde el Backoffice — se crea sin categorías (ver reporte de la sesión).
-      </Alert>
       <Card>
         <CardContent className="pt-6">
           <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
@@ -203,6 +222,37 @@ export function ExperienceFormPage() {
                 <p className="text-xs text-destructive">{form.formState.errors.coverImageUrl.message}</p>
               )}
             </div>
+
+            {categories.length > 0 && (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="text-label font-medium text-foreground">Categorías</legend>
+                <p className="text-label text-ink-muted">
+                  Con qué intereses se encuentra esta experiencia cuando alguien explora o le pide un viaje al
+                  asistente.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {categories.map((category) => {
+                    const active = selectedCategoryIds.includes(category.id!)
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => toggleCategory(category.id!)}
+                        className={cn(
+                          'h-9 rounded-sm border px-3 text-label transition-colors',
+                          active
+                            ? 'border-primary bg-primary/10 font-medium text-primary'
+                            : 'border-border-control text-ink-muted hover:bg-muted',
+                        )}
+                      >
+                        {category.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+            )}
 
             {submitError && <Alert variant="destructive">{submitError}</Alert>}
             <Button type="submit" disabled={form.formState.isSubmitting} className="self-start">
