@@ -30,6 +30,17 @@ export const approveCompany = (http: AxiosInstance, id: string) =>
 export const rejectCompany = (http: AxiosInstance, id: string, body: RejectCompanyRequest) =>
   http.post<CompanyResponse>(`/api/admin/companies/${id}/reject`, body).then((r) => r.data)
 
+/**
+ * UC-A-08 — exclusivo ADMIN. Solo desde APPROVED (idempotente si ya está SUSPENDED; 409 en otro caso). Saca su
+ * catálogo de circulación en tiempo de consulta: no borra nada.
+ */
+export const suspendCompany = (http: AxiosInstance, id: string) =>
+  http.post<CompanyResponse>(`/api/admin/companies/${id}/suspend`).then((r) => r.data)
+
+/** UC-A-08 — exclusivo ADMIN. Solo desde SUSPENDED (409 en otro caso); cada producto vuelve a su propio estado. */
+export const reactivateCompany = (http: AxiosInstance, id: string) =>
+  http.post<CompanyResponse>(`/api/admin/companies/${id}/reactivate`).then((r) => r.data)
+
 /** UC-P-02 — "Mi Empresa", exclusivo PROVIDER (su propia empresa). */
 export const getMyCompany = (http: AxiosInstance) => http.get<CompanyResponse>('/api/companies/me').then((r) => r.data)
 

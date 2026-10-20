@@ -41,3 +41,25 @@ export function useRejectCompany() {
     },
   })
 }
+
+export function useSuspendCompany() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => companiesApi.suspendCompany(httpClient, id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: LIST_KEY })
+      queryClient.setQueryData(['adminCompany', data.id], data)
+    },
+  })
+}
+
+export function useReactivateCompany() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => companiesApi.reactivateCompany(httpClient, id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: LIST_KEY })
+      queryClient.setQueryData(['adminCompany', data.id], data)
+    },
+  })
+}
