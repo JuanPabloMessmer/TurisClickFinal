@@ -26,6 +26,19 @@ export type ResetProviderPasswordResponse = Schemas['ResetProviderPasswordRespon
 export type CompanyUserResponse = Schemas['CompanyUserResponse']
 export type ReservationPaymentsResponse = Schemas['ReservationPaymentsResponse']
 export type CancellationSummaryResponse = Schemas['CancellationSummaryResponse']
+export type AdminContentResponse = Schemas['AdminContentResponse']
+export type ResolvePendingCancellationsResponse = Schemas['ResolvePendingCancellationsResponse']
+
+/** El backend recibe los enums por nombre en la query (`role=ADMIN`), aunque el OpenAPI los publique como enteros. */
+export type AdminUserRole = 'ADMIN' | 'PROVIDER' | 'TOURIST'
+export type AdminUserStatus = 'ACTIVE' | 'SUSPENDED'
+export type ListUsersParams = {
+  role?: AdminUserRole
+  status?: AdminUserStatus
+  search?: string
+  page?: number
+  pageSize?: number
+}
 
 type Paged<T> = { items?: T[] | null; page?: number; pageSize?: number; totalCount?: number; totalPages?: number }
 
@@ -55,6 +68,41 @@ export const getReservationPayments = (http: AxiosInstance, reservationId: strin
 /** Las cancelaciones que quedaron a medias: la cola de trabajo del administrador. */
 export const listUnresolvedCancellations = (http: AxiosInstance, params?: { limit?: number }) =>
   http.get<CancellationSummaryResponse[]>('/api/admin/cancellations', { params }).then((r) => r.data)
+
+/**
+ * Reintenta ya las cancelaciones a medias, sin esperar al proceso de fondo (que no corre mientras la app
+ * duerme). Es idempotente: un reembolso ya hecho no se repite.
+ */
+export const resolveCancellations = (http: AxiosInstance) =>
+  http.post<ResolvePendingCancellationsResponse>('/api/admin/cancellations/resolve').then((r) => r.data)
+
+/**
+ * UC-A-07 — moderación. Suspender saca el producto del catálogo público y del asistente; restaurar lo deja
+ * despublicado (no publicado): volver a publicarlo es decisión del operador. Restaurar algo que no está
+ * suspendido responde 409.
+ */
+export const suspendExperience = (http: AxiosInstance, id: string) =>
+  http.post<AdminContentResponse>(`/api/admin/experiences/${id}/suspend`).then((r) => r.data)
+
+export const restoreExperience = (http: AxiosInstance, id: string) =>
+  http.post<AdminContentResponse>(`/api/admin/experiences/${id}/restore`).then((r) => r.data)
+
+export const suspendPackage = (http: AxiosInstance, id: string) =>
+  http.post<AdminContentResponse>(`/api/admin/packages/${id}/suspend`).then((r) => r.data)
+
+export const restorePackage = (http: AxiosInstance, id: string) =>
+  http.post<AdminContentResponse>(`/api/admin/packages/${id}/restore`).then((r) => r.data)
+
+/** UC-A-06 — todas las cuentas de la plataforma, de cualquier rol, paginadas. */
+export const listUsers = (http: AxiosInstance, params?: ListUsersParams) =>
+  http.get<AdminUserResponsePagedResult>('/api/admin/users', { params }).then((r) => r.data)
+
+/** Bloquea el ingreso y la renovación de sesión. La propia cuenta no se suspende (409). */
+export const suspendUser = (http: AxiosInstance, userId: string) =>
+  http.post<AdminUserResponse>(`/api/admin/users/${userId}/suspend`).then((r) => r.data)
+
+export const activateUser = (http: AxiosInstance, userId: string) =>
+  http.post<AdminUserResponse>(`/api/admin/users/${userId}/activate`).then((r) => r.data)
 
 /**
  * Da de alta una empresa con su primera cuenta de operador.

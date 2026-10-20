@@ -1,8 +1,9 @@
 import { formatCurrency } from '@turisclick/utils'
 import { Plane, Search } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/PageHeader'
+import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -18,7 +19,9 @@ import {
   TableLoadingRow,
   TableRow,
 } from '@/components/ui/table'
-import { useAdminExperiences, useAdminPackages } from './api'
+import { getErrorMessage } from '@/lib/errors'
+import { type ContentKind, type ModerationAction, useAdminExperiences, useAdminPackages, useModerateContent } from './api'
+import { ConfirmActionDialog } from './ConfirmActionDialog'
 
 /**
  * El catálogo completo de la plataforma, de todas las empresas.
@@ -26,6 +29,8 @@ import { useAdminExperiences, useAdminPackages } from './api'
  * Qué muestra que el listado del operador no puede mostrar: de quién es cada producto, en qué estado de
  * publicación está —incluidos borradores y suspendidos, que son justamente los que la moderación necesita
  * ver— y si tiene lo que hace falta para venderse (salidas futuras, categorías, política de cancelación).
+ *
+ * Es también donde se modera (UC-A-07): cada fila se puede suspender, y una suspendida se puede liberar.
  */
 
 const PAGE_SIZE = 20
@@ -120,6 +125,105 @@ function SearchField({ value, onChange }: { value: string; onChange: (value: str
   )
 }
 
+const NOUN: Record<ContentKind, { label: string; female: boolean }> = {
+  experience: { label: 'la experiencia', female: true },
+  package: { label: 'el paquete', female: false },
+}
+
+/**
+ * La suspensión y su reverso, con su diálogo de confirmación. Un producto suspendido se libera; cualquier otro
+ * (publicado, borrador o despublicado) se puede suspender.
+ */
+function useModeration(kind: ContentKind) {
+  const mutation = useModerateContent(kind)
+  const [target, setTarget] = useState<{ id: string; title: string; action: ModerationAction } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const inFlight = useRef(false)
+  const noun = NOUN[kind]
+  const ending = noun.female ? 'a' : 'o'
+
+  const ask = (row: { id?: string; title?: string | null; status?: string | null }) => {
+    if (!row.id) return
+    mutation.reset()
+    setError(null)
+    setNotice(null)
+    setTarget({ id: row.id, title: row.title ?? '', action: row.status === 'SUSPENDED' ? 'restore' : 'suspend' })
+  }
+
+  const confirm = () => {
+    // `isPending` recién cambia cuando la mutación arranca, que es asíncrono: un doble clic llega antes. La
+    // referencia corta el segundo envío en el acto; el botón bloqueado es lo que se ve.
+    if (!target || inFlight.current) return
+    inFlight.current = true
+    mutation.mutate(
+      { id: target.id, action: target.action },
+      {
+        onSettled: () => {
+          inFlight.current = false
+        },
+        onSuccess: () => {
+          setNotice(
+            target.action === 'suspend'
+              ? `«${target.title}» quedó suspendid${ending}.`
+              : `Se levantó la suspensión de «${target.title}». Queda despublicad${ending} hasta que la empresa l${ending} vuelva a publicar.`,
+          )
+          setTarget(null)
+        },
+        onError: (mutationError) => setError(getErrorMessage(mutationError)),
+      },
+    )
+  }
+
+  const action = (row: { id?: string; title?: string | null; status?: string | null }) => {
+    const suspended = row.status === 'SUSPENDED'
+    return (
+      <Button
+        variant={suspended ? 'outline' : 'ghost'}
+        size="sm"
+        disabled={mutation.isPending}
+        onClick={() => ask(row)}
+        aria-label={`${suspended ? 'Levantar suspensión de' : 'Suspender'} ${row.title ?? ''}`.trim()}
+      >
+        {suspended ? 'Levantar suspensión' : 'Suspender'}
+      </Button>
+    )
+  }
+
+  const dialog = (
+    <ConfirmActionDialog
+      open={target !== null}
+      title={target?.action === 'restore' ? `¿Levantar la suspensión de ${noun.label}?` : `¿Suspender ${noun.label}?`}
+      confirmLabel={target?.action === 'restore' ? 'Levantar suspensión' : 'Suspender'}
+      destructive={target?.action === 'suspend'}
+      pending={mutation.isPending}
+      error={error}
+      onConfirm={confirm}
+      onClose={() => setTarget(null)}
+    >
+      {target?.action === 'restore' ? (
+        <>
+          <p>
+            «{target.title}» vuelve a manos de la empresa, pero no se publica sol{ending}: queda despublicad{ending}.
+          </p>
+          <p>Para que los viajeros l{ending} vuelvan a ver, la empresa tiene que publicarl{ending} de nuevo.</p>
+        </>
+      ) : (
+        <>
+          <p>
+            «{target?.title}» deja de verse en el catálogo de la app y el asistente deja de recomendarl{ending}.
+          </p>
+          <p>Las reservas que ya existen no se cancelan. Sólo un administrador puede levantar la suspensión.</p>
+        </>
+      )}
+    </ConfirmActionDialog>
+  )
+
+  const banner = notice && <Alert variant="success">{notice}</Alert>
+
+  return { action, dialog, banner }
+}
+
 function Pagination({
   page,
   totalPages,
@@ -150,6 +254,7 @@ function Pagination({
 
 export function AdminExperiencesPage() {
   const filters = useCatalogFilters()
+  const moderation = useModeration('experience')
 
   const { data, isLoading } = useAdminExperiences({
     status: filters.status === 'ALL' ? undefined : filters.status,
@@ -165,8 +270,10 @@ export function AdminExperiencesPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Experiencias"
-        description="Las experiencias de todas las empresas, publicadas o no, con su destino y su precio."
+        description="Las experiencias de todas las empresas, publicadas o no, con su destino y su precio. Desde acá suspendés las que incumplen las políticas."
       />
+
+      {moderation.banner}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <SearchField value={filters.searchInput} onChange={filters.setSearchInput} />
@@ -183,13 +290,16 @@ export function AdminExperiencesPage() {
               <TableHead className="text-right">Precio</TableHead>
               <TableHead className="text-right">Fechas futuras</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>
+                <span className="sr-only">Acciones</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableLoadingRow colSpan={6} />
+              <TableLoadingRow colSpan={7} />
             ) : items.length === 0 ? (
-              <TableEmptyRow colSpan={6} title="No hay experiencias que coincidan" description="Probá con otro estado o con otra búsqueda." />
+              <TableEmptyRow colSpan={7} title="No hay experiencias que coincidan" description="Probá con otro estado o con otra búsqueda." />
             ) : (
               items.map((row) => (
                 <TableRow key={row.id}>
@@ -217,6 +327,7 @@ export function AdminExperiencesPage() {
                       {PUBLICATION_LABEL[row.status ?? ''] ?? row.status}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-right">{moderation.action(row)}</TableCell>
                 </TableRow>
               ))
             )}
@@ -224,12 +335,15 @@ export function AdminExperiencesPage() {
         </Table>
         <Pagination page={filters.page} totalPages={totalPages} onChange={filters.goToPage} />
       </Card>
+
+      {moderation.dialog}
     </div>
   )
 }
 
 export function AdminPackagesPage() {
   const filters = useCatalogFilters()
+  const moderation = useModeration('package')
 
   const { data, isLoading } = useAdminPackages({
     status: filters.status === 'ALL' ? undefined : filters.status,
@@ -246,8 +360,10 @@ export function AdminPackagesPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Paquetes"
-        description="Los viajes de varios días de todas las empresas, con si incluyen vuelo y si tienen política de cancelación."
+        description="Los viajes de varios días de todas las empresas, con si incluyen vuelo y si tienen política de cancelación. Desde acá suspendés los que incumplen las políticas."
       />
+
+      {moderation.banner}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <SearchField value={filters.searchInput} onChange={filters.setSearchInput} />
@@ -275,13 +391,16 @@ export function AdminPackagesPage() {
               <TableHead className="text-right">Salidas futuras</TableHead>
               <TableHead>Cancelación</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>
+                <span className="sr-only">Acciones</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableLoadingRow colSpan={7} />
+              <TableLoadingRow colSpan={8} />
             ) : items.length === 0 ? (
-              <TableEmptyRow colSpan={7} title="No hay paquetes que coincidan" description="Probá con otro estado o con otra búsqueda." />
+              <TableEmptyRow colSpan={8} title="No hay paquetes que coincidan" description="Probá con otro estado o con otra búsqueda." />
             ) : (
               items.map((row) => (
                 <TableRow key={row.id}>
@@ -325,6 +444,7 @@ export function AdminPackagesPage() {
                       {PUBLICATION_LABEL[row.status ?? ''] ?? row.status}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-right">{moderation.action(row)}</TableCell>
                 </TableRow>
               ))
             )}
@@ -332,6 +452,8 @@ export function AdminPackagesPage() {
         </Table>
         <Pagination page={filters.page} totalPages={totalPages} onChange={filters.goToPage} />
       </Card>
+
+      {moderation.dialog}
     </div>
   )
 }

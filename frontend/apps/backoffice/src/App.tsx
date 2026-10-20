@@ -28,6 +28,7 @@ import { PackageFormPage } from '@/modules/packages/PackageFormPage'
 import { PackagesPage } from '@/modules/packages/PackagesPage'
 import { ProviderReservationDetailPage } from '@/modules/provider-reservations/ProviderReservationDetailPage'
 import { ProviderReservationsPage } from '@/modules/provider-reservations/ProviderReservationsPage'
+import { UsersPage } from '@/modules/users/UsersPage'
 
 export default function App() {
   return (
@@ -56,6 +57,7 @@ export default function App() {
                 <Route path="/admin/categories" element={<CategoriesPage />} />
                 <Route path="/admin/administrators" element={<AdministratorsPage />} />
                 <Route path="/admin/administrators/new" element={<NewAdminAccountPage />} />
+                <Route path="/admin/users" element={<UsersPage />} />
                 <Route path="/admin/companies" element={<CompaniesApprovalPage />} />
                 <Route path="/admin/companies/new" element={<NewProviderAccountPage />} />
                 <Route path="/admin/companies/:id" element={<CompanyDetailPage />} />

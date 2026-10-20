@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useAdminReservations } from './api'
+import { UnresolvedCancellationsPanel } from './UnresolvedCancellationsPanel'
 
 /**
  * Todas las reservas de la plataforma.
@@ -115,6 +116,8 @@ export function AdminReservationsPage() {
         title="Reservas"
         description="Todas las reservas de la plataforma, con el estado del pasaje, de la cancelación y del cobro."
       />
+
+      <UnresolvedCancellationsPanel />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Select value={status} onValueChange={(value) => update('status', value === 'ALL' ? null : value)}>

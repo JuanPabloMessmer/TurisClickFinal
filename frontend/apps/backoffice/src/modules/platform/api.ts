@@ -1,10 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@turisclick/api-client'
 import { httpClient } from '@/lib/httpClient'
 
 /**
- * Consultas de la consola de administración. Todas son de lectura: operar sobre una cancelación a medias es
- * una operación de dominio y no una edición manual desde una tabla.
+ * Consultas de la consola de administración. Las únicas escrituras son operaciones de dominio que ya existen en
+ * el backend —moderar contenido y reintentar las cancelaciones a medias—, nunca una edición manual desde una
+ * tabla.
  */
 
 export const platformKeys = {
@@ -73,5 +74,45 @@ export function useUnresolvedCancellations() {
     queryKey: platformKeys.cancellations,
     queryFn: () => adminApi.listUnresolvedCancellations(httpClient, { limit: 50 }),
     staleTime: 30_000,
+  })
+}
+
+export type ContentKind = 'experience' | 'package'
+export type ModerationAction = 'suspend' | 'restore'
+
+const MODERATE = {
+  experience: { suspend: adminApi.suspendExperience, restore: adminApi.restoreExperience },
+  package: { suspend: adminApi.suspendPackage, restore: adminApi.restorePackage },
+} as const
+
+/**
+ * UC-A-07. Suspender saca el producto del catálogo público y del asistente; levantar la suspensión lo deja
+ * despublicado, y volver a publicarlo queda en manos del operador.
+ */
+export function useModerateContent(kind: ContentKind) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, action }: { id: string; action: ModerationAction }) => MODERATE[kind][action](httpClient, id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', kind === 'experience' ? 'experiences' : 'packages'] })
+      void queryClient.invalidateQueries({ queryKey: platformKeys.overview })
+    },
+  })
+}
+
+/**
+ * UC-A-10. Corre ahora la misma resolución que el proceso de fondo, que en el plan gratuito de Azure no corre
+ * mientras la app duerme. Es idempotente del lado del servidor.
+ */
+export function useResolveCancellations() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => adminApi.resolveCancellations(httpClient),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: platformKeys.cancellations })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'reservations'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'payments'] })
+      void queryClient.invalidateQueries({ queryKey: platformKeys.overview })
+    },
   })
 }
