@@ -10,6 +10,7 @@ import {
   Package,
   ShieldCheck,
   Tags,
+  Users,
   X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -31,6 +32,7 @@ const adminNav = [
     links: [
       { to: '/admin/companies', label: 'Empresas', icon: Building2 },
       { to: '/admin/reservations', label: 'Reservas', icon: ClipboardList },
+      { to: '/admin/users', label: 'Usuarios', icon: Users },
     ],
   },
   {
