@@ -8,6 +8,7 @@ using TurisClick.Api.Modules.Ai.Entities;
 using TurisClick.Api.Modules.Categories.Dtos;
 using TurisClick.Api.Modules.Destinations.Dtos;
 using TurisClick.Api.Modules.Experiences.Dtos;
+using TurisClick.Api.Modules.Flights.Entities;
 using TurisClick.Api.Modules.Packages.Dtos;
 using TurisClick.Api.Modules.Reservations.Dtos;
 using TurisClick.Api.Modules.Reservations.Entities;
@@ -293,6 +294,82 @@ public class ReservationExpirationTests
         Assert.Equal(ReservationStatus.EXPIRED, await StatusOfAsync(due.Id));
         Assert.Equal(ReservationStatus.PENDING_PAYMENT, await StatusOfAsync(notDue.Id));
         Assert.Equal(2, await ExperienceSlotsAsync(catalog.ExperienceAvailabilityId)); // solo se liberaron los de la vencida
+    }
+
+    /// <summary>
+    /// Regresión: las reservas con el vuelo en emisión o esperando reconciliación no se pueden expirar todavía,
+    /// y si entraran al lote lo llenarían. Antes, con más reservas así que el tamaño del lote —las más viejas,
+    /// que el orden pone primero—, ninguna otra reserva vencía nunca: el lote se iba entero en saltearlas.
+    /// </summary>
+    [Fact]
+    public async Task ExpireDueReservations_IsNotStarvedByReservationsWhoseFlightIsStillBeingResolved()
+    {
+        while (await WithExpirationServiceAsync(s => s.ExpireDueReservationsAsync(500, CancellationToken.None)) > 0) { }
+
+        var catalog = await SeedCatalogAsync("exp-starve", slots: 10);
+        var (_, blockedA) = await CreateDirectReservationAsync(catalog, "exp-starve-a", travelers: 1);
+        var (_, blockedB) = await CreateDirectReservationAsync(catalog, "exp-starve-b", travelers: 1);
+        var (_, plain) = await CreateDirectReservationAsync(catalog, "exp-starve-c", travelers: 1);
+
+        // Las dos trabadas vencieron antes: son las que un lote ordenado por vencimiento toma primero.
+        await QueryDbAsync(async db =>
+        {
+            foreach (var (reservationId, status) in new[]
+                     {
+                         (blockedA.Id, FlightBookingStatus.ORDERING),
+                         (blockedB.Id, FlightBookingStatus.RECONCILIATION_REQUIRED),
+                     })
+            {
+                var quote = new FlightQuote
+                {
+                    Id = Guid.NewGuid(),
+                    PackageId = catalog.PackageId,
+                    PackageAvailabilityId = catalog.PackageAvailabilityId,
+                    Provider = "Fake",
+                    ProviderOfferId = $"off_fake_UNK_LPB_{reservationId:N}",
+                    OriginIata = "UNK",
+                    DestinationIata = "LPB",
+                    OutboundDate = AvailabilityDate,
+                    Travelers = 1,
+                    TotalAmount = 120m,
+                    InitialAmount = 120m,
+                    Currency = "USD",
+                    QuotedAt = DateTimeOffset.UtcNow,
+                    ItinerarySummary = "test",
+                };
+                db.FlightQuotes.Add(quote);
+                db.FlightBookings.Add(new FlightBooking
+                {
+                    Id = Guid.NewGuid(),
+                    ReservationId = reservationId,
+                    FlightQuoteId = quote.Id,
+                    Provider = "Fake",
+                    Status = status,
+                    TotalAmount = 120m,
+                    Currency = "USD",
+                    IdempotencyKey = $"tc_{quote.Id:N}",
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    OriginIata = "UNK",
+                    DestinationIata = "LPB",
+                    OutboundDate = AvailabilityDate,
+                    Travelers = 1,
+                });
+            }
+
+            await db.SaveChangesAsync();
+            await db.Reservations.Where(r => r.Id == blockedA.Id || r.Id == blockedB.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.ExpiresAt, DateTimeOffset.UtcNow.AddMinutes(-10)));
+            return 0;
+        });
+        await ForceExpiryAsync(plain.Id);
+
+        // Un lote de 2: antes eran exactamente las dos trabadas, y la reserva común no vencía.
+        await WithExpirationServiceAsync(s => s.ExpireDueReservationsAsync(2, CancellationToken.None));
+
+        Assert.Equal(ReservationStatus.EXPIRED, await StatusOfAsync(plain.Id));
+        // Las trabadas siguen esperando a la reconciliación: no se libera un cupo cuyo vuelo puede existir.
+        Assert.Equal(ReservationStatus.PENDING_PAYMENT, await StatusOfAsync(blockedA.Id));
+        Assert.Equal(ReservationStatus.PENDING_PAYMENT, await StatusOfAsync(blockedB.Id));
     }
 
     // ---- La carrera crítica: pago vs expiración ----
