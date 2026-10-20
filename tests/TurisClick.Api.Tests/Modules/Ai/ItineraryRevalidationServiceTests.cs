@@ -2,6 +2,7 @@
 using TurisClick.Api.Modules.Ai.Entities;
 using TurisClick.Api.Modules.Ai.Repositories;
 using TurisClick.Api.Modules.Ai.Services;
+using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
 using TurisClick.Api.Modules.Reservations.Entities;
@@ -235,5 +236,82 @@ public class ItineraryRevalidationServiceTests
 
         Assert.False(Assert.Single(result.ByItemId.Values).HasCapacity);
         Assert.Contains(result.Warnings, w => w.Contains(FutureDate.ToString("yyyy-MM-dd")));
+    }
+
+    /// <summary>
+    /// UC-A-08: la suspensión de la empresa no toca el estado del producto, así que la revalidación tiene
+    /// que mirar a la empresa. Si no, el itinerario guardado decía "disponible" y recién fallaba al reservar.
+    /// </summary>
+    [Theory]
+    [InlineData(CompanyStatus.SUSPENDED, false)]
+    [InlineData(CompanyStatus.APPROVED, true)]
+    public async Task Revalidate_ExperienceFromSuspendedCompany_IsNotValidAndWarns(CompanyStatus companyStatus, bool expectedValid)
+    {
+        var experience = MakeExperience();
+        experience.Company = new Company { Id = Guid.NewGuid(), Status = companyStatus };
+        _catalogRepository.Setup(r => r.GetExperiencesByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([experience]);
+
+        var result = await _sut.RevalidateAsync(MakeItinerary(), CancellationToken.None);
+
+        var item = Assert.Single(result.ByItemId.Values);
+        Assert.Equal(expectedValid, item.IsValid);
+        if (expectedValid)
+        {
+            Assert.Empty(result.Warnings);
+            return;
+        }
+
+        Assert.False(item.IsPublished);
+        Assert.Equal(ItemAvailabilityState.UNPUBLISHED, item.State);
+        var warning = Assert.Single(result.Warnings);
+        Assert.Contains("suspendido", warning, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Revalidate_PackageFromSuspendedCompany_IsNotValidAndWarns()
+    {
+        var packageId = Guid.NewGuid();
+        var slotId = Guid.NewGuid();
+
+        _catalogRepository.Setup(r => r.GetPackagesByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Package
+            {
+                Id = packageId,
+                Title = "Uyuni 3 días",
+                Price = 300,
+                Currency = "USD",
+                Status = PublicationStatus.PUBLISHED,
+                Company = new Company { Id = Guid.NewGuid(), Status = CompanyStatus.SUSPENDED },
+                Availabilities =
+                [
+                    new PackageAvailability
+                    {
+                        Id = slotId, PackageId = packageId,
+                        DepartureDate = FutureDate,
+                        TotalSlots = 4, ReservedSlots = 0, Status = AvailabilitySlotStatus.OPEN
+                    }
+                ]
+            }]);
+
+        var itinerary = new AiItinerary
+        {
+            Id = Guid.NewGuid(),
+            Items =
+            [
+                new AiItineraryItem
+                {
+                    Id = Guid.NewGuid(), ProductType = ProductType.PACKAGE, PackageId = packageId,
+                    PackageAvailabilityId = slotId, DayNumber = 1, EstimatedUnitPrice = 300, Currency = "USD"
+                }
+            ]
+        };
+
+        var result = await _sut.RevalidateAsync(itinerary, CancellationToken.None);
+
+        var item = Assert.Single(result.ByItemId.Values);
+        Assert.False(item.IsValid);
+        Assert.Equal(ItemAvailabilityState.UNPUBLISHED, item.State);
+        Assert.Contains(result.Warnings, w => w.Contains("suspendido", StringComparison.OrdinalIgnoreCase));
     }
 }

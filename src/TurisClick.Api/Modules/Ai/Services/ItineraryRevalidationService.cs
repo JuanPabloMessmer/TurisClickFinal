@@ -1,5 +1,6 @@
 ﻿using TurisClick.Api.Modules.Ai.Entities;
 using TurisClick.Api.Modules.Ai.Repositories;
+using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
 using TurisClick.Api.Modules.Reservations.Entities;
@@ -54,8 +55,11 @@ public class ItineraryRevalidationService(IAiCatalogRepository catalogRepository
             return Missing(item, warnings);
 
         var title = experience.Title;
-        var isPublished = experience.Status == PublicationStatus.PUBLISHED;
-        if (!isPublished)
+        var companySuspended = experience.Company?.Status == CompanyStatus.SUSPENDED;
+        var isPublished = experience.Status == PublicationStatus.PUBLISHED && !companySuspended;
+        if (companySuspended)
+            warnings.Add($"\"{title}\" no está disponible: el proveedor está suspendido en TurisClick.");
+        else if (!isPublished)
             warnings.Add($"\"{title}\" ya no está publicada por el proveedor.");
 
         // El slot concreto propuesto; si la propuesta nunca fijó uno, sirve cualquiera abierto con cupo.
@@ -92,8 +96,11 @@ public class ItineraryRevalidationService(IAiCatalogRepository catalogRepository
             return Missing(item, warnings);
 
         var title = package.Title;
-        var isPublished = package.Status == PublicationStatus.PUBLISHED;
-        if (!isPublished)
+        var companySuspended = package.Company?.Status == CompanyStatus.SUSPENDED;
+        var isPublished = package.Status == PublicationStatus.PUBLISHED && !companySuspended;
+        if (companySuspended)
+            warnings.Add($"El paquete \"{title}\" no está disponible: el proveedor está suspendido en TurisClick.");
+        else if (!isPublished)
             warnings.Add($"El paquete \"{title}\" ya no está publicado por el proveedor.");
 
         var today = Today;
