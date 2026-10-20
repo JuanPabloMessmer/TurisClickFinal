@@ -45,7 +45,9 @@ if (-not $SkipBuild) {
 
 if (-not (Test-Path (Join-Path $distPath 'index.html'))) { throw "No se encontró el build en $distPath" }
 
-Assert-Az 'leer el deployment token'
+# $LASTEXITCODE es global y sólo lo actualiza un comando nativo: hay que leerlo DESPUÉS de la llamada a az, nunca
+# antes. Hasta la Oleada 16 acá había un Assert-Az previo que, con -SkipBuild, evaluaba el código de salida de
+# cualquier comando que hubiera corrido antes en la misma sesión de PowerShell y abortaba sin desplegar.
 $token = az staticwebapp secrets list --name $AppName --resource-group $ResourceGroup --query "properties.apiKey" -o tsv
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($token)) { throw 'No se pudo leer el deployment token' }
 
