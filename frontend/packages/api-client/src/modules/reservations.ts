@@ -19,6 +19,14 @@ export const listCompanyReservations = (http: AxiosInstance, params?: { page?: n
 export const getCompanyReservationById = (http: AxiosInstance, id: string) =>
   http.get<ReservationItemResponse>(`/api/companies/me/reservations/${id}`).then((r) => r.data)
 
+/**
+ * UC-P-14 — cancelación excepcional de la propia línea (sólo PENDING_PAYMENT o CONFIRMED; si no, 409
+ * RESERVATION_NOT_CANCELLABLE). El motivo es obligatorio (5–500 caracteres) y queda registrado en la línea.
+ * Libera el cupo; no toca las líneas de otros proveedores ni emite un reembolso.
+ */
+export const cancelCompanyReservation = (http: AxiosInstance, id: string, body: { reason: string }) =>
+  http.post<ReservationItemResponse>(`/api/companies/me/reservations/${id}/cancel`, body).then((r) => r.data)
+
 // ---- TOURIST (Tourist Mobile) ----
 
 /**

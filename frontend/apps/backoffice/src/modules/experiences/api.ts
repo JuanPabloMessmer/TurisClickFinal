@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  catalogApi,
   destinationsApi,
   experiencesApi,
   type CreateExperienceRequest,
@@ -29,6 +30,18 @@ export function useCityDestinations() {
   return useQuery({
     queryKey: ['publicDestinations', 'CITY'],
     queryFn: () => destinationsApi.listPublicDestinations(httpClient, { type: 'CITY' }),
+  })
+}
+
+/**
+ * Categorías del catálogo público: el endpoint de admin exige rol ADMIN y un operador no lo puede llamar.
+ * Misma queryKey que el formulario de paquetes, así comparten la caché.
+ */
+export function usePublicCategories() {
+  return useQuery({
+    queryKey: ['publicCategories'],
+    queryFn: () => catalogApi.listCategories(httpClient),
+    staleTime: 30 * 60_000,
   })
 }
 
