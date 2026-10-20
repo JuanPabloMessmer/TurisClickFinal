@@ -95,6 +95,7 @@ public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
         return await db.Experiences
             .AsNoTracking()
             .AsSplitQuery()
+            .Include(e => e.Company)
             .Include(e => e.Destination)
             .Include(e => e.Categories)
             .Include(e => e.Availabilities)
@@ -109,6 +110,7 @@ public class AiCatalogRepository(TurisClickDbContext db) : IAiCatalogRepository
         return await db.Packages
             .AsNoTracking()
             .AsSplitQuery()
+            .Include(p => p.Company)
             .Include(p => p.Destination)
             .Include(p => p.Categories)
             .Include(p => p.Availabilities)

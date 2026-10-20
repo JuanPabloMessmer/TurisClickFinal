@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Infrastructure.Database;
+using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Flights.Dtos;
 using TurisClick.Api.Modules.Packages.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
@@ -100,6 +101,9 @@ public class FlightSearchService(
     /// Los paquetes publicados que vuelan esta ruta: mismo aeropuerto de destino y el origen entre los que
     /// el operador ofrece. Se filtra en memoria porque los orígenes viven serializados en una columna de
     /// texto (mismo criterio que el resto del módulo) y son un puñado de filas.
+    ///
+    /// Una empresa suspendida (UC-A-08) no ofrece nada: sus paquetes conservan su propio estado para que
+    /// la reactivación los devuelva, así que el filtro va acá, igual que en el catálogo público.
     /// </summary>
     private async Task<List<FlightRoutePackageResponse>> RoutePackagesAsync(
         string origin, string destination, CancellationToken ct)
@@ -110,6 +114,7 @@ public class FlightSearchService(
             .Include(p => p.Images)
             .Include(p => p.Destination)
             .Where(p => p.Status == PublicationStatus.PUBLISHED
+                        && p.Company!.Status != CompanyStatus.SUSPENDED
                         && p.IncludesFlight
                         && p.FlightRule != null
                         && p.FlightRule.DestinationIata == destination)
