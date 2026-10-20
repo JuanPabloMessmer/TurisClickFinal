@@ -32,7 +32,13 @@ internal sealed record DuffelSliceRequest(
     [property: JsonPropertyName("destination")] string Destination,
     [property: JsonPropertyName("departure_date")] string DepartureDate);
 
-internal sealed record DuffelPassengerRequest([property: JsonPropertyName("type")] string Type);
+/// <summary>
+/// Un pasajero de la búsqueda. Duffel acepta `type` (adult, infant_without_seat) **o** `age`, que es como
+/// pide a los niños para tarifarlos; el campo que no aplica no se manda.
+/// </summary>
+internal sealed record DuffelPassengerRequest(
+    [property: JsonPropertyName("type"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Type,
+    [property: JsonPropertyName("age"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Age = null);
 
 internal sealed record DuffelOfferRequest(
     [property: JsonPropertyName("id")] string Id,

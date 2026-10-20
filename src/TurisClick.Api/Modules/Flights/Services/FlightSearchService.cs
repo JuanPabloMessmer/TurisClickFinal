@@ -46,8 +46,15 @@ public class FlightSearchService(
             DestinationLabel = AirportCatalog.Describe(destination),
             DepartureDate = request.DepartureDate,
             ReturnDate = request.ReturnDate,
-            Passengers = request.Passengers,
+            Passengers = request.TotalPassengers,
+            Adults = request.EffectiveAdults,
+            ChildrenAges = [.. request.ChildrenAges],
+            Infants = request.Infants,
             CabinClass = cabin.ToString(),
+            InventoryMode = InventoryModeFor(flightProvider, offers: []),
+            Bookable = false,
+            // Sin ofertas también se rotula: un "no hay vuelos" simulado no es un "no hay vuelos" real.
+            TestMode = InventoryModeFor(flightProvider, offers: []) != FlightInventoryModes.Live,
             Packages = await RoutePackagesAsync(origin, destination, ct),
         };
 
@@ -59,7 +66,8 @@ public class FlightSearchService(
         try
         {
             search = await flightProvider.SearchAsync(
-                new FlightSearchRequest(slices, request.Passengers, cabin, MaxOptions), ct);
+                new FlightSearchRequest(
+                    slices, request.EffectiveAdults, cabin, MaxOptions, request.ChildrenAges, request.Infants), ct);
         }
         catch (FlightProviderException ex)
         {
@@ -90,11 +98,24 @@ public class FlightSearchService(
             response.TestMode |= !offer.LiveMode;
         }
 
+        response.InventoryMode = InventoryModeFor(flightProvider, search.Offers);
+
         logger.LogInformation(
             "Búsqueda de vuelos {Origin}→{Destination} el {Date}: {Count} oferta(s).",
             origin, destination, request.DepartureDate, response.Options.Count);
 
         return response;
+    }
+
+    /// <summary>
+    /// Cómo rotular las ofertas. El proveedor falso inventa los vuelos: eso es SIMULATED, y la app lo dice
+    /// con todas las letras. Un proveedor real en modo de prueba (Duffel con token de test) devuelve vuelos
+    /// con forma real que no se pueden emitir: SANDBOX. Sólo una oferta marcada live por el proveedor es LIVE.
+    /// </summary>
+    internal static string InventoryModeFor(IFlightProvider provider, IReadOnlyCollection<FlightOffer> offers)
+    {
+        if (provider is Providers.FakeFlightProvider) return FlightInventoryModes.Simulated;
+        return offers.Count > 0 && offers.All(o => o.LiveMode) ? FlightInventoryModes.Live : FlightInventoryModes.Sandbox;
     }
 
     /// <summary>

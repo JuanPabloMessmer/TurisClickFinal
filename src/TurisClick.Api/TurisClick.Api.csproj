@@ -29,6 +29,10 @@
     <Content Update="Infrastructure\Database\Seed\bolivia-cities.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Aeropuertos (OurAirports, generado por tools/airports): va DENTRO del ensamblado, no al lado, para que
+         ningún despliegue pueda quedar con el código nuevo y el dataset viejo o ausente. -->
+    <Content Remove="Modules\Flights\Data\airports.json" />
+    <EmbeddedResource Include="Modules\Flights\Data\airports.json" LogicalName="TurisClick.Airports.json" />
   </ItemGroup>
 
 </Project>

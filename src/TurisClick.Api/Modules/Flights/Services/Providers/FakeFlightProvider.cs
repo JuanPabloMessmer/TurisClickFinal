@@ -55,7 +55,7 @@ public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProv
         if (first.OriginIata == NoOffersOrigin)
             return Task.FromResult(new FlightSearchResult(searchId, [], TimeSpan.Zero));
 
-        var offers = Enumerable.Range(0, 2)
+        var offers = Enumerable.Range(0, Math.Min(OffersPerSearch, Math.Max(request.MaxOffers, 1)))
             .Select(index => BuildOffer(request, index))
             .ToList();
 
@@ -216,65 +216,176 @@ public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProv
 
     // ---------------------------------------------------------------- construcción
 
+    /// <summary>Cuántas ofertas devuelve una búsqueda: suficientes para que ordenar y filtrar signifiquen algo.</summary>
+    public const int OffersPerSearch = 4;
+
+    /// <summary>Más allá de esta distancia, sólo la primera oferta es directa: las demás conectan en un hub.</summary>
+    private const double LongHaulKm = 3500;
+
+    /// <summary>Velocidad de crucero efectiva y tiempo fijo de rodaje, ascenso y descenso.</summary>
+    private const double CruiseKmPerHour = 780;
+    private const int TaxiAndClimbMinutes = 35;
+
+    /// <summary>Duración de un tramo cuando no se conocen las coordenadas (códigos de escenario como CHG o NET).</summary>
+    private const int UnknownLegMinutes = 85;
+
+    private const int LayoverMinutes = 95;
+
+    /// <summary>
+    /// Arma una oferta determinística. Lo que importa no es que sea realista —es una simulación y la app lo
+    /// dice—, sino que sea **coherente**: un tramo por tramo pedido, duraciones que crecen con la distancia,
+    /// escalas en los vuelos largos, y un precio que depende de cabina y pasajeros. Con dos ofertas idénticas
+    /// salvo el horario, ordenar y filtrar resultados no tendría nada que mostrar.
+    ///
+    /// Las ofertas 0 y 1 conservan los horarios y precios base de siempre (08:15 y 12:15; 120 y 155 USD por
+    /// adulto en económica) para que el paquete con vuelo se cotice igual que antes en rutas cortas.
+    /// </summary>
     private FlightOffer BuildOffer(FlightSearchRequest request, int index)
     {
-        var slice = request.Slices[0];
-        var departure = slice.DepartureDate.ToDateTime(new TimeOnly(8 + index * 4, 15), DateTimeKind.Unspecified);
-        var arrival = departure.AddHours(1).AddMinutes(25);
-        var expired = slice.OriginIata == ExpiredOrigin;
+        var first = request.Slices[0];
+        var expired = first.OriginIata == ExpiredOrigin;
+        var outboundKm = AirportCatalog.DistanceKm(first.OriginIata, first.DestinationIata);
 
-        var price = 120m + index * 35m;
+        // La oferta 2 siempre hace escala; en los vuelos largos, todas menos la primera.
+        var withStop = index == 2 || (outboundKm > LongHaulKm && index > 0);
 
-        // Un tramo por cada tramo pedido. Antes devolvía siempre uno solo, así que una ida y vuelta se veía
-        // igual que un viaje de ida: el proveedor real devuelve un slice por slice pedido, y los tests que
-        // dependían de eso no estaban probando lo que creían.
+        // Equipaje: las cabinas altas llevan dos valijas; en económica, la mitad de las ofertas incluye una.
+        var bags = request.CabinClass is FlightCabinClass.BUSINESS or FlightCabinClass.FIRST
+            ? 2
+            : index is 0 or 2 ? 1 : 0;
+
         var slices = request.Slices
-            .Select((leg, legIndex) =>
-            {
-                var legDeparture = leg.DepartureDate.ToDateTime(new TimeOnly(8 + index * 4, 15), DateTimeKind.Unspecified);
-                var legArrival = legDeparture.AddHours(1).AddMinutes(25);
-
-                return new FlightSlice(
-                    leg.OriginIata,
-                    leg.DestinationIata,
-                    TimeSpan.FromMinutes(85),
-                    [
-                        new FlightSegment(
-                            leg.OriginIata,
-                            leg.DestinationIata,
-                            legDeparture,
-                            legArrival,
-                            "ZZ",
-                            "Fake Airways",
-                            $"{100 + index + legIndex * 10}",
-                            "Airbus A320",
-                            CheckedBags: index == 0 ? 1 : 0),
-                    ]);
-            })
+            .Select((leg, legIndex) => BuildSlice(leg, index, legIndex, withStop, bags))
             .ToList();
 
         return new FlightOffer(
             EncodeOffer(request, index),
-            new FlightPrice(price * request.Adults, "USD"),
+            new FlightPrice(PriceFor(request, index, outboundKm, withStop), "USD"),
             slices,
             expired ? _time.GetUtcNow().AddMinutes(-1) : _time.GetUtcNow().AddMinutes(20),
-            IdentityDocumentsRequired: slice.OriginIata == DocumentsRequiredOrigin,
+            IdentityDocumentsRequired: first.OriginIata == DocumentsRequiredOrigin,
             InstantPaymentRequired: true,
             LiveMode: false,
             "Fake Airways",
             "ZZ",
-            [.. Enumerable.Range(0, request.Adults).Select(i => new FlightPassengerSlot($"pas_fake_{i}", "adult"))]);
+            [
+                .. Enumerable.Range(0, request.Adults).Select(i => new FlightPassengerSlot($"pas_fake_{i}", "adult")),
+                .. request.Children.Select((_, i) => new FlightPassengerSlot($"pas_fake_child_{i}", "child")),
+                .. Enumerable.Range(0, request.Infants).Select(i => new FlightPassengerSlot($"pas_fake_infant_{i}", "infant_without_seat")),
+            ]);
+    }
+
+    private static FlightSlice BuildSlice(FlightSliceRequest leg, int index, int legIndex, bool withStop, int bags)
+    {
+        // 08:15, 12:15, 16:15 y 20:15: una de mañana, una de mediodía, una de tarde y una de noche, para que
+        // el filtro por horario tenga de qué filtrar.
+        var departure = leg.DepartureDate.ToDateTime(new TimeOnly(8 + index * 4, 15), DateTimeKind.Unspecified);
+        var flightNumber = 100 + index + legIndex * 10;
+
+        var hub = withStop ? HubFor(leg.OriginIata, leg.DestinationIata) : null;
+
+        var segments = new List<FlightSegment>();
+        if (hub is null)
+        {
+            segments.Add(Segment(leg.OriginIata, leg.DestinationIata, departure, $"{flightNumber}", bags));
+        }
+        else
+        {
+            var toHub = Segment(leg.OriginIata, hub, departure, $"{flightNumber}", bags);
+            var fromHub = Segment(hub, leg.DestinationIata, toHub.ArrivingAt.AddMinutes(LayoverMinutes), $"{flightNumber + 500}", bags);
+            segments.Add(toHub);
+            segments.Add(fromHub);
+        }
+
+        return new FlightSlice(
+            leg.OriginIata,
+            leg.DestinationIata,
+            segments[^1].ArrivingAt - segments[0].DepartingAt,
+            segments);
+    }
+
+    private static FlightSegment Segment(string origin, string destination, DateTime departure, string flightNumber, int bags) =>
+        new(
+            origin,
+            destination,
+            departure,
+            departure.AddMinutes(LegMinutes(origin, destination)),
+            "ZZ",
+            "Fake Airways",
+            flightNumber,
+            "Airbus A320",
+            CheckedBags: bags);
+
+    private static int LegMinutes(string origin, string destination)
+    {
+        if (AirportCatalog.DistanceKm(origin, destination) is not { } km) return UnknownLegMinutes;
+
+        var minutes = TaxiAndClimbMinutes + km / CruiseKmPerHour * 60;
+        return (int)(Math.Round(minutes / 5) * 5);
+    }
+
+    /// <summary>
+    /// Dónde conecta un vuelo con escala: un hub boliviano en los tramos cortos y uno sudamericano en los
+    /// largos, nunca uno de los dos extremos del viaje.
+    /// </summary>
+    private static string HubFor(string origin, string destination)
+    {
+        string[] hubs = AirportCatalog.DistanceKm(origin, destination) > LongHaulKm
+            ? ["LIM", "BOG", "GRU"]
+            : ["CBB", "VVI", "LPB"];
+
+        return hubs.First(hub => hub != origin && hub != destination);
+    }
+
+    /// <summary>
+    /// Precio total de la oferta. Base por adulto (120 + 35 por posición) más un componente por distancia en
+    /// los vuelos largos; cabina, ida y vuelta, niños (75%) e infantes en brazos (10%) lo escalan. Las rutas
+    /// cortas en económica, sólo ida y sólo adultos dan exactamente lo mismo que antes.
+    /// </summary>
+    private static decimal PriceFor(FlightSearchRequest request, int index, double? outboundKm, bool withStop)
+    {
+        var perAdult = 120m + index * 35m;
+
+        if (outboundKm is > 1500)
+            perAdult += Math.Round((decimal)(outboundKm.Value - 1500) * 0.06m);
+
+        if (withStop && index > 0)
+            perAdult = Math.Round(perAdult * 0.9m);
+
+        perAdult *= request.CabinClass switch
+        {
+            FlightCabinClass.PREMIUM_ECONOMY => 1.6m,
+            FlightCabinClass.BUSINESS => 3m,
+            FlightCabinClass.FIRST => 4.5m,
+            _ => 1m,
+        };
+
+        if (request.Slices.Count > 1) perAdult *= 1.8m;
+
+        var total = perAdult * request.Adults
+                    + perAdult * 0.75m * request.Children.Count
+                    + perAdult * 0.1m * request.Infants;
+
+        return Math.Round(total, 2);
     }
 
     /// <summary>
     /// El id de oferta lleva adentro lo necesario para reconstruirla: el proveedor falso no guarda estado
     /// y así dos instancias distintas (una en el test, otra en el servicio) se comportan igual.
+    ///
+    /// Forma: <c>off_fake_ORIG_DEST_yyyyMMdd_adultos_índice[_cabina_edades_infantes_vuelta]</c>. La parte
+    /// opcional es lo que hace que revalidar una ida y vuelta, o una oferta en business, devuelva el mismo
+    /// precio que la búsqueda: si se perdiera, el flujo de reserva vería un "cambio de precio" que nadie hizo.
     /// </summary>
     private static string EncodeOffer(FlightSearchRequest request, int index)
     {
         var slice = request.Slices[0];
+        var cabin = request.CabinClass.ToString()[0];
+        var children = request.Children.Count == 0 ? "x" : string.Join('-', request.Children);
+        var back = request.Slices.Count > 1 ? request.Slices[1].DepartureDate.ToString("yyyyMMdd", CultureInfo.InvariantCulture) : "x";
+
         return string.Create(CultureInfo.InvariantCulture,
-            $"off_fake_{slice.OriginIata}_{slice.DestinationIata}_{slice.DepartureDate:yyyyMMdd}_{request.Adults}_{index}");
+            $"off_fake_{slice.OriginIata}_{slice.DestinationIata}_{slice.DepartureDate:yyyyMMdd}_{request.Adults}_{index}_{cabin}_{children}_{request.Infants}_{back}");
     }
 
     private static (FlightSearchRequest Request, int Index) DecodeOffer(string offerId)
@@ -282,10 +393,38 @@ public class FakeFlightProvider(TimeProvider? timeProvider = null) : IFlightProv
         var parts = offerId.Split('_');
         if (parts.Length < 7) throw new FlightProviderRequestException("Id de oferta desconocido.", 404);
 
+        var origin = parts[2];
+        var destination = parts[3];
         var date = DateOnly.ParseExact(parts[4], "yyyyMMdd", CultureInfo.InvariantCulture);
         var adults = int.Parse(parts[5], CultureInfo.InvariantCulture);
         var index = int.Parse(parts[6], CultureInfo.InvariantCulture);
 
-        return (new FlightSearchRequest([new FlightSliceRequest(parts[2], parts[3], date)], adults), index);
+        var slices = new List<FlightSliceRequest> { new(origin, destination, date) };
+        var cabin = FlightCabinClass.ECONOMY;
+        List<int> children = [];
+        var infants = 0;
+
+        // Los ids anteriores no traen la parte opcional: se leen como sólo ida, económica y sólo adultos.
+        if (parts.Length >= 11)
+        {
+            cabin = parts[7] switch
+            {
+                "P" => FlightCabinClass.PREMIUM_ECONOMY,
+                "B" => FlightCabinClass.BUSINESS,
+                "F" => FlightCabinClass.FIRST,
+                _ => FlightCabinClass.ECONOMY,
+            };
+
+            if (parts[8] != "x")
+                children = [.. parts[8].Split('-').Select(age => int.Parse(age, CultureInfo.InvariantCulture))];
+
+            infants = int.Parse(parts[9], CultureInfo.InvariantCulture);
+
+            if (parts[10] != "x")
+                slices.Add(new FlightSliceRequest(
+                    destination, origin, DateOnly.ParseExact(parts[10], "yyyyMMdd", CultureInfo.InvariantCulture)));
+        }
+
+        return (new FlightSearchRequest(slices, adults, cabin, ChildAges: children, Infants: infants), index);
     }
 }

@@ -1542,6 +1542,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/airports/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    role?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AirportSearchResultResponse"][];
+                        "application/json": components["schemas"]["AirportSearchResultResponse"][];
+                        "text/json": components["schemas"]["AirportSearchResultResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/register": {
         parameters: {
             query?: never;
@@ -4233,6 +4274,14 @@ export interface components {
             iata?: string | null;
             label?: string | null;
         };
+        AirportSearchResultResponse: {
+            iata?: string | null;
+            name?: string | null;
+            city?: string | null;
+            country?: string | null;
+            countryCode?: string | null;
+            label?: string | null;
+        };
         AuthResultResponse: {
             accessToken?: string | null;
             refreshToken?: string | null;
@@ -4658,6 +4707,7 @@ export interface components {
             itinerarySummary?: string | null;
             statusMessage?: string | null;
             inProgress?: boolean;
+            inventoryMode?: string | null;
         };
         FlightOptionResponse: {
             price?: components["schemas"]["MoneyResponse"];
@@ -5275,6 +5325,11 @@ export interface components {
             /** Format: date */
             returnDate?: string | null;
             /** Format: int32 */
+            adults?: number | null;
+            childrenAges?: number[] | null;
+            /** Format: int32 */
+            infants?: number;
+            /** Format: int32 */
             passengers?: number;
             /** Format: Enumeration */
             cabinClass?: string | null;
@@ -5290,11 +5345,18 @@ export interface components {
             returnDate?: string | null;
             /** Format: int32 */
             passengers?: number;
+            /** Format: int32 */
+            adults?: number;
+            childrenAges?: number[] | null;
+            /** Format: int32 */
+            infants?: number;
             cabinClass?: string | null;
             options?: components["schemas"]["FlightOptionResponse"][] | null;
             packages?: components["schemas"]["FlightRoutePackageResponse"][] | null;
             notice?: string | null;
             testMode?: boolean;
+            inventoryMode?: string | null;
+            bookable?: boolean;
         };
         SendMessageRequest: {
             content: string;

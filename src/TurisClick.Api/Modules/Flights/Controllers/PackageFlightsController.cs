@@ -108,4 +108,35 @@ public class AirportsController : ControllerBase
             .ThenBy(a => a.City, StringComparer.CurrentCulture)
             .Select(a => new AirportResponse { Iata = a.Iata, Label = $"{a.City} ({a.Iata})" }));
     }
+
+    /// <summary>
+    /// Autocompletado de aeropuertos del mundo (OurAirports), por ciudad, nombre, país o código IATA.
+    ///
+    /// `role=destination` limita a Bolivia, que es a donde se puede volar por ahora; `role=origin` (default)
+    /// busca en todo el mundo. Sin `q` devuelve sugerencias. Es público: el dataset vive en memoria y no
+    /// consulta a ningún proveedor, así que no hay inventario que proteger.
+    /// </summary>
+    [HttpGet("search")]
+    [AllowAnonymous]
+    public ActionResult<IEnumerable<AirportSearchResultResponse>> Search(
+        [FromQuery] string? q, [FromQuery] string? role, [FromQuery] int limit = 10)
+    {
+        var searchRole = string.Equals(role, "destination", StringComparison.OrdinalIgnoreCase)
+            ? AirportCatalog.SearchRole.Destination
+            : AirportCatalog.SearchRole.Origin;
+
+        // Un texto larguísimo no encuentra nada que uno corto no encuentre: se recorta en vez de rechazar.
+        var query = q is { Length: > 60 } ? q[..60] : q;
+
+        return Ok(AirportCatalog.Search(query, searchRole, Math.Clamp(limit, 1, 25))
+            .Select(a => new AirportSearchResultResponse
+            {
+                Iata = a.Iata,
+                Name = a.Name,
+                City = a.City,
+                Country = a.Country,
+                CountryCode = a.CountryCode,
+                Label = $"{a.City} ({a.Iata})",
+            }));
+    }
 }

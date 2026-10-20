@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Flights.Dtos;
 using TurisClick.Api.Modules.Flights.Entities;
@@ -116,6 +117,7 @@ public record FlightOrderOutcome(
 public class FlightBookingOrchestrator(
     TurisClickDbContext db,
     IFlightProvider flightProvider,
+    IOptions<FlightsOptions> flightsOptions,
     ILogger<FlightBookingOrchestrator> logger) : IFlightBookingOrchestrator
 {
     public async Task<Guid?> FindReservationForQuoteAsync(Guid quoteId, Guid touristId, CancellationToken ct)
@@ -474,43 +476,72 @@ public class FlightBookingOrchestrator(
         })];
     }
 
-    public FlightBookingResponse ToResponse(FlightBooking booking) => new()
+    public FlightBookingResponse ToResponse(FlightBooking booking)
     {
-        Status = booking.Status.ToString(),
-        OriginIata = booking.OriginIata,
-        OriginLabel = AirportCatalog.Describe(booking.OriginIata),
-        DestinationIata = booking.DestinationIata,
-        DestinationLabel = AirportCatalog.Describe(booking.DestinationIata),
-        OutboundDate = booking.OutboundDate,
-        InboundDate = booking.InboundDate,
-        Travelers = booking.Travelers,
-        CarrierIata = booking.CarrierIata,
-        CarrierName = booking.CarrierName,
-        OutboundDepartureAt = booking.OutboundDepartureAt,
-        OutboundArrivalAt = booking.OutboundArrivalAt,
-        OutboundFlightNumber = booking.OutboundFlightNumber,
-        InboundDepartureAt = booking.InboundDepartureAt,
-        InboundArrivalAt = booking.InboundArrivalAt,
-        InboundFlightNumber = booking.InboundFlightNumber,
-        BookingReference = booking.BookingReference,
-        Price = new MoneyResponse { Amount = booking.TotalAmount, Currency = booking.Currency },
-        ItinerarySummary = booking.ItinerarySummary,
-        StatusMessage = StatusMessage(booking.Status),
-        InProgress = booking.Status is FlightBookingStatus.ORDERING or FlightBookingStatus.RECONCILIATION_REQUIRED,
-    };
+        var inventoryMode = InventoryModeOf(booking);
+
+        return new FlightBookingResponse
+        {
+            Status = booking.Status.ToString(),
+            InventoryMode = inventoryMode,
+            OriginIata = booking.OriginIata,
+            OriginLabel = AirportCatalog.Describe(booking.OriginIata),
+            DestinationIata = booking.DestinationIata,
+            DestinationLabel = AirportCatalog.Describe(booking.DestinationIata),
+            OutboundDate = booking.OutboundDate,
+            InboundDate = booking.InboundDate,
+            Travelers = booking.Travelers,
+            CarrierIata = booking.CarrierIata,
+            CarrierName = booking.CarrierName,
+            OutboundDepartureAt = booking.OutboundDepartureAt,
+            OutboundArrivalAt = booking.OutboundArrivalAt,
+            OutboundFlightNumber = booking.OutboundFlightNumber,
+            InboundDepartureAt = booking.InboundDepartureAt,
+            InboundArrivalAt = booking.InboundArrivalAt,
+            InboundFlightNumber = booking.InboundFlightNumber,
+            BookingReference = booking.BookingReference,
+            Price = new MoneyResponse { Amount = booking.TotalAmount, Currency = booking.Currency },
+            ItinerarySummary = booking.ItinerarySummary,
+            StatusMessage = StatusMessage(booking.Status, inventoryMode),
+            InProgress = booking.Status is FlightBookingStatus.ORDERING or FlightBookingStatus.RECONCILIATION_REQUIRED,
+        };
+    }
+
+    /// <summary>
+    /// De dónde salió la reserva aérea. Se deduce del proveedor que la hizo, que ya está guardado: el falso
+    /// SIEMPRE simula, y Duffel con un token de prueba (lo único que el adapter acepta mientras
+    /// RequireTestToken siga en true) reserva en su entorno de prueba, donde nada se emite.
+    /// </summary>
+    private string InventoryModeOf(FlightBooking booking)
+    {
+        if (string.Equals(booking.Provider, "Fake", StringComparison.OrdinalIgnoreCase))
+            return FlightInventoryModes.Simulated;
+
+        var duffel = flightsOptions.Value.Duffel;
+        return duffel.RequireTestToken || duffel.IsTestToken ? FlightInventoryModes.Sandbox : FlightInventoryModes.Live;
+    }
 
     /// <summary>
     /// El estado en palabras. Lo decide el dominio y no la pantalla: dos apps distintas no pueden contar
     /// historias distintas sobre el mismo vuelo.
+    ///
+    /// **Nunca dice "pasaje emitido".** Que el proveedor confirme una orden no es lo mismo que un pasaje
+    /// emitido con su número de ticket, y TurisClick todavía no registra emisiones. Una reserva simulada o de
+    /// prueba lo dice con todas las letras.
     /// </summary>
-    private static string StatusMessage(FlightBookingStatus status) => status switch
+    private static string StatusMessage(FlightBookingStatus status, string inventoryMode) => status switch
     {
-        FlightBookingStatus.PENDING => "Falta confirmar el pasaje. Se emite cuando confirmás la reserva.",
-        FlightBookingStatus.ORDERING => "Estamos emitiendo tu pasaje.",
-        FlightBookingStatus.CONFIRMED => "Pasaje emitido.",
-        FlightBookingStatus.FAILED => "No se pudo emitir el pasaje.",
+        FlightBookingStatus.PENDING => "Falta confirmar el vuelo. Se reserva cuando confirmás y pagás.",
+        FlightBookingStatus.ORDERING => "Estamos reservando tu vuelo.",
+        FlightBookingStatus.CONFIRMED => inventoryMode switch
+        {
+            FlightInventoryModes.Simulated => "Reserva simulada para la demo: no existe un pasaje ni un asiento real.",
+            FlightInventoryModes.Sandbox => "Reserva en el entorno de prueba del proveedor: no se emitió ningún pasaje.",
+            _ => "Reserva aérea confirmada. El pasaje todavía no figura como emitido.",
+        },
+        FlightBookingStatus.FAILED => "No se pudo reservar el vuelo.",
         FlightBookingStatus.RECONCILIATION_REQUIRED => "Estamos confirmando tu vuelo con la aerolínea.",
-        FlightBookingStatus.CANCELLED => "Pasaje cancelado.",
+        FlightBookingStatus.CANCELLED => "Vuelo cancelado.",
         _ => string.Empty,
     };
 

@@ -49,13 +49,14 @@ export const RESERVATION_VARIANT: Record<string, 'success' | 'warning' | 'destru
   PAYMENT_FAILED: 'destructive',
 }
 
+/** Nunca "pasaje emitido": una orden confirmada no es un pasaje emitido, y hoy no se registran emisiones. */
 export const FLIGHT_LABEL: Record<string, string> = {
-  PENDING: 'Pasaje pendiente',
-  ORDERING: 'Emitiendo',
-  CONFIRMED: 'Pasaje emitido',
-  FAILED: 'No se emitió',
+  PENDING: 'Vuelo pendiente',
+  ORDERING: 'Reservando',
+  CONFIRMED: 'Reserva confirmada',
+  FAILED: 'No se reservó',
   RECONCILIATION_REQUIRED: 'Confirmando con la aerolínea',
-  CANCELLED: 'Pasaje cancelado',
+  CANCELLED: 'Vuelo cancelado',
 }
 
 export const CANCELLATION_LABEL: Record<string, string> = {

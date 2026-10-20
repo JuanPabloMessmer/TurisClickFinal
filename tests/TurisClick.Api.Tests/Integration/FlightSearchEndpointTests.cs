@@ -213,6 +213,163 @@ public class FlightSearchEndpointTests(TurisClickApiFactory factory)
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    // ---------------------------------------------------------------- búsqueda global (Oleada 16, A)
+
+    private static object Family(
+        string origin = "MAD", string destination = "VVI", int adults = 2, int[]? childrenAges = null,
+        int infants = 0, string cabin = "ECONOMY", int inDays = 30) => new
+        {
+            originIata = origin,
+            destinationIata = destination,
+            departureDate = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddDays(inDays)).ToString("yyyy-MM-dd"),
+            adults,
+            childrenAges = childrenAges ?? [],
+            infants,
+            cabinClass = cabin,
+        };
+
+    [Fact]
+    public async Task SeBuscaDesdeCualquierAeropuertoDelMundoHaciaBolivia()
+    {
+        var tourist = await CreateTouristClientAsync("flight-search-world");
+
+        var response = await tourist.PostAsJsonAsync("/api/flights/search", Family(origin: "NRT", destination: "CIJ"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<SearchFlightsResponse>(JsonOptions);
+        Assert.NotEmpty(result!.Options);
+        Assert.Equal("NRT", result.Options[0].Slices[0].OriginIata);
+        Assert.Equal("CIJ", result.Options[0].Slices[0].DestinationIata);
+    }
+
+    [Fact]
+    public async Task ElDestinoTieneQueEstarEnBolivia()
+    {
+        var tourist = await CreateTouristClientAsync("flight-search-dest-bo");
+
+        var response = await tourist.PostAsJsonAsync("/api/flights/search", Family(origin: "VVI", destination: "LIM"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Bolivia", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DosAeropuertosDeLaMismaCiudadSeRechazan()
+    {
+        var tourist = await CreateTouristClientAsync("flight-search-same-city");
+
+        var response = await tourist.PostAsJsonAsync("/api/flights/search", Family(origin: "SRZ", destination: "VVI"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(1, new int[0], 2)] // más infantes que adultos
+    [InlineData(5, new[] { 4, 6, 8, 10 }, 1)] // diez pasajeros en total
+    [InlineData(1, new[] { 1 }, 0)] // un niño de 1 año es un infante
+    [InlineData(1, new[] { 12 }, 0)] // con 12 años ya paga como adulto
+    public async Task LasReglasDePasajerosSeValidanEnElServidor(int adults, int[] childrenAges, int infants)
+    {
+        var tourist = await CreateTouristClientAsync("flight-search-pax-rules");
+
+        var response = await tourist.PostAsJsonAsync(
+            "/api/flights/search", Family(adults: adults, childrenAges: childrenAges, infants: infants));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UnaFechaDemasiadoLejanaSeRechaza()
+    {
+        var tourist = await CreateTouristClientAsync("flight-search-far");
+
+        var response = await tourist.PostAsJsonAsync("/api/flights/search", Family(inDays: SearchFlightsRequest.MaxDaysAhead + 1));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task NinosInfantesYCabinaLleganAlProveedorYVuelvenEnLaRespuesta()
+    {
+        var tourist = await CreateTouristClientAsync("flight-search-family");
+
+        var solo = await (await tourist.PostAsJsonAsync("/api/flights/search", Family(adults: 1)))
+            .Content.ReadFromJsonAsync<SearchFlightsResponse>(JsonOptions);
+        var response = await tourist.PostAsJsonAsync(
+            "/api/flights/search", Family(adults: 2, childrenAges: [7], infants: 1, cabin: "BUSINESS"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var family = await response.Content.ReadFromJsonAsync<SearchFlightsResponse>(JsonOptions);
+
+        Assert.Equal(2, family!.Adults);
+        Assert.Equal([7], family.ChildrenAges);
+        Assert.Equal(1, family.Infants);
+        Assert.Equal(4, family.Passengers);
+        Assert.Equal("BUSINESS", family.CabinClass);
+        Assert.True(family.Options.Min(o => o.Price.Amount) > solo!.Options.Min(o => o.Price.Amount));
+    }
+
+    [Fact]
+    public async Task LosVuelosSimuladosSeRotulanComoSimulados_YNoSonReservables()
+    {
+        var tourist = await CreateTouristClientAsync("flight-search-simulated");
+
+        var response = await tourist.PostAsJsonAsync("/api/flights/search", Body());
+        var result = await response.Content.ReadFromJsonAsync<SearchFlightsResponse>(JsonOptions);
+
+        Assert.Equal(FlightInventoryModes.Simulated, result!.InventoryMode);
+        Assert.False(result.Bookable);
+        Assert.True(result.TestMode);
+    }
+
+    [Fact]
+    public async Task ElContratoAnteriorConPassengersSigueFuncionando()
+    {
+        var tourist = await CreateTouristClientAsync("flight-search-legacy");
+
+        var response = await tourist.PostAsJsonAsync("/api/flights/search", Body(passengers: 3));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<SearchFlightsResponse>(JsonOptions);
+        Assert.Equal(3, result!.Adults);
+        Assert.Equal(3, result.Passengers);
+    }
+
+    [Fact]
+    public async Task ElAutocompletadoDeAeropuertosEsPublico_YElDestinoSoloDevuelveBolivia()
+    {
+        var anonymous = _factory.CreateClient();
+
+        var origins = await anonymous.GetFromJsonAsync<List<AirportSearchResultResponse>>(
+            "/api/airports/search?q=madrid", JsonOptions);
+        var destinations = await anonymous.GetFromJsonAsync<List<AirportSearchResultResponse>>(
+            "/api/airports/search?q=madrid&role=destination", JsonOptions);
+        var bolivia = await anonymous.GetFromJsonAsync<List<AirportSearchResultResponse>>(
+            "/api/airports/search?role=destination&limit=25", JsonOptions);
+
+        var mad = Assert.Single(origins!, a => a.Iata == "MAD");
+        Assert.Equal("España", mad.Country);
+        Assert.Equal("ES", mad.CountryCode);
+        Assert.Equal("Madrid", mad.City);
+        Assert.False(string.IsNullOrWhiteSpace(mad.Name));
+        Assert.Empty(destinations!);
+        Assert.All(bolivia!, a => Assert.Equal("BO", a.CountryCode));
+        Assert.Contains(bolivia!, a => a.Iata == "RIB");
+    }
+
+    [Fact]
+    public async Task LaListaDeAeropuertosDelBackofficeNoCambia()
+    {
+        var anonymous = _factory.CreateClient();
+
+        var all = await anonymous.GetFromJsonAsync<List<AirportResponse>>("/api/airports", JsonOptions);
+        var bolivian = await anonymous.GetFromJsonAsync<List<AirportResponse>>("/api/airports?country=BO", JsonOptions);
+
+        Assert.Equal(20, all!.Count);
+        Assert.Equal(9, bolivian!.Count);
+        Assert.Equal("Santa Cruz de la Sierra (VVI)", bolivian.Single(a => a.Iata == "VVI").Label);
+    }
 }
 
 /// <summary>Proveedor que contesta bien pero sin inventario.</summary>

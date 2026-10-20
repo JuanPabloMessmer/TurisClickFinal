@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using TurisClick.Api.Modules.Flights.Entities;
 using TurisClick.Api.Modules.Flights.Services;
 
@@ -293,6 +294,12 @@ public class FlightBookingResponse
 
     /// <summary>true mientras el desenlace esté sin resolver: la app vuelve a consultar en vez de ofrecer reintentar.</summary>
     public bool InProgress { get; set; }
+
+    /// <summary>
+    /// SIMULATED, SANDBOX o LIVE (ver <see cref="FlightInventoryModes"/>). Con SIMULATED o SANDBOX la app
+    /// rotula la reserva como demo: no hay pasaje ni asiento real detrás.
+    /// </summary>
+    public string InventoryMode { get; set; } = FlightInventoryModes.Simulated;
 }
 
 // ───────────────────────── Explorador de vuelos (Oleada 16) ─────────────────────────
@@ -301,12 +308,21 @@ public class FlightBookingResponse
 /// Búsqueda suelta de vuelos, sin paquete de por medio.
 ///
 /// Es **exploración, no compra**: no persiste cotizaciones y por eso su respuesta no trae ningún id
-/// reservable. En TurisClick un pasaje se vende como parte de un paquete —la reserva aérea cuelga de una
-/// reserva de paquete— así que una búsqueda suelta que devolviera algo "reservable" estaría prometiendo una
-/// capacidad que el dominio no tiene. Lo que sí hace es decir con qué paquetes se vuela esa misma ruta.
+/// reservable. Hoy un pasaje sólo se vende como parte de un paquete, así que una búsqueda suelta que
+/// devolviera algo "reservable" estaría prometiendo una capacidad que el dominio todavía no tiene. Lo que sí
+/// hace es decir con qué paquetes se vuela esa misma ruta.
+///
+/// Reglas de la búsqueda, todas validadas acá y no sólo en la app:
+/// - el origen puede ser cualquier aeropuerto conocido del mundo; el destino, por ahora, sólo Bolivia;
+/// - ni el mismo aeropuerto ni dos aeropuertos de la misma ciudad;
+/// - hasta 9 pasajeros en total, al menos un adulto y no más infantes que adultos (cada infante viaja en
+///   brazos de un adulto) — son los límites de los proveedores aéreos, no un capricho nuestro.
 /// </summary>
 public class SearchFlightsRequest : IValidatableObject
 {
+    public const int MaxPassengers = 9;
+    public const int MaxDaysAhead = 330;
+
     [Required, StringLength(3, MinimumLength = 3)]
     public string OriginIata { get; set; } = string.Empty;
 
@@ -318,11 +334,32 @@ public class SearchFlightsRequest : IValidatableObject
     /// <summary>Opcional: sin vuelta, se busca sólo la ida.</summary>
     public DateOnly? ReturnDate { get; set; }
 
-    [Range(1, 9)]
+    /// <summary>Adultos (12 años o más). Si no viene, se usa <see cref="Passengers"/>.</summary>
+    [Range(1, MaxPassengers)]
+    public int? Adults { get; set; }
+
+    /// <summary>Edad de cada niño con asiento propio, de 2 a 11 años. La edad la exigen los proveedores para tarifar.</summary>
+    public List<int> ChildrenAges { get; set; } = [];
+
+    /// <summary>Infantes de 0 a 23 meses, en brazos de un adulto y sin asiento.</summary>
+    [Range(0, MaxPassengers)]
+    public int Infants { get; set; }
+
+    /// <summary>
+    /// Forma anterior del contrato: cantidad de personas, todas adultas. Se mantiene para que una app que
+    /// todavía no se actualizó siga buscando igual que antes.
+    /// </summary>
+    [Range(1, MaxPassengers)]
     public int Passengers { get; set; } = 1;
 
     [EnumDataType(typeof(FlightCabinClass))]
     public string CabinClass { get; set; } = nameof(FlightCabinClass.ECONOMY);
+
+    [JsonIgnore]
+    public int EffectiveAdults => Adults ?? Passengers;
+
+    [JsonIgnore]
+    public int TotalPassengers => EffectiveAdults + ChildrenAges.Count + Infants;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -332,20 +369,44 @@ public class SearchFlightsRequest : IValidatableObject
         if (origin == destination)
             yield return new ValidationResult(
                 "El origen y el destino no pueden ser el mismo aeropuerto.", [nameof(DestinationIata)]);
+        else if (AirportCatalog.SameCity(origin, destination))
+            yield return new ValidationResult(
+                "El origen y el destino están en la misma ciudad.", [nameof(DestinationIata)]);
 
         if (AirportCatalog.Find(origin) is null)
             yield return new ValidationResult($"No conocemos el aeropuerto {origin}.", [nameof(OriginIata)]);
 
         if (AirportCatalog.Find(destination) is null)
             yield return new ValidationResult($"No conocemos el aeropuerto {destination}.", [nameof(DestinationIata)]);
+        else if (!AirportCatalog.IsBolivianDestination(destination))
+            yield return new ValidationResult(
+                "Por ahora sólo se pueden buscar vuelos con destino en Bolivia.", [nameof(DestinationIata)]);
 
         // La fecha se compara contra la del servidor: un teléfono con el reloj atrasado no puede pedirle al
         // proveedor un vuelo de ayer.
-        if (DepartureDate < DateOnly.FromDateTime(DateTime.UtcNow.Date))
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        if (DepartureDate < today)
             yield return new ValidationResult("La fecha de ida ya pasó.", [nameof(DepartureDate)]);
+        else if (DepartureDate > today.AddDays(MaxDaysAhead))
+            yield return new ValidationResult(
+                $"Las aerolíneas publican vuelos hasta {MaxDaysAhead} días antes. Elegí una fecha más cercana.",
+                [nameof(DepartureDate)]);
 
         if (ReturnDate is { } back && back < DepartureDate)
             yield return new ValidationResult("La vuelta no puede ser anterior a la ida.", [nameof(ReturnDate)]);
+
+        if (TotalPassengers > MaxPassengers)
+            yield return new ValidationResult(
+                $"Se pueden buscar hasta {MaxPassengers} pasajeros, contando niños e infantes.", [nameof(Adults)]);
+
+        if (ChildrenAges.Any(age => age is < 2 or > 11))
+            yield return new ValidationResult(
+                "La edad de cada niño tiene que estar entre 2 y 11 años. Los menores de 2 van como infantes.",
+                [nameof(ChildrenAges)]);
+
+        if (Infants > EffectiveAdults)
+            yield return new ValidationResult(
+                "Cada infante viaja en brazos de un adulto: no puede haber más infantes que adultos.", [nameof(Infants)]);
     }
 }
 
@@ -359,19 +420,44 @@ public class SearchFlightsResponse
 
     public DateOnly DepartureDate { get; set; }
     public DateOnly? ReturnDate { get; set; }
+
+    /// <summary>Total de pasajeros (adultos + niños + infantes). Se mantiene por compatibilidad.</summary>
     public int Passengers { get; set; }
+
+    public int Adults { get; set; }
+    public List<int> ChildrenAges { get; set; } = [];
+    public int Infants { get; set; }
+
     public string CabinClass { get; set; } = string.Empty;
 
     public List<FlightOptionResponse> Options { get; set; } = [];
 
-    /// <summary>Paquetes publicados que vuelan esta misma ruta. Es lo único que sí se puede comprar.</summary>
+    /// <summary>Paquetes publicados que vuelan esta misma ruta. Hoy es lo único que sí se puede comprar.</summary>
     public List<FlightRoutePackageResponse> Packages { get; set; } = [];
 
     /// <summary>Aviso cuando el proveedor no devolvió nada o falló. La pantalla lo muestra en vez de quedar vacía.</summary>
     public string? Notice { get; set; }
 
-    /// <summary>true si las ofertas son de un entorno de prueba. La app lo rotula; nunca se disimula.</summary>
+    /// <summary>true si las ofertas no son de venta real (simuladas o de un entorno de prueba).</summary>
     public bool TestMode { get; set; }
+
+    /// <summary>
+    /// De dónde salen las ofertas, para rotularlas sin ambigüedad:
+    /// `SIMULATED` = proveedor falso de TurisClick (vuelos inventados para la demo);
+    /// `SANDBOX` = entorno de prueba de un proveedor real (no se emite nada);
+    /// `LIVE` = inventario real.
+    /// </summary>
+    public string InventoryMode { get; set; } = FlightInventoryModes.Simulated;
+
+    /// <summary>Siempre false hoy: la compra de vuelos sueltos todavía no existe. La app no ofrece reservar.</summary>
+    public bool Bookable { get; set; }
+}
+
+public static class FlightInventoryModes
+{
+    public const string Simulated = "SIMULATED";
+    public const string Sandbox = "SANDBOX";
+    public const string Live = "LIVE";
 }
 
 /// <summary>
@@ -395,4 +481,17 @@ public class FlightRoutePackageResponse
     public int DurationDays { get; set; }
     public MoneyResponse Price { get; set; } = new();
     public string? CoverImageUrl { get; set; }
+}
+
+/// <summary>Un aeropuerto del autocompletado, con todo lo que la fila necesita para mostrarse.</summary>
+public class AirportSearchResultResponse
+{
+    public string Iata { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public string Country { get; set; } = string.Empty;
+    public string CountryCode { get; set; } = string.Empty;
+
+    /// <summary>"Santa Cruz de la Sierra (VVI)": la misma etiqueta que el resto de la API.</summary>
+    public string Label { get; set; } = string.Empty;
 }
