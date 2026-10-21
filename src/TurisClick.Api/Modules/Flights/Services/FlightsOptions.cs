@@ -10,6 +10,17 @@ public class FlightsOptions
 
     public string Provider { get; set; } = "Fake";
 
+    /// <summary>
+    /// Si la búsqueda suelta de vuelos se puede usar sin sesión. Sin valor, se decide por el proveedor: con
+    /// el falso sí (no consulta a nadie ni cuesta nada), con uno real no — cada búsqueda anónima sería una
+    /// consulta a la API del proveedor, con su límite de pedidos. Prenderlo con un proveedor real es una
+    /// decisión explícita, que debería venir con un límite de pedidos propio.
+    /// </summary>
+    public bool? AllowAnonymousSearch { get; set; }
+
+    public bool AnonymousSearchAllowed =>
+        AllowAnonymousSearch ?? string.Equals(Provider, "Fake", StringComparison.OrdinalIgnoreCase);
+
     public DuffelOptions Duffel { get; set; } = new();
 }
 

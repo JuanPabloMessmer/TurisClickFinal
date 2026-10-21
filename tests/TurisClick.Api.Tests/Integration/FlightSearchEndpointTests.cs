@@ -204,14 +204,48 @@ public class FlightSearchEndpointTests(TurisClickApiFactory factory)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// Buscar y comparar vuelos no exige cuenta mientras el proveedor sea el simulado: no hay inventario externo
+    /// que proteger. La sesión se exige al reservar (ver ReservationsController).
+    /// </summary>
     [Fact]
-    public async Task BuscarVuelosExigeSesion()
+    public async Task ConElProveedorSimuladoSeBuscaSinSesion()
     {
         var anonymous = _factory.CreateClient();
 
         var response = await anonymous.PostAsJsonAsync("/api/flights/search", Body());
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<SearchFlightsResponse>(JsonOptions);
+        Assert.NotEmpty(result!.Options);
+        Assert.Equal(FlightInventoryModes.Simulated, result.InventoryMode);
+    }
+
+    /// <summary>Si la búsqueda anónima está apagada, sin sesión es 401 y con sesión funciona igual que antes.</summary>
+    [Fact]
+    public async Task ConLaBusquedaAnonimaApagadaSeExigeSesion()
+    {
+        using var factory = _factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("Flights:AllowAnonymousSearch", "false"));
+
+        var anonymous = factory.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync("/api/flights/search", Body())).StatusCode);
+
+        var tourist = factory.CreateClient();
+        UseBearerToken(tourist, await RegisterAndLoginTouristAsync(tourist, "flight-search-auth"));
+        Assert.Equal(HttpStatusCode.OK, (await tourist.PostAsJsonAsync("/api/flights/search", Body())).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("Fake", null, true)]
+    [InlineData("Duffel", null, false)] // un proveedor real no queda abierto a búsquedas anónimas por defecto
+    [InlineData("Duffel", true, true)]
+    [InlineData("Fake", false, false)]
+    public void LaBusquedaAnonimaDependeDelProveedorSalvoDecisionExplicita(string provider, bool? configured, bool expected)
+    {
+        var options = new FlightsOptions { Provider = provider, AllowAnonymousSearch = configured };
+
+        Assert.Equal(expected, options.AnonymousSearchAllowed);
     }
 
     // ---------------------------------------------------------------- búsqueda global (Oleada 16, A)

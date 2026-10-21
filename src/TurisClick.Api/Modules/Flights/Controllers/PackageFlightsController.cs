@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using TurisClick.Api.Modules.Flights.Dtos;
 using TurisClick.Api.Modules.Flights.Services;
 
@@ -70,24 +71,31 @@ public class PackageFlightQuotesController(IPackageFlightService service) : Cont
 }
 
 /// <summary>
-/// Búsqueda de vuelos sin paquete, para el explorador de la app.
+/// Búsqueda de vuelos sin paquete, para el buscador de la app.
 ///
-/// Exige sesión por la misma razón que la cotización de un paquete: pedirle inventario a un proveedor
-/// externo no es leer el catálogo, y dejarlo anónimo convierte cada visita en consultas a Duffel.
+/// **Sin sesión mientras el proveedor sea el falso** (`Flights:AllowAnonymousSearch`, ver FlightsOptions):
+/// buscar y comparar no debería exigir una cuenta, y con el proveedor simulado no hay inventario externo que
+/// proteger. Con un proveedor real vuelve a exigir sesión, salvo decisión explícita, porque cada búsqueda
+/// anónima sería una consulta a su API. La sesión se exige siempre al reservar: eso vive en /api/reservations.
 ///
-/// No devuelve ningún identificador reservable, a propósito: desde acá no se compra. Lo que se puede
-/// comprar son los paquetes que vuelan la ruta, y vienen en la misma respuesta.
+/// No escribe nada y no devuelve ningún identificador que alcance para cobrar: lo reservable se reserva en
+/// /api/reservations, con sesión.
 /// </summary>
 [ApiController]
 [Route("api/flights")]
-[Authorize(Policy = "RequireTourist")]
-public class FlightSearchController(IFlightSearchService service) : ControllerBase
+[AllowAnonymous]
+public class FlightSearchController(IFlightSearchService service, IOptions<FlightsOptions> options) : ControllerBase
 {
     [HttpPost("search")]
     [ProducesResponseType(typeof(SearchFlightsResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<SearchFlightsResponse>> Search(
         [FromBody] SearchFlightsRequest request, CancellationToken ct)
-        => Ok(await service.SearchAsync(request, ct));
+    {
+        if (!options.Value.AnonymousSearchAllowed && User.Identity?.IsAuthenticated != true)
+            return Challenge();
+
+        return Ok(await service.SearchAsync(request, ct));
+    }
 }
 
 /// <summary>Catálogo de aeropuertos conocidos, para que el Backoffice no tenga que hardcodear la lista.</summary>
