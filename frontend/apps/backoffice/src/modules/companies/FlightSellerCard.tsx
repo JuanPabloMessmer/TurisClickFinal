@@ -9,9 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmActionDialog } from '@/modules/platform/ConfirmActionDialog'
 import { useSetFlightSeller } from '@/modules/platform/flightsApi'
-import { flightErrorKind, flightErrorMessage } from '@/modules/provider-flights/flightErrors'
-import { readSellerState } from './sellerState'
-
+import { flightErrorMessage } from '@/modules/provider-flights/flightErrors'
 
 const REGISTRATION_MAX = 100
 
@@ -21,17 +19,15 @@ const REGISTRATION_MAX = 100
  */
 export function FlightSellerCard({ company }: { company: CompanyResponse }) {
   const setSeller = useSetFlightSeller(company.id!)
-  const fromCompany = readSellerState(company)
   const [lastResult, setLastResult] = useState<providerFlightsApi.FlightSellerAuthorizationResponse | null>(null)
-  const [registration, setRegistration] = useState(fromCompany.flightSellerRegistration ?? '')
+  const [registration, setRegistration] = useState(company.flightSellerRegistration ?? '')
   const [confirm, setConfirm] = useState<'authorize' | 'revoke' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [validation, setValidation] = useState<string | null>(null)
 
-  const canSell = lastResult?.canSellFlights ?? fromCompany.canSellFlights
-  const known = canSell !== undefined
-  const authorizedAt = lastResult?.authorizedAt ?? fromCompany.flightSellerAuthorizedAt
-  const currentRegistration = lastResult?.registration ?? fromCompany.flightSellerRegistration
+  const canSell = lastResult?.canSellFlights ?? company.canSellFlights ?? false
+  const authorizedAt = lastResult?.authorizedAt ?? company.flightSellerAuthorizedAt
+  const currentRegistration = lastResult?.registration ?? company.flightSellerRegistration
 
   const onConfirm = async () => {
     setError(null)
@@ -65,26 +61,18 @@ export function FlightSellerCard({ company }: { company: CompanyResponse }) {
             <Plane className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <p className="font-medium text-foreground">Venta de vuelos</p>
           </div>
-          {known && (
-            <Badge variant={canSell ? 'success' : 'neutral'}>{canSell ? 'Autorizada' : 'No autorizada'}</Badge>
-          )}
+          <Badge variant={canSell ? 'success' : 'neutral'}>{canSell ? 'Autorizada' : 'No autorizada'}</Badge>
         </div>
 
-        {known ? (
-          canSell ? (
-            <p className="text-muted-foreground">
-              Puede publicar vuelos propios
-              {currentRegistration ? ` con el registro ${currentRegistration}` : ''}
-              {authorizedAt ? `, autorizada el ${formatDateTime(authorizedAt)}` : ''}.
-            </p>
-          ) : (
-            <p className="text-muted-foreground">
-              No puede publicar vuelos. Para habilitarla, cargá el registro o la licencia que declaró.
-            </p>
-          )
+        {canSell ? (
+          <p className="text-muted-foreground">
+            Puede publicar vuelos propios
+            {currentRegistration ? ` con el registro ${currentRegistration}` : ''}
+            {authorizedAt ? `, autorizada el ${formatDateTime(authorizedAt)}` : ''}.
+          </p>
         ) : (
           <p className="text-muted-foreground">
-            El estado actual todavía no se puede consultar desde el Backoffice. Autorizar o revocar acá lo actualiza.
+            No puede publicar vuelos. Para habilitarla, cargá el registro o la licencia que declaró.
           </p>
         )}
 
@@ -103,14 +91,14 @@ export function FlightSellerCard({ company }: { company: CompanyResponse }) {
         )}
 
         <div className="flex flex-wrap gap-2">
-          {canSell !== true && <Button onClick={openAuthorize}>Autorizar venta de vuelos</Button>}
-          {canSell !== false && (
-            <Button variant={known ? 'destructive' : 'outline'} onClick={() => { setError(null); setConfirm('revoke') }}>
+          {canSell ? (
+            <Button variant="destructive" onClick={() => { setError(null); setConfirm('revoke') }}>
               Revocar autorización
             </Button>
+          ) : (
+            <Button onClick={openAuthorize}>Autorizar venta de vuelos</Button>
           )}
         </div>
-        {error && flightErrorKind(error) === 'not-available' && <p className="text-xs text-muted-foreground">{error}</p>}
       </CardContent>
 
       <ConfirmActionDialog

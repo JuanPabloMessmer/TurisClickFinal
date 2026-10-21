@@ -103,6 +103,20 @@ describe('FlightIssuanceSection', () => {
     expect(recordIssuance).not.toHaveBeenCalled()
   })
 
+  it('el localizador, si se carga, son 5 a 8 letras o números', async () => {
+    renderWithProviders(<FlightIssuanceSection item={flightItem('CONFIRMED', 'PENDING')} />)
+    fireEvent.click(screen.getByRole('button', { name: /Registrar emisión/ }))
+    const dialog = await screen.findByRole('dialog')
+
+    fireEvent.change(within(dialog).getByLabelText(/Pasaje de Ana/), { target: { value: '9301234567890' } })
+    fireEvent.change(within(dialog).getByLabelText(/Pasaje de Leo/), { target: { value: '9301234567891' } })
+    fireEvent.change(within(dialog).getByLabelText(/Localizador/), { target: { value: 'AB-1' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar emisión' }))
+
+    expect(await within(dialog).findByText('El localizador son de 5 a 8 letras o números, por ejemplo ABC123.')).toBeTruthy()
+    expect(recordIssuance).not.toHaveBeenCalled()
+  })
+
   it('con el backend todavía en 501, el diálogo muestra el mensaje del servidor', async () => {
     recordIssuanceFailure.mockRejectedValue(notAvailable())
     renderWithProviders(<FlightIssuanceSection item={flightItem('CONFIRMED', 'PENDING')} />)

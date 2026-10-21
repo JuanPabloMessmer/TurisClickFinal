@@ -10,7 +10,7 @@ vi.mock('@turisclick/api-client', async (importOriginal) => {
 })
 const setFlightSeller = vi.mocked(providerFlightsApi.setFlightSeller)
 
-const COMPANY = { id: 'c1', name: 'Altura Viva', status: 'APPROVED' }
+const COMPANY = { id: 'c1', name: 'Altura Viva', status: 'APPROVED', canSellFlights: false, flightSellerRegistration: null }
 
 beforeEach(() => vi.clearAllMocks())
 
@@ -19,8 +19,7 @@ describe('FlightSellerCard', () => {
     setFlightSeller.mockResolvedValue({ companyId: 'c1', canSellFlights: true, registration: 'DGAC 0123', authorizedAt: '2026-10-21T12:00:00Z' })
     renderWithProviders(<FlightSellerCard company={COMPANY} />)
 
-    // Sin los campos nuevos de CompanyResponse, el estado se declara desconocido (no se inventa).
-    expect(screen.getByText(/El estado actual todavía no se puede consultar/)).toBeTruthy()
+    expect(screen.getByText('No autorizada')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Autorizar venta de vuelos' }))
     expect(screen.getByText(/hay que indicar el registro o la licencia/)).toBeTruthy()
@@ -38,10 +37,14 @@ describe('FlightSellerCard', () => {
   it('lee el estado cuando el backend ya lo expone y permite revocar', async () => {
     setFlightSeller.mockResolvedValue({ companyId: 'c1', canSellFlights: false, registration: 'DGAC 0123' })
     renderWithProviders(
-      <FlightSellerCard company={{ ...COMPANY, canSellFlights: true, flightSellerRegistration: 'DGAC 0123' } as typeof COMPANY} />,
+      <FlightSellerCard
+        company={{ ...COMPANY, canSellFlights: true, flightSellerRegistration: 'DGAC 0123', flightSellerAuthorizedAt: '2026-10-01T12:00:00Z' }}
+      />,
     )
 
     expect(screen.getByText('Autorizada')).toBeTruthy()
+    expect(screen.getByText(/con el registro DGAC 0123/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Autorizar venta de vuelos' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Revocar autorización' }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText(/va a poder seguir registrando la emisión/)).toBeTruthy()
@@ -51,7 +54,7 @@ describe('FlightSellerCard', () => {
     expect(await screen.findByText('No autorizada')).toBeTruthy()
   })
 
-  it('con 501 el diálogo muestra el mensaje del servidor', async () => {
+  it('si el servidor rechaza, el diálogo muestra su mensaje', async () => {
     setFlightSeller.mockRejectedValue(notAvailable())
     renderWithProviders(<FlightSellerCard company={COMPANY} />)
 

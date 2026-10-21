@@ -51,6 +51,7 @@ export function useAdminPackages(params: {
 export function useAdminReservations(params: {
   status?: string
   needsAttention?: boolean
+  productType?: string
   page: number
   pageSize: number
 }) {

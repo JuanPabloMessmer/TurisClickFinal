@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useRecordIssuance, useRecordIssuanceFailure } from '@/modules/provider-flights/api'
 import { DemoBadge } from '@/modules/provider-flights/DemoBadge'
 import { flightErrorMessage } from '@/modules/provider-flights/flightErrors'
-import { TICKET_MAX, validateTickets } from './issuance'
+import { BOOKING_REFERENCE_MAX, TICKET_MAX, validateBookingReference, validateTickets } from './issuance'
 import { cabinLabel, flightCode, formatLocalDateTime, issuanceLabel, issuanceVariant, passengerTypeLabel } from '@/modules/provider-flights/labels'
 
 const REASON_MIN = 5
@@ -124,7 +124,7 @@ function IssueDialogContent({ item, onClose }: { item: ReservationItemResponse; 
   const onSave = async () => {
     if (submittingRef.current) return
     setError(null)
-    const invalid = validateTickets(tickets)
+    const invalid = validateTickets(tickets) ?? validateBookingReference(bookingReference)
     if (invalid) {
       setError(invalid)
       return
@@ -135,7 +135,7 @@ function IssueDialogContent({ item, onClose }: { item: ReservationItemResponse; 
         itemId: item.id!,
         body: {
           ticketNumbers: tickets.map((t) => t.trim().toUpperCase()),
-          bookingReference: bookingReference.trim() || null,
+          bookingReference: bookingReference.trim().toUpperCase() || null,
           note: note.trim() || null,
         },
       })
@@ -173,7 +173,7 @@ function IssueDialogContent({ item, onClose }: { item: ReservationItemResponse; 
         ))}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="booking-reference">Localizador (opcional)</Label>
-          <Input id="booking-reference" value={bookingReference} maxLength={20} onChange={(e) => setBookingReference(e.target.value.toUpperCase())} />
+          <Input id="booking-reference" value={bookingReference} maxLength={BOOKING_REFERENCE_MAX} onChange={(e) => setBookingReference(e.target.value.toUpperCase())} />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="issuance-note">Nota (opcional)</Label>
