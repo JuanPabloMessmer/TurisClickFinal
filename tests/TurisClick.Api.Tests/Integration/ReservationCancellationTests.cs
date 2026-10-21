@@ -286,6 +286,144 @@ public class ReservationCancellationTests
         Assert.Equal(0, await ExperienceSlotsAsync(catalog.ExperienceAvailabilityId));
     }
 
+    // ---- Pagar después de una cancelación del proveedor (Oleada 17) ----
+    //
+    // Hasta la Oleada 17, pagar una reserva con una línea cancelada por el operador cobraba esa línea y la volvía
+    // a CONFIRMED sobre un cupo ya liberado. Estos tests fijan que lo cancelado no se cobra ni se reconfirma, y que
+    // una reserva sin nada activo no queda esperando un pago.
+
+    private Task<List<(string Currency, decimal Amount, PaymentTransactionStatus Status)>> ChargesAsync(Guid reservationId) =>
+        QueryDbAsync(async db => (await db.PaymentTransactions.AsNoTracking()
+                .Where(t => t.ReservationId == reservationId && t.Type == PaymentTransactionType.CHARGE)
+                .Select(t => new { t.Currency, t.Amount, t.Status })
+                .ToListAsync())
+            .Select(t => (t.Currency, t.Amount, t.Status)).ToList());
+
+    [Fact]
+    public async Task PayAfterPartialProviderCancel_ChargesAndConfirmsOnlyTheActiveLine()
+    {
+        var catalog = await SeedCatalogAsync("pay-partial");
+        var (tourist, reservation) = await CreateItineraryReservationAsync(catalog, "pay-partial-t");
+        var experienceItem = reservation.Items.Single(i => i.ExperienceId == catalog.ExperienceId);
+        var packageItem = reservation.Items.Single(i => i.PackageId == catalog.PackageId);
+
+        Assert.Equal(HttpStatusCode.OK, (await catalog.ExperienceProvider.PostAsJsonAsync(
+            $"/api/companies/me/reservations/{experienceItem.Id}/cancel", new { reason = "Cierre del acceso por obras." })).StatusCode);
+
+        // Antes de pagar, el total ya es sólo lo que se va a cobrar: el paquete en BOB, sin la experiencia en USD.
+        var pending = await (await tourist.GetAsync($"/api/reservations/{reservation.Id}"))
+            .Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("PENDING_PAYMENT", pending!.Status);
+        var pendingTotal = Assert.Single(pending.Totals);
+        Assert.Equal(("BOB", 600m), (pendingTotal.Currency, pendingTotal.Amount));
+
+        var paid = await tourist.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay",
+            new { success = true, acceptPriceChanges = true });
+        Assert.Equal(HttpStatusCode.OK, paid.StatusCode);
+        var body = await paid.Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+
+        Assert.Equal("CONFIRMED", body!.Status);
+        Assert.Equal("CANCELLED", body.Items.Single(i => i.Id == experienceItem.Id).Status);
+        Assert.Equal("CONFIRMED", body.Items.Single(i => i.Id == packageItem.Id).Status);
+        var paidTotal = Assert.Single(body.Totals);
+        Assert.Equal(("BOB", 600m), (paidTotal.Currency, paidTotal.Amount));
+
+        // El libro de pagos: un solo cobro, en BOB y por el paquete. Ningún cargo en USD por la experiencia cancelada.
+        var charge = Assert.Single(await ChargesAsync(reservation.Id));
+        Assert.Equal(("BOB", 600m, PaymentTransactionStatus.SUCCEEDED), charge);
+
+        // Lo persistido coincide con la respuesta, y el cupo liberado no se vuelve a ocupar.
+        var stored = await (await tourist.GetAsync($"/api/reservations/{reservation.Id}"))
+            .Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("CANCELLED", stored!.Items.Single(i => i.Id == experienceItem.Id).Status);
+        Assert.Equal(0, await ExperienceSlotsAsync(catalog.ExperienceAvailabilityId));
+        Assert.Equal(2, await PackageSlotsAsync(catalog.PackageAvailabilityId));
+    }
+
+    [Fact]
+    public async Task ProviderCancelsTheOnlyLine_CancelsTheReservation_AndPaymentIsRejected()
+    {
+        var catalog = await SeedCatalogAsync("pay-full");
+        var (tourist, reservation) = await CreateDirectReservationAsync(catalog, "pay-full-t");
+        var item = Assert.Single(reservation.Items);
+
+        Assert.Equal(HttpStatusCode.OK, (await catalog.ExperienceProvider.PostAsJsonAsync(
+            $"/api/companies/me/reservations/{item.Id}/cancel", new { reason = "Alerta meteorológica en la zona." })).StatusCode);
+
+        var after = await (await tourist.GetAsync($"/api/reservations/{reservation.Id}"))
+            .Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("CANCELLED", after!.Status);
+        Assert.NotNull(after.CancelledAt);
+
+        var paid = await tourist.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay",
+            new { success = true, acceptPriceChanges = true });
+        Assert.Equal(HttpStatusCode.Conflict, paid.StatusCode);
+
+        var stored = await (await tourist.GetAsync($"/api/reservations/{reservation.Id}"))
+            .Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("CANCELLED", stored!.Status);
+        Assert.Equal("CANCELLED", Assert.Single(stored.Items).Status);
+        Assert.Empty(await ChargesAsync(reservation.Id));
+        Assert.Equal(0, await ExperienceSlotsAsync(catalog.ExperienceAvailabilityId));
+    }
+
+    [Fact]
+    public async Task ProvidersCancelEveryLine_ReservationEndsCancelled_AndNothingIsCharged()
+    {
+        var catalog = await SeedCatalogAsync("pay-all");
+        var (tourist, reservation) = await CreateItineraryReservationAsync(catalog, "pay-all-t");
+        var experienceItem = reservation.Items.Single(i => i.ExperienceId == catalog.ExperienceId);
+        var packageItem = reservation.Items.Single(i => i.PackageId == catalog.PackageId);
+
+        await catalog.ExperienceProvider.PostAsJsonAsync(
+            $"/api/companies/me/reservations/{experienceItem.Id}/cancel", new { reason = "Motivo de fuerza mayor." });
+
+        // Con una línea todavía activa, la reserva sigue esperando el pago de esa línea.
+        var halfway = await (await tourist.GetAsync($"/api/reservations/{reservation.Id}"))
+            .Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("PENDING_PAYMENT", halfway!.Status);
+
+        await catalog.PackageProvider.PostAsJsonAsync(
+            $"/api/companies/me/reservations/{packageItem.Id}/cancel", new { reason = "Motivo de fuerza mayor." });
+
+        var cancelled = await (await tourist.GetAsync($"/api/reservations/{reservation.Id}"))
+            .Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("CANCELLED", cancelled!.Status);
+        Assert.All(cancelled.Items, i => Assert.Equal("CANCELLED", i.Status));
+        // Todo cancelado: el total vuelve a ser el histórico, para que la reserva siga diciendo qué fue.
+        Assert.Equal(2, cancelled.Totals.Count);
+
+        var paid = await tourist.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay",
+            new { success = true, acceptPriceChanges = true });
+        Assert.Equal(HttpStatusCode.Conflict, paid.StatusCode);
+        Assert.Empty(await ChargesAsync(reservation.Id));
+        Assert.Equal(0, await ExperienceSlotsAsync(catalog.ExperienceAvailabilityId));
+        Assert.Equal(0, await PackageSlotsAsync(catalog.PackageAvailabilityId));
+    }
+
+    [Fact]
+    public async Task ProviderCancelOnAConfirmedReservation_KeepsItConfirmed_AndTheLineCancelled()
+    {
+        var catalog = await SeedCatalogAsync("pay-conf");
+        var (tourist, reservation) = await CreateItineraryReservationAsync(catalog, "pay-conf-t");
+        var experienceItem = reservation.Items.Single(i => i.ExperienceId == catalog.ExperienceId);
+
+        Assert.Equal(HttpStatusCode.OK, (await tourist.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay",
+            new { success = true, acceptPriceChanges = true })).StatusCode);
+
+        Assert.Equal(HttpStatusCode.OK, (await catalog.ExperienceProvider.PostAsJsonAsync(
+            $"/api/companies/me/reservations/{experienceItem.Id}/cancel", new { reason = "Cierre imprevisto." })).StatusCode);
+
+        // Pagada, la reserva no cambia de estado por la línea cancelada (su dinero sigue el circuito de reembolsos),
+        // y volver a pagar sigue siendo imposible.
+        var after = await (await tourist.GetAsync($"/api/reservations/{reservation.Id}"))
+            .Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("CONFIRMED", after!.Status);
+        Assert.Equal("CANCELLED", after.Items.Single(i => i.Id == experienceItem.Id).Status);
+        Assert.Equal(HttpStatusCode.Conflict, (await tourist.PostAsJsonAsync($"/api/reservations/{reservation.Id}/pay",
+            new { success = true, acceptPriceChanges = true })).StatusCode);
+    }
+
     [Fact]
     public async Task ProviderCancel_AnotherProvidersLine_IsForbidden()
     {

@@ -345,8 +345,20 @@ public class ReservationService(
 
         if (flight is not null) GuardFlightIsPayable(flight);
 
+        // Sólo se paga lo que sigue activo. Una línea que el proveedor canceló (UC-P-14) liberó su cupo y no se
+        // cobra ni se reconfirma: hasta la Oleada 17 este método cobraba y confirmaba TODAS las líneas, así que
+        // pagar después de una cancelación del proveedor revivía el servicio sobre un cupo ya liberado.
+        var payableItems = reservation.Items
+            .Where(i => i.Status == ReservationItemStatus.PENDING_PAYMENT)
+            .ToList();
+
+        if (payableItems.Count == 0)
+            throw new ConflictAppException(
+                "Esta reserva ya no tiene servicios para pagar: el operador los canceló.",
+                ErrorCodes.ReservationNoLongerPayable);
+
         // UC-SYS-02: revalidación de precio contra el valor vigente de cada Experience/Package.
-        var revalidationByItemId = reservation.Items.ToDictionary(i => i.Id, BuildRevalidation);
+        var revalidationByItemId = payableItems.ToDictionary(i => i.Id, BuildRevalidation);
 
         var anyPriceChanged = revalidationByItemId.Values.Any(r => r.Changed);
 
@@ -399,7 +411,7 @@ public class ReservationService(
         if (anyPriceChanged)
         {
             // El turista aceptó explícitamente el nuevo precio: se recongela antes de cobrar/confirmar.
-            foreach (var item in reservation.Items)
+            foreach (var item in payableItems)
             {
                 var revalidation = revalidationByItemId[item.Id];
                 if (!revalidation.Changed) continue;
@@ -417,7 +429,7 @@ public class ReservationService(
         // El vuelo entra en el cobro como una linea mas, en SU moneda. Si el paquete cotiza en bolivianos y
         // el pasaje en dolares, son dos cargos: convertir uno al otro exigiria un tipo de cambio que
         // TurisClick no tiene y no va a inventar.
-        var chargeableAmounts = reservation.Items
+        var chargeableAmounts = payableItems
             .Select(i => (i.Currency, Amount: i.Subtotal))
             .Concat(flight is null
                 ? Array.Empty<(string Currency, decimal Amount)>()
@@ -459,7 +471,7 @@ public class ReservationService(
         // Nunca se sostiene una transaccion de base abierta durante una llamada externa, y aca menos que en
         // ningun otro lado: la emision puede tardar segundos y lo que esta en juego es el cupo del paquete.
         if (flight is not null && chargeResult.Approved && preflight?.Offer is { } offer)
-            return await PlaceFlightOrderAsync(reservation, flight, offer, request.Travelers!, now, ct);
+            return await PlaceFlightOrderAsync(reservation, payableItems, flight, offer, request.Travelers!, now, ct);
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
@@ -498,8 +510,7 @@ public class ReservationService(
             reservation.Status = ReservationStatus.CONFIRMED;
             reservation.ConfirmedAt = now;
 
-            foreach (var item in reservation.Items)
-                item.Status = ReservationItemStatus.CONFIRMED;
+            await ConfirmPayableItemsAsync(payableItems, ct);
         }
         // Si el cobro fue rechazado no se cambia Reservation.Status ni ReservationItem.Status: la
         // reserva sigue PENDING_PAYMENT y admite reintentar el pago mientras no venza ExpiresAt
@@ -530,6 +541,7 @@ public class ReservationService(
     /// </summary>
     private async Task<ReservationResponse> PlaceFlightOrderAsync(
         Reservation reservation,
+        IReadOnlyList<ReservationItem> payableItems,
         FlightBooking flight,
         FlightOffer offer,
         IReadOnlyList<FlightTravelerRequest> travelers,
@@ -584,7 +596,7 @@ public class ReservationService(
 
                 reservation.Status = ReservationStatus.CONFIRMED;
                 reservation.ConfirmedAt = now;
-                foreach (var item in reservation.Items) item.Status = ReservationItemStatus.CONFIRMED;
+                await ConfirmPayableItemsAsync(payableItems, ct);
 
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
@@ -841,6 +853,30 @@ public class ReservationService(
 
         await bookingService.ReleaseHoldsAsync([item], ct);
 
+        // Si era la última línea activa de una reserva todavía sin pagar, la reserva entera queda cancelada: no
+        // tiene sentido dejarla PENDING_PAYMENT esperando un pago por nada. Una reserva ya CONFIRMED no se toca
+        // acá: su dinero sigue el circuito de reembolsos, que es otro caso de uso.
+        var anyActiveLeft = await db.ReservationItems.AnyAsync(i =>
+            i.ReservationId == item.ReservationId
+            && (i.Status == ReservationItemStatus.PENDING_PAYMENT || i.Status == ReservationItemStatus.CONFIRMED), ct);
+
+        if (!anyActiveLeft)
+        {
+            var reservationCancelled = await db.Reservations
+                .Where(r => r.Id == item.ReservationId && r.Status == ReservationStatus.PENDING_PAYMENT)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(r => r.Status, ReservationStatus.CANCELLED)
+                    .SetProperty(r => r.CancelledAt, now), ct);
+
+            // Mismo criterio que la cancelación del turista: un pasaje todavía no emitido es sólo una intención.
+            if (reservationCancelled == 1)
+                await db.FlightBookings
+                    .Where(b => b.ReservationId == item.ReservationId && b.Status == FlightBookingStatus.PENDING)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(b => b.Status, FlightBookingStatus.CANCELLED)
+                        .SetProperty(b => b.FailureReason, "El operador canceló la reserva antes de emitir el pasaje."), ct);
+        }
+
         await tx.CommitAsync(ct);
 
         logger.LogInformation(
@@ -848,6 +884,32 @@ public class ReservationService(
             item.CompanyId, itemId, item.ReservationId);
 
         return await GetReceivedItemByIdAsync(itemId, ct);
+    }
+
+    /// <summary>
+    /// Confirma sólo las líneas cobradas, y de forma condicional: si el proveedor canceló una de ellas mientras
+    /// se procesaba el cobro, su CANCELLED gana y no se pisa con CONFIRMED. La entidad trackeada se actualiza
+    /// para la respuesta, pero sin que SaveChanges vuelva a escribir el estado de la línea.
+    /// </summary>
+    private async Task ConfirmPayableItemsAsync(IReadOnlyList<ReservationItem> payableItems, CancellationToken ct)
+    {
+        var ids = payableItems.Select(i => i.Id).ToList();
+        await db.ReservationItems
+            .Where(i => ids.Contains(i.Id) && i.Status == ReservationItemStatus.PENDING_PAYMENT)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.Status, ReservationItemStatus.CONFIRMED), ct);
+
+        var currentStatus = await db.ReservationItems
+            .Where(i => ids.Contains(i.Id))
+            .Select(i => new { i.Id, i.Status })
+            .ToDictionaryAsync(i => i.Id, i => i.Status, ct);
+
+        // Original y actual iguales: la entidad refleja la base sin quedar marcada para escribirse otra vez.
+        // (Poner IsModified = false no sirve: EF Core devuelve la propiedad a su valor original.)
+        foreach (var item in payableItems)
+        {
+            var status = db.Entry(item).Property(i => i.Status);
+            status.OriginalValue = status.CurrentValue = currentStatus.GetValueOrDefault(item.Id, item.Status);
+        }
     }
 
     private sealed record PriceRevalidation(bool Changed, decimal CurrentUnitPrice, string CurrentCurrency);
@@ -885,7 +947,11 @@ public class ReservationService(
         CancelledAt = reservation.CancelledAt,
         Items = [.. reservation.Items.Select(i => ToItemResponse(
             i, revalidationByItemId?.GetValueOrDefault(i.Id), refundsByItem?.GetValueOrDefault(i.Id)))],
+        // El total es lo que la reserva sigue incluyendo: una línea que el operador canceló no suma, ni para lo
+        // que falta pagar ni para lo que se cobró. Si se canceló todo, se muestra el total histórico.
         Totals = [.. reservation.Items
+            .Where(i => i.Status != ReservationItemStatus.CANCELLED
+                        || reservation.Items.All(x => x.Status == ReservationItemStatus.CANCELLED))
             .GroupBy(i => i.Currency)
             .Select(g => new ReservationTotalResponse { Currency = g.Key, Amount = g.Sum(i => i.Subtotal) })],
         RequiresPriceAcceptance = requiresPriceAcceptance,
