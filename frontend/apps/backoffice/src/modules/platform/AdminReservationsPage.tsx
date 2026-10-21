@@ -72,12 +72,18 @@ export const CANCELLATION_LABEL: Record<string, string> = {
 const KIND_LABEL: Record<string, string> = {
   PACKAGE: 'Paquete',
   EXPERIENCE: 'Experiencia',
+  FLIGHT: 'Vuelo',
   MIXED: 'Varios servicios',
 }
 
-/** Lo que pide acción: un pasaje sin resolver o una cancelación a medias. */
-export function needsAttention(row: { flightStatus?: string | null; cancellationStatus?: string | null }) {
+/** Lo que pide acción: un pasaje sin resolver, uno de operador sin emitir hace más de 24 h, o una cancelación a medias. */
+export function needsAttention(row: {
+  flightStatus?: string | null
+  cancellationStatus?: string | null
+  flightIssuanceOverdue?: boolean
+}) {
   return (
+    row.flightIssuanceOverdue === true ||
     row.flightStatus === 'RECONCILIATION_REQUIRED' ||
     row.flightStatus === 'ORDERING' ||
     row.cancellationStatus === 'REFUND_PENDING' ||
@@ -90,11 +96,13 @@ export function AdminReservationsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const status = searchParams.get('status') ?? 'ALL'
   const attention = searchParams.get('attention') === '1'
+  const productType = searchParams.get('product') ?? 'ALL'
   const page = Math.max(Number(searchParams.get('page') ?? '1'), 1)
 
   const { data, isLoading } = useAdminReservations({
     status: status === 'ALL' ? undefined : status,
     needsAttention: attention ? true : undefined,
+    productType: productType === 'ALL' ? undefined : productType,
     page,
     pageSize: PAGE_SIZE,
   })
@@ -134,6 +142,18 @@ export function AdminReservationsPage() {
           </SelectContent>
         </Select>
 
+        <Select value={productType} onValueChange={(value) => update('product', value === 'ALL' ? null : value)}>
+          <SelectTrigger className="w-full sm:w-48" aria-label="Filtrar por servicio">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todos los servicios</SelectItem>
+            <SelectItem value="EXPERIENCE">Experiencias</SelectItem>
+            <SelectItem value="PACKAGE">Paquetes</SelectItem>
+            <SelectItem value="FLIGHT">Vuelos de operador</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Button
           variant={attention ? 'default' : 'outline'}
           onClick={() => update('attention', attention ? null : '1')}
@@ -166,7 +186,7 @@ export function AdminReservationsPage() {
                 title={attention ? 'No hay nada esperando resolución' : 'Todavía no hay reservas'}
                 description={
                   attention
-                    ? 'Ningún pasaje quedó sin resolver y ninguna cancelación quedó a medias.'
+                    ? 'Ningún pasaje quedó sin resolver o sin emitir y ninguna cancelación quedó a medias.'
                     : 'Cuando un viajero reserve, va a aparecer acá.'
                 }
               />
@@ -192,9 +212,21 @@ export function AdminReservationsPage() {
                           {row.flightRoute ? <span className="block text-caption text-ink-muted">{row.flightRoute}</span> : null}
                         </span>
                       </span>
-                    ) : (
+                    ) : !row.flightIssuancePending ? (
                       <span className="text-ink-muted">—</span>
-                    )}
+                    ) : null}
+                    {/* Vuelos de operador: el pasaje existe sólo cuando el operador registra la emisión. */}
+                    {row.flightIssuanceOverdue ? (
+                      <span className="flex items-center gap-1.5 text-caption text-warning-fg">
+                        <TriangleAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                        Sin emitir hace más de 24 h
+                      </span>
+                    ) : row.flightIssuancePending ? (
+                      <span className="flex items-center gap-1.5 text-caption text-ink-muted">
+                        <Plane className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                        Emisión pendiente del operador
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {(row.charged ?? []).length === 0 ? (

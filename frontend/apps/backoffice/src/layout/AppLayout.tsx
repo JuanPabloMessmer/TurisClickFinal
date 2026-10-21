@@ -8,6 +8,7 @@ import {
   MapPinned,
   Menu,
   Package,
+  Plane,
   ShieldCheck,
   Tags,
   Users,
@@ -40,6 +41,7 @@ const adminNav = [
     links: [
       { to: '/admin/experiences', label: 'Experiencias', icon: Compass },
       { to: '/admin/packages', label: 'Paquetes', icon: Package },
+      { to: '/admin/flights', label: 'Vuelos', icon: Plane },
     ],
   },
   {
@@ -59,6 +61,7 @@ const providerNav = [
     links: [
       { to: '/provider/experiences', label: 'Experiencias', icon: Compass },
       { to: '/provider/packages', label: 'Paquetes', icon: Package },
+      { to: '/provider/flights', label: 'Vuelos', icon: Plane },
     ],
   },
   {

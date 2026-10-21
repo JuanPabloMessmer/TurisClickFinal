@@ -20,6 +20,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { getErrorMessage } from '@/lib/errors'
 import { useCancelCompanyReservation, useCompanyReservation } from './api'
+import { FlightIssuanceSection } from './FlightIssuanceSection'
+import { isFlightItem, itemTitle } from './itemTitle'
 
 /** Estados de la línea que el backend deja cancelar al proveedor (UC-P-14); cualquier otro responde 409. */
 const CANCELLABLE_ITEM_STATUSES = ['PENDING_PAYMENT', 'CONFIRMED']
@@ -63,7 +65,10 @@ export function ProviderReservationDetailPage() {
 
   if (isLoading || !item) return <FullScreenSpinner />
 
-  const canCancel = CANCELLABLE_ITEM_STATUSES.includes(item.status ?? '')
+  const flightItem = isFlightItem(item)
+  // Un vuelo se resuelve por su emisión (o su falla, que ya cancela con reembolso), no con la cancelación
+  // excepcional de experiencias y paquetes.
+  const canCancel = !flightItem && CANCELLABLE_ITEM_STATUSES.includes(item.status ?? '')
 
   return (
     <div className="max-w-xl">
@@ -78,10 +83,14 @@ export function ProviderReservationDetailPage() {
 
       <Card>
         <CardContent className="grid grid-cols-1 gap-5 pt-6 text-sm sm:grid-cols-2">
-          <Row label="Experiencia" value={item.experienceTitle} />
+          <Row label={flightItem ? 'Vuelo' : item.packageId ? 'Paquete' : 'Experiencia'} value={itemTitle(item)} />
           <Row label="Turista" value={item.touristName} />
-          <Row label="Fecha" value={item.date ? formatDate(item.date) : undefined} />
-          <Row label="Hora" value={item.startTime ?? 'Día completo'} />
+          {!flightItem && (
+            <>
+              <Row label="Fecha" value={item.date ? formatDate(item.date) : undefined} />
+              <Row label="Hora" value={item.startTime ? item.startTime.slice(0, 5) : 'Día completo'} />
+            </>
+          )}
           <Row label="Viajeros" value={String(item.travelers)} />
           <Row label="Precio unitario" value={formatCurrency(item.unitPrice ?? 0, item.currency ?? 'USD')} />
           <Row label="Subtotal" value={formatCurrency(item.subtotal ?? 0, item.currency ?? 'USD')} />
@@ -106,6 +115,8 @@ export function ProviderReservationDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {flightItem && <FlightIssuanceSection item={item} />}
 
       {canCancel && id && (
         <Card className="mt-6">
