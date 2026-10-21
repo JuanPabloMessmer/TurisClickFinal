@@ -134,7 +134,7 @@ export function reservationFixture(overrides: Partial<ReservationResponse> = {})
   }
 }
 
-/** Un vuelo de reserva ya emitido. Los overrides sirven para ejercitar los estados en curso y fallidos. */
+/** El vuelo de una reserva (pendiente, simulado). Los overrides sirven para ejercitar los estados en curso y fallidos. */
 export function flightFixture(overrides: Partial<FlightBookingResponse> = {}): FlightBookingResponse {
   return {
     status: 'PENDING',
@@ -156,7 +156,7 @@ export function flightFixture(overrides: Partial<FlightBookingResponse> = {}): F
     bookingReference: null,
     price: { amount: 155, currency: 'USD' },
     itinerarySummary: 'VVI→UYU 20/11 08:15 (directo)',
-    statusMessage: 'Falta confirmar el pasaje. Se emite cuando confirmás la reserva.',
+    statusMessage: 'Falta confirmar el vuelo. Se reserva cuando confirmás y pagás.',
     inProgress: false,
     ...overrides,
   }

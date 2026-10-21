@@ -60,10 +60,11 @@ public class SuspendedCompanyLeaksTests(TurisClickApiFactory factory)
 
     // ---- POST /api/flights/search: paquetes que vuelan la ruta ----
 
+    // Destino boliviano: la búsqueda suelta sólo admite destinos en Bolivia (Oleada 16, buscador global).
     private static object SearchBody() => new
     {
         originIata = "VVI",
-        destinationIata = "AMM",
+        destinationIata = "UYU",
         departureDate = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddDays(20)).ToString("yyyy-MM-dd"),
         passengers = 1,
         cabinClass = "ECONOMY",
@@ -103,7 +104,7 @@ public class SuspendedCompanyLeaksTests(TurisClickApiFactory factory)
 
         var rule = await provider.PutAsJsonAsync($"/api/packages/{package.Id}/flight-rule", new
         {
-            destinationIata = "AMM",
+            destinationIata = "UYU",
             allowedOriginIatas = new[] { "VVI", "LPB" },
             cabinClass = "ECONOMY",
             outboundOffsetDays = -1,
@@ -115,7 +116,7 @@ public class SuspendedCompanyLeaksTests(TurisClickApiFactory factory)
         var tourist = _factory.CreateClient();
         UseBearerToken(tourist, await RegisterAndLoginTouristAsync(tourist, "susp-flight-t"));
 
-        // Por id y no por conteo: la base de tests es compartida y otros casos publican paquetes a AMM.
+        // Por id y no por conteo: la base de tests es compartida y otros casos publican paquetes a UYU.
         Assert.Contains(package.Id, await RoutePackageIdsAsync(tourist));
 
         await SetCompanySuspendedAsync(adminClient, companyId, suspended: true);

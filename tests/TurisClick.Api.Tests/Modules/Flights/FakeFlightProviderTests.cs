@@ -108,4 +108,98 @@ public class FakeFlightProviderTests
         Assert.Equal(offer.Id, refreshed.Id);
         Assert.Equal(offer.Price.Amount, refreshed.Price.Amount);
     }
+
+    // ---------------------------------------------------------------- búsqueda suelta (Oleada 16)
+
+    private static FlightSearchRequest Trip(
+        string origin, string destination, DateOnly? back = null,
+        FlightCabinClass cabin = FlightCabinClass.ECONOMY, int adults = 1, int[]? children = null, int infants = 0)
+    {
+        var slices = new List<FlightSliceRequest> { new(origin, destination, Departure) };
+        if (back is { } date) slices.Add(new FlightSliceRequest(destination, origin, date));
+        return new FlightSearchRequest(slices, adults, cabin, ChildAges: children, Infants: infants);
+    }
+
+    [Fact]
+    public async Task UnaBusquedaTraeOfertasDistintas_ParaQueOrdenarYFiltrarTenganSentido()
+    {
+        var offers = (await _sut.SearchAsync(Trip("VVI", "LPB"), CancellationToken.None)).Offers;
+
+        Assert.Equal(FakeFlightProvider.OffersPerSearch, offers.Count);
+        Assert.Contains(offers, o => o.Slices[0].Segments.Count == 1);
+        Assert.Contains(offers, o => o.Slices[0].Segments.Count == 2);
+        Assert.Contains(offers, o => o.Slices[0].Segments[0].CheckedBags == 0);
+        Assert.Contains(offers, o => o.Slices[0].Segments[0].CheckedBags == 1);
+        Assert.Equal(offers.Count, offers.Select(o => o.Slices[0].Segments[0].DepartingAt.Hour).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task LasRutasCortasSeCotizanIgualQueAntes()
+    {
+        // El paquete con vuelo depende de esto: las dos primeras ofertas en económica, sólo ida y sólo adultos.
+        var offers = (await _sut.SearchAsync(Request("VVI", adults: 2), CancellationToken.None)).Offers;
+
+        Assert.Equal(240m, offers[0].Price.Amount);
+        Assert.Equal(310m, offers[1].Price.Amount);
+        Assert.Equal(new TimeOnly(8, 15), TimeOnly.FromDateTime(offers[0].Slices[0].Segments[0].DepartingAt));
+        Assert.Equal(new TimeOnly(12, 15), TimeOnly.FromDateTime(offers[1].Slices[0].Segments[0].DepartingAt));
+    }
+
+    [Fact]
+    public async Task UnVueloLargoDuraMasYCasiSiempreHaceEscala()
+    {
+        var domestic = (await _sut.SearchAsync(Trip("VVI", "LPB"), CancellationToken.None)).Offers[0];
+        var longHaul = (await _sut.SearchAsync(Trip("MAD", "VVI"), CancellationToken.None)).Offers;
+
+        Assert.True(longHaul[0].Slices[0].Duration > domestic.Slices[0].Duration);
+        Assert.Single(longHaul[0].Slices[0].Segments);
+        Assert.All(longHaul.Skip(1), o => Assert.Equal(2, o.Slices[0].Segments.Count));
+
+        // La escala nunca es uno de los extremos del viaje.
+        var stop = longHaul[1].Slices[0].Segments[0].DestinationIata;
+        Assert.NotEqual("MAD", stop);
+        Assert.NotEqual("VVI", stop);
+        Assert.Equal(stop, longHaul[1].Slices[0].Segments[1].OriginIata);
+    }
+
+    [Fact]
+    public async Task LaCabinaYLosPasajerosCambianElPrecio()
+    {
+        var economy = (await _sut.SearchAsync(Trip("VVI", "LPB"), CancellationToken.None)).Offers[0];
+        var business = (await _sut.SearchAsync(Trip("VVI", "LPB", cabin: FlightCabinClass.BUSINESS), CancellationToken.None)).Offers[0];
+        var family = (await _sut.SearchAsync(Trip("VVI", "LPB", adults: 2, children: [7], infants: 1), CancellationToken.None)).Offers[0];
+
+        Assert.Equal(economy.Price.Amount * 3, business.Price.Amount);
+        Assert.Equal(2, business.Slices[0].Segments[0].CheckedBags);
+
+        // Dos adultos, un niño al 75% y un infante en brazos al 10%.
+        Assert.Equal(economy.Price.Amount * 2.85m, family.Price.Amount);
+        Assert.Equal(["adult", "adult", "child", "infant_without_seat"], family.Passengers.Select(p => p.Type));
+    }
+
+    [Fact]
+    public async Task RevalidarUnaIdaYVueltaEnBusinessDevuelveElMismoPrecio()
+    {
+        // Si el id de la oferta perdiera la vuelta o la cabina, revalidar "cambiaría" el precio y el flujo de
+        // reserva le pediría a la persona aceptar un aumento que nadie hizo.
+        var offer = (await _sut.SearchAsync(
+            Trip("VVI", "LPB", back: Departure.AddDays(6), cabin: FlightCabinClass.BUSINESS, adults: 2, children: [5]),
+            CancellationToken.None)).Offers[1];
+
+        var refreshed = await new FakeFlightProvider().RefreshOfferAsync(offer.Id, CancellationToken.None);
+
+        Assert.Equal(offer.Price.Amount, refreshed.Price.Amount);
+        Assert.Equal(2, refreshed.Slices.Count);
+        Assert.Equal(offer.Passengers.Count, refreshed.Passengers.Count);
+    }
+
+    [Fact]
+    public async Task UnIdDeOfertaDelFormatoAnteriorSeSigueLeyendo()
+    {
+        // Cotizaciones guardadas antes de este cambio siguen en flight_quotes y se tienen que poder revalidar.
+        var refreshed = await _sut.RefreshOfferAsync("off_fake_VVI_LPB_20261119_2_1", CancellationToken.None);
+
+        Assert.Equal(310m, refreshed.Price.Amount);
+        Assert.Single(refreshed.Slices);
+    }
 }

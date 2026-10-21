@@ -20,15 +20,23 @@ public enum FlightCabinClass
 public record FlightSliceRequest(string OriginIata, string DestinationIata, DateOnly DepartureDate);
 
 /// <summary>
-/// Qué se busca. `Adults` se modela aparte de los menores porque es lo que todos los proveedores
-/// distinguen; los infantes se suman cuando el caso de uso los pida.
+/// Qué se busca. Adultos, niños e infantes van por separado porque los proveedores los tarifan distinto:
+/// el niño necesita su edad y el infante viaja en brazos, sin asiento. El paquete con vuelo sólo manda
+/// adultos; los menores los usa la búsqueda suelta.
 /// </summary>
 public record FlightSearchRequest(
     IReadOnlyList<FlightSliceRequest> Slices,
     int Adults,
     FlightCabinClass CabinClass = FlightCabinClass.ECONOMY,
     /// <summary>Techo de ofertas a traer. Una búsqueda devuelve decenas y al turista se le muestran pocas.</summary>
-    int MaxOffers = 20);
+    int MaxOffers = 20,
+    /// <summary>Edad de cada niño con asiento (2 a 11 años). Null o vacío = ninguno.</summary>
+    IReadOnlyList<int>? ChildAges = null,
+    /// <summary>Infantes en brazos (menores de 2 años), uno por adulto como máximo.</summary>
+    int Infants = 0)
+{
+    public IReadOnlyList<int> Children => ChildAges ?? [];
+}
 
 public record FlightSearchResult(
     /// <summary>Id de la búsqueda en el proveedor. Se guarda para poder rastrear una oferta hasta su origen.</summary>

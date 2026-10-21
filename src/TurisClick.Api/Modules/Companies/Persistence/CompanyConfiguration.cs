@@ -69,6 +69,18 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
         builder.HasIndex(c => c.Status)
             .HasDatabaseName("ix_companies_status");
 
+        // Venta de vuelos (Oleada 18): la autoriza un ADMIN. El registro queda aunque se revoque: es la
+        // constancia de por qué se la había autorizado.
+        builder.Property(c => c.CanSellFlights)
+            .HasColumnName("can_sell_flights")
+            .HasDefaultValue(false)
+            .IsRequired();
+        builder.Property(c => c.FlightSellerRegistration)
+            .HasColumnName("flight_seller_registration")
+            .HasMaxLength(100);
+        builder.Property(c => c.FlightSellerAuthorizedAt).HasColumnName("flight_seller_authorized_at");
+        builder.Property(c => c.FlightSellerAuthorizedByUserId).HasColumnName("flight_seller_authorized_by");
+
         // ADMIN que aprobó/rechazó — no se cascadea: un usuario no se borra físicamente (ver domain-model.md).
         builder.HasOne(c => c.ApprovedByUser)
             .WithMany()

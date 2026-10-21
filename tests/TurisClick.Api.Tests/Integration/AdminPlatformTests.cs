@@ -382,10 +382,12 @@ public class AdminPlatformTests(TurisClickApiFactory factory)
         var attention = await (await admin.GetAsync("/api/admin/reservations?needsAttention=true&pageSize=100")).Content
             .ReadFromJsonAsync<PagedResult<AdminReservationRowResponse>>(JsonOptions);
 
-        // Todo lo que entra por este filtro tiene un pasaje sin resolver o una cancelación a medias.
+        // Todo lo que entra por este filtro tiene un pasaje sin resolver, una cancelación a medias o (Oleada 18)
+        // un vuelo de operador pagado que lleva más de 24 h sin emitir.
         Assert.All(attention!.Items, row => Assert.True(
             row.FlightStatus is "RECONCILIATION_REQUIRED" or "ORDERING"
-            || row.CancellationStatus is "REFUND_PENDING" or "REQUIRES_REVIEW" or "ACCEPTED"));
+            || row.CancellationStatus is "REFUND_PENDING" or "REQUIRES_REVIEW" or "ACCEPTED"
+            || row.FlightIssuanceOverdue));
     }
 
     // ================================================================ auxiliares

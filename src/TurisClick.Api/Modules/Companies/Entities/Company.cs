@@ -25,5 +25,16 @@ public class Company
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    // ------------------------------------------------------------------ venta de vuelos (Oleada 18)
+
+    /// <summary>La autoriza un ADMIN. Sin esto, la empresa no publica vuelos y los suyos no aparecen en la búsqueda.</summary>
+    public bool CanSellFlights { get; set; }
+
+    /// <summary>Registro o licencia que la empresa declaró, tal como figura en su documentación.</summary>
+    public string? FlightSellerRegistration { get; set; }
+
+    public DateTimeOffset? FlightSellerAuthorizedAt { get; set; }
+    public Guid? FlightSellerAuthorizedByUserId { get; set; }
+
     public ICollection<User> Users { get; set; } = new List<User>();
 }

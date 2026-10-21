@@ -154,13 +154,27 @@ const FLIGHT_TONES: Record<string, 'success' | 'warning' | 'danger' | 'neutral'>
   CANCELLED: 'danger',
 }
 
+/**
+ * Nunca "pasaje emitido": confirmar una orden no es emitir un pasaje, y TurisClick todavía no registra
+ * emisiones. Una reserva simulada o de prueba se nombra como tal.
+ */
 const FLIGHT_LABELS: Record<string, string> = {
-  CONFIRMED: 'Pasaje emitido',
-  PENDING: 'Pasaje pendiente',
-  ORDERING: 'Emitiendo el pasaje',
+  CONFIRMED: 'Reserva confirmada',
+  PENDING: 'Vuelo pendiente',
+  ORDERING: 'Reservando el vuelo',
   RECONCILIATION_REQUIRED: 'Confirmando con la aerolínea',
-  FAILED: 'No se pudo emitir',
-  CANCELLED: 'Pasaje cancelado',
+  FAILED: 'No se pudo reservar',
+  CANCELLED: 'Vuelo cancelado',
+}
+
+/** SIMULATED y SANDBOX no tienen pasaje ni asiento real detrás. Sin el dato (backend anterior) se asume simulado. */
+export function isDemoInventory(mode?: string | null) {
+  return mode !== 'LIVE'
+}
+
+function flightLabel(status: string, mode?: string | null) {
+  if (status === 'CONFIRMED' && isDemoInventory(mode)) return mode === 'SANDBOX' ? 'Reserva de prueba' : 'Reserva simulada'
+  return FLIGHT_LABELS[status] ?? 'Vuelo'
 }
 
 /**
@@ -178,8 +192,19 @@ export function FlightBookingCard({ flight }: { flight: FlightBookingResponse })
           <Icon icon={Plane} size={16} color={colors.primary} />
           <Text className="font-ui600 text-label text-ink">Vuelo</Text>
         </View>
-        <StateBadge label={FLIGHT_LABELS[status] ?? 'Vuelo'} tone={FLIGHT_TONES[status] ?? 'neutral'} />
+        <StateBadge label={flightLabel(status, flight.inventoryMode)} tone={FLIGHT_TONES[status] ?? 'neutral'} />
       </View>
+
+      {isDemoInventory(flight.inventoryMode) ? (
+        <View testID="flight-demo-notice" className="mt-3 rounded-md border border-warning-fg/30 bg-warning-bg p-3">
+          <Text className="font-ui600 text-label text-warning-fg">DEMO · vuelo simulado</Text>
+          <Text className="mt-1 font-sans text-caption text-warning-fg">
+            {flight.inventoryMode === 'SANDBOX'
+              ? 'Reserva hecha en el entorno de prueba del proveedor. No es un pasaje real y no sirve para volar.'
+              : 'Esta reserva es una simulación de TurisClick. No existe un pasaje ni un asiento real.'}
+          </Text>
+        </View>
+      ) : null}
 
       <Text className="mt-3 font-ui700 text-heading text-ink">
         {flight.originLabel ?? flight.originIata} → {flight.destinationLabel ?? flight.destinationIata}

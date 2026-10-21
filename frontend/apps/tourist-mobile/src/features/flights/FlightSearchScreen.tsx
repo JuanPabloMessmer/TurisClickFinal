@@ -1,332 +1,230 @@
-import type { flightsApi } from '@turisclick/api-client'
-import { formatCurrency, formatDate } from '@turisclick/utils'
+import { addDaysIso, todayIso } from '@turisclick/utils'
 import { useRouter } from 'expo-router'
-import { Plane, Search } from 'lucide-react-native'
-import { useMemo, useState } from 'react'
+import { ArrowUpDown, CalendarDays, PlaneLanding, PlaneTakeoff, Search, Users } from 'lucide-react-native'
+import { useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
-import { useAirports, useFlightSearch } from '@/features/flights/api'
-import { FlightItinerary } from '@/features/flights/components'
-import { toApiError } from '@/lib/errors'
-import { Button, Chip, EmptyState, ErrorState, FieldLabel, Icon, Skeleton, Surface } from '@/ui'
+import { AirportPickerModal } from '@/features/flights/search/AirportPickerModal'
+import { DateRangeModal, formatShortDate } from '@/features/flights/search/DateRangeModal'
+import {
+  cabinLabel,
+  canSwap,
+  draftProblem,
+  initialDraft,
+  passengersSummary,
+  toSearchParams,
+  type AirportChoice,
+  type SearchDraft,
+} from '@/features/flights/search/model'
+import { PassengersModal } from '@/features/flights/search/PassengersModal'
+import { colors } from '@/theme/colors'
+import { Button, Icon, SegmentedControl, Surface } from '@/ui'
+
+type Panel = 'origin' | 'destination' | 'dates' | 'passengers' | null
 
 /**
- * Explorador de vuelos.
+ * Buscador de vuelos, con la forma de cualquier buscador conocido: origen y destino con autocompletado,
+ * ida y vuelta o sólo ida en un calendario, pasajeros y cabina, y un botón. Los resultados se abren en otra
+ * pantalla; al volver, el formulario sigue como estaba.
  *
- * Esta pantalla **no vende pasajes**, y está construida para que eso se note. En TurisClick un vuelo se
- * compra dentro de un paquete —la reserva aérea cuelga de una reserva de paquete— así que acá no hay botón
- * de reservar, no hay "seleccionar" y el backend no devuelve ningún identificador reservable. Lo que sí
- * hace es mostrar qué se vuela realmente en esa ruta y llevar a los paquetes que la cubren, que es lo
- * único que se puede comprar.
+ * Origen: cualquier aeropuerto del mundo. Destino: por ahora, Bolivia. Las reglas viven en
+ * `search/model.ts` y son las mismas que valida el backend.
  *
- * Las ofertas salen del entorno de pruebas del proveedor y se rotulan como tales en la pantalla, no en una
- * nota al pie: un precio de prueba que parezca real es peor que no mostrarlo.
+ * Esta pantalla **no vende pasajes**: la compra de vuelos sueltos todavía no existe, y los resultados lo
+ * dicen. Lo que sí se puede comprar hoy son los paquetes que vuelan la ruta.
  */
-
-/** Ida y vuelta se pide eligiendo una fecha de regreso; sin ella, es sólo ida. */
-type Draft = {
-  originIata: string
-  destinationIata: string
-  departureInDays: number
-  passengers: number
-}
-
-const EMPTY: Draft = { originIata: '', destinationIata: '', departureInDays: 14, passengers: 1 }
-
-/** Opciones de fecha relativas: un selector de calendario completo es otra pantalla, no este primer paso. */
-const DATE_OPTIONS = [
-  { days: 7, label: 'En 1 semana' },
-  { days: 14, label: 'En 2 semanas' },
-  { days: 30, label: 'En 1 mes' },
-  { days: 60, label: 'En 2 meses' },
-]
-
-function isoInDays(days: number) {
-  const date = new Date()
-  date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
-}
-
-export function FlightSearchScreen() {
+export function FlightSearchScreen({ today = todayIso() }: { today?: string }) {
   const router = useRouter()
-  const airports = useAirports()
-  const search = useFlightSearch()
-  const [draft, setDraft] = useState<Draft>(EMPTY)
+  const [draft, setDraft] = useState<SearchDraft>(() => initialDraft(today))
+  const [panel, setPanel] = useState<Panel>(null)
 
-  // Bolivia primero: es donde opera el catálogo. El backend ya los devuelve en ese orden.
-  const options = useMemo(() => airports.data ?? [], [airports.data])
+  const problem = draftProblem(draft, today)
+  const close = () => setPanel(null)
 
-  const ready = Boolean(draft.originIata) && Boolean(draft.destinationIata) && draft.originIata !== draft.destinationIata
+  const chooseAirport = (side: 'origin' | 'destination', airport: AirportChoice) => {
+    setDraft((d) => ({ ...d, [side]: airport }))
+    setPanel(null)
+  }
 
-  const result = search.data
-  const failure = search.error ? toApiError(search.error) : null
-
-  const run = () =>
-    search.mutate({
-      originIata: draft.originIata,
-      destinationIata: draft.destinationIata,
-      departureDate: isoInDays(draft.departureInDays),
-      passengers: draft.passengers,
-      cabinClass: 'ECONOMY',
-    })
-
-  return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
-      <View className="px-5">
-        <Text className="font-sans text-body text-ink-muted">
-          Mirá qué vuelos hay para una ruta y con qué paquetes de TurisClick se viaja.
-        </Text>
-
-        <View className="mt-5">
-          <FieldLabel label="¿Desde dónde salís?" />
-          <AirportPicker
-            testID="picker-origen"
-            airports={options}
-            loading={airports.isPending}
-            selected={draft.originIata}
-            onSelect={(iata) => setDraft((d) => ({ ...d, originIata: iata }))}
-          />
-        </View>
-
-        <View className="mt-5">
-          <FieldLabel label="¿A dónde vas?" />
-          <AirportPicker
-            testID="picker-destino"
-            airports={options}
-            loading={airports.isPending}
-            selected={draft.destinationIata}
-            disabled={draft.originIata}
-            onSelect={(iata) => setDraft((d) => ({ ...d, destinationIata: iata }))}
-          />
-        </View>
-
-        <View className="mt-5">
-          <FieldLabel label="¿Cuándo?" />
-          <View className="mt-2 flex-row flex-wrap gap-2">
-            {DATE_OPTIONS.map((option) => (
-              <Chip
-                key={option.days}
-                label={option.label}
-                selected={draft.departureInDays === option.days}
-                onPress={() => setDraft((d) => ({ ...d, departureInDays: option.days }))}
-              />
-            ))}
-          </View>
-          <Text className="mt-2 font-sans text-caption text-ink-muted">
-            {formatDate(isoInDays(draft.departureInDays))}
-          </Text>
-        </View>
-
-        <View className="mt-5">
-          <FieldLabel label="¿Cuántos viajan?" />
-          <View className="mt-2 flex-row flex-wrap gap-2">
-            {[1, 2, 3, 4].map((count) => (
-              <Chip
-                key={count}
-                label={count === 1 ? '1 persona' : `${count} personas`}
-                selected={draft.passengers === count}
-                onPress={() => setDraft((d) => ({ ...d, passengers: count }))}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View className="mt-6">
-          <Button
-            label="Buscar vuelos"
-            icon={Search}
-            loading={search.isPending}
-            disabled={!ready}
-            onPress={run}
-          />
-          {!ready && draft.originIata && draft.originIata === draft.destinationIata ? (
-            <Text className="mt-2 font-sans text-label text-danger-fg">
-              El origen y el destino no pueden ser el mismo aeropuerto.
-            </Text>
-          ) : null}
-        </View>
-      </View>
-
-      {search.isPending ? <SearchSkeleton /> : null}
-
-      {failure ? (
-        <View className="mt-6 px-5">
-          <ErrorState message={failure.message} onRetry={run} />
-        </View>
-      ) : null}
-
-      {result && !search.isPending ? <Results result={result} onOpenPackage={(id) => router.push(`/package/${id}`)} /> : null}
-    </ScrollView>
-  )
-}
-
-function AirportPicker({
-  testID,
-  airports,
-  loading,
-  selected,
-  disabled,
-  onSelect,
-}: {
-  /** Los dos selectores muestran los mismos aeropuertos: sin esto no hay forma de distinguirlos. */
-  testID: string
-  airports: flightsApi.AirportResponse[]
-  loading: boolean
-  selected: string
-  /** El aeropuerto ya elegido como origen: no puede ser también el destino. */
-  disabled?: string
-  onSelect: (iata: string) => void
-}) {
-  if (loading) {
-    return (
-      <View testID={testID} className="mt-2 flex-row gap-2">
-        <Skeleton className="h-11 w-32" />
-        <Skeleton className="h-11 w-32" />
-        <Skeleton className="h-11 w-28" />
-      </View>
-    )
+  const search = () => {
+    if (problem) return
+    router.push({ pathname: '/flight-results', params: toSearchParams(draft) })
   }
 
   return (
-    <ScrollView testID={testID} horizontal showsHorizontalScrollIndicator={false} className="mt-2">
-      <View className="flex-row gap-2 pr-5">
-        {airports
-          .filter((airport) => airport.iata !== disabled)
-          .map((airport) => (
-            <Chip
-              key={airport.iata}
-              label={airport.label ?? airport.iata ?? ''}
-              selected={selected === airport.iata}
-              onPress={() => onSelect(airport.iata!)}
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+      <Text className="font-sans text-body text-ink-muted">Vuelos a Bolivia desde cualquier aeropuerto del mundo.</Text>
+
+      <Surface className="mt-4 rounded-lg">
+        <View className="p-4">
+          <SegmentedControl
+            options={[
+              { value: 'ROUND_TRIP', label: 'Ida y vuelta' },
+              { value: 'ONE_WAY', label: 'Sólo ida' },
+            ]}
+            value={draft.tripType}
+            onChange={(tripType) =>
+              setDraft((d) => ({
+                ...d,
+                tripType,
+                // Pasar a ida y vuelta propone una vuelta a la semana, en vez de dejar el buscador incompleto.
+                returnDate:
+                  tripType === 'ROUND_TRIP'
+                    ? d.returnDate ?? (d.departureDate ? addDaysIso(d.departureDate, 7) : null)
+                    : d.returnDate,
+              }))
+            }
+          />
+
+          <View className="mt-4">
+            <Field
+              testID="campo-origen"
+              icon={PlaneTakeoff}
+              label="Desde"
+              value={draft.origin ? `${draft.origin.city} (${draft.origin.iata})` : null}
+              detail={draft.origin?.country}
+              placeholder="Ciudad o aeropuerto de salida"
+              onPress={() => setPanel('origin')}
             />
-          ))}
-      </View>
+            <View className="relative">
+              <View className="ml-11 h-px bg-border" />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Invertir origen y destino"
+                accessibilityState={{ disabled: !canSwap(draft) }}
+                disabled={!canSwap(draft)}
+                onPress={() => setDraft((d) => ({ ...d, origin: d.destination, destination: d.origin }))}
+                className={`absolute right-2 -top-5 h-10 w-10 items-center justify-center rounded-full border border-border bg-surface ${
+                  canSwap(draft) ? 'active:opacity-60' : 'opacity-30'
+                }`}
+              >
+                <Icon icon={ArrowUpDown} size={16} color={colors.primary} />
+              </Pressable>
+            </View>
+            <Field
+              testID="campo-destino"
+              icon={PlaneLanding}
+              label="Hacia"
+              value={draft.destination ? `${draft.destination.city} (${draft.destination.iata})` : null}
+              detail={draft.destination?.country}
+              placeholder="Destino en Bolivia"
+              onPress={() => setPanel('destination')}
+            />
+          </View>
+
+          <View className="mt-2 border-t border-border">
+            <Field
+              testID="campo-fechas"
+              icon={CalendarDays}
+              label={draft.tripType === 'ROUND_TRIP' ? 'Ida y vuelta' : 'Ida'}
+              value={
+                draft.tripType === 'ROUND_TRIP'
+                  ? `${formatShortDate(draft.departureDate)} – ${formatShortDate(draft.returnDate)}`
+                  : formatShortDate(draft.departureDate)
+              }
+              onPress={() => setPanel('dates')}
+            />
+          </View>
+
+          <View className="border-t border-border">
+            <Field
+              testID="campo-pasajeros"
+              icon={Users}
+              label="Pasajeros y cabina"
+              value={`${passengersSummary(draft.passengers)} · ${cabinLabel(draft.cabin)}`}
+              onPress={() => setPanel('passengers')}
+            />
+          </View>
+
+          <View className="mt-4">
+            <Button label="Buscar vuelos" icon={Search} disabled={Boolean(problem)} onPress={search} />
+            {problem && (draft.origin || draft.destination) ? (
+              <Text accessibilityRole="alert" className="mt-2 font-sans text-label text-danger-fg">
+                {problem}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      </Surface>
+
+      <Text className="mt-5 font-sans text-caption text-ink-muted">
+        Buscás vuelos y los comparás. Comprar un vuelo suelto todavía no está disponible: hoy el vuelo se compra
+        dentro de un paquete de TurisClick.
+      </Text>
+
+      <AirportPickerModal
+        visible={panel === 'origin'}
+        role="origin"
+        exclude={draft.destination?.iata}
+        onSelect={(airport) => chooseAirport('origin', airport)}
+        onClose={close}
+      />
+      <AirportPickerModal
+        visible={panel === 'destination'}
+        role="destination"
+        exclude={draft.origin?.iata}
+        onSelect={(airport) => chooseAirport('destination', airport)}
+        onClose={close}
+      />
+      <DateRangeModal
+        visible={panel === 'dates'}
+        tripType={draft.tripType}
+        value={{ departure: draft.departureDate, return: draft.returnDate }}
+        today={today}
+        onConfirm={(range) => {
+          setDraft((d) => ({ ...d, departureDate: range.departure, returnDate: range.return }))
+          setPanel(null)
+        }}
+        onClose={close}
+      />
+      <PassengersModal
+        visible={panel === 'passengers'}
+        value={draft.passengers}
+        cabin={draft.cabin}
+        onConfirm={(passengers, cabin) => {
+          setDraft((d) => ({ ...d, passengers, cabin }))
+          setPanel(null)
+        }}
+        onClose={close}
+      />
     </ScrollView>
   )
 }
 
-function SearchSkeleton() {
-  return (
-    <View className="mt-6 gap-3 px-5">
-      <Skeleton className="h-28 w-full" />
-      <Skeleton className="h-28 w-full" />
-    </View>
-  )
-}
-
-function Results({
-  result,
-  onOpenPackage,
+function Field({
+  testID,
+  icon,
+  label,
+  value,
+  detail,
+  placeholder,
+  onPress,
 }: {
-  result: flightsApi.SearchFlightsResponse
-  onOpenPackage: (id: string) => void
+  testID: string
+  icon: Parameters<typeof Icon>[0]['icon']
+  label: string
+  value: string | null
+  detail?: string
+  placeholder?: string
+  onPress: () => void
 }) {
-  const options = result.options ?? []
-  const packages = result.packages ?? []
-
   return (
-    <View className="mt-7">
-      <View className="px-5">
-        <Text className="font-display text-title text-ink">
-          {result.originLabel} → {result.destinationLabel}
-        </Text>
-        <Text className="mt-0.5 font-sans text-caption text-ink-muted">
-          {result.departureDate ? formatDate(result.departureDate) : ''} ·{' '}
-          {result.passengers === 1 ? '1 persona' : `${result.passengers} personas`}
-        </Text>
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value ?? placeholder ?? 'sin elegir'}`}
+      onPress={onPress}
+      className="min-h-[56px] flex-row items-center gap-3 py-2 pr-12 active:opacity-60"
+    >
+      <View className="h-8 w-8 items-center justify-center">
+        <Icon icon={icon} size={20} color={colors.primary} />
       </View>
-
-      {result.testMode ? (
-        <View className="mx-5 mt-3 rounded-md border border-warning-fg/30 bg-warning-bg p-3">
-          <Text className="font-ui600 text-label text-warning-fg">Vuelos de prueba</Text>
-          <Text className="mt-1 font-sans text-caption text-warning-fg">
-            Son ofertas reales de aerolíneas reales, consultadas en el entorno de pruebas del proveedor. Los
-            precios sirven para orientarte; no se emite ningún pasaje desde acá.
-          </Text>
-        </View>
-      ) : null}
-
-      {result.notice ? (
-        <View className="mt-4 px-5">
-          <EmptyState title="Sin vuelos para esa búsqueda" message={result.notice} />
-        </View>
-      ) : null}
-
-      {options.length > 0 ? (
-        <View className="mt-4 gap-3 px-5">
-          {options.map((option, index) => (
-            <Surface key={index}>
-              <View className="p-4">
-                <View className="flex-row items-start justify-between gap-3">
-                  <View className="flex-1">
-                    <View className="flex-row items-center gap-1.5">
-                      <Icon icon={Plane} size={14} />
-                      <Text className="font-ui600 text-label text-ink">
-                        {option.carrierName ?? 'Aerolínea por confirmar'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View className="items-end">
-                    <Text className="font-display text-heading text-ink">
-                      {formatCurrency(option.price?.amount ?? 0, option.price?.currency ?? 'USD')}
-                    </Text>
-                    <Text className="font-sans text-caption text-ink-muted">
-                      {result.passengers === 1 ? 'total' : `total, ${result.passengers} personas`}
-                    </Text>
-                  </View>
-                </View>
-                <View className="mt-3 border-t border-border pt-3">
-                  <FlightItinerary slices={option.slices ?? []} />
-                </View>
-              </View>
-            </Surface>
-          ))}
-        </View>
-      ) : null}
-
-      <View className="mt-8 px-5">
-        <Text className="font-display text-heading text-ink">Cómo se compra un vuelo acá</Text>
-        <Text className="mt-1 font-sans text-body text-ink-muted">
-          TurisClick no vende pasajes sueltos: el vuelo viaja con el paquete, y el operador se hace cargo de
-          los dos. Por eso acá mirás, y reservás en el paquete.
+      <View className="flex-1">
+        <Text className="font-ui600 text-caption uppercase tracking-wide text-ink-muted">{label}</Text>
+        <Text className={`font-ui600 text-body ${value ? 'text-ink' : 'text-ink-muted'}`} numberOfLines={1}>
+          {value ?? placeholder}
         </Text>
-
-        {packages.length === 0 ? (
-          <View className="mt-4">
-            <EmptyState
-              title="Todavía no hay paquetes en esta ruta"
-              message="Ningún operador publicó un paquete con vuelo entre estos dos aeropuertos. Probá con otro destino."
-            />
-          </View>
-        ) : (
-          <View className="mt-4 gap-3">
-            {packages.map((item) => (
-              <Pressable
-                key={item.id}
-                accessibilityRole="button"
-                accessibilityLabel={`Ver ${item.title}`}
-                onPress={() => onOpenPackage(item.id!)}
-                className="active:opacity-70"
-              >
-                <Surface>
-                  <View className="flex-row items-center justify-between gap-3 p-4">
-                    <View className="flex-1">
-                      <Text className="font-ui600 text-label text-ink" numberOfLines={2}>
-                        {item.title}
-                      </Text>
-                      <Text className="mt-0.5 font-sans text-caption text-ink-muted">
-                        {item.destinationName} · {item.durationDays} días
-                      </Text>
-                    </View>
-                    <Text className="font-display text-heading text-ink">
-                      {formatCurrency(item.price?.amount ?? 0, item.price?.currency ?? 'BOB')}
-                    </Text>
-                  </View>
-                </Surface>
-              </Pressable>
-            ))}
-          </View>
-        )}
+        {detail ? <Text className="font-sans text-caption text-ink-muted">{detail}</Text> : null}
       </View>
-    </View>
+    </Pressable>
   )
 }

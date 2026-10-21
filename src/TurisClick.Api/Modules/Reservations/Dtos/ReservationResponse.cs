@@ -1,4 +1,5 @@
 using TurisClick.Api.Modules.Flights.Dtos;
+using TurisClick.Api.Modules.Flights.ProviderFlights.Dtos;
 
 namespace TurisClick.Api.Modules.Reservations.Dtos;
 
@@ -79,6 +80,11 @@ public class ReservationItemResponse
     public string TouristName { get; set; } = string.Empty;
 
     public int Travelers { get; set; }
+
+    /// <summary>
+    /// Precio unitario congelado. En un vuelo de operador (ProductType FLIGHT) es la tarifa de ADULTO: con niños
+    /// o infantes, UnitPrice × Travelers no es el subtotal. El importe de la línea es siempre <see cref="Subtotal"/>.
+    /// </summary>
     public decimal UnitPrice { get; set; }
     public string Currency { get; set; } = string.Empty;
     public decimal Subtotal { get; set; }
@@ -113,6 +119,12 @@ public class ReservationItemResponse
 
     /// <summary>Cuánto se reembolsó de esta línea, si se canceló. Nulo mientras no haya habido reembolso.</summary>
     public decimal? RefundedAmount { get; set; }
+
+    /// <summary>
+    /// Vuelo de operador (ProductType = "FLIGHT"): la ruta, los horarios, los pasajeros y el estado de la
+    /// emisión. Null en cualquier otro ítem. (Contrato de B1: se llena a partir de B2.)
+    /// </summary>
+    public ProviderFlightItemResponse? Flight { get; set; }
 }
 
 public class ReservationTotalResponse

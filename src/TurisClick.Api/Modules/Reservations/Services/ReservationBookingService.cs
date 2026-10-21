@@ -125,7 +125,7 @@ public class ReservationBookingService(
             .Select(i => new
             {
                 i.ProductType,
-                AvailabilityId = i.ExperienceAvailabilityId ?? i.PackageAvailabilityId,
+                AvailabilityId = i.ExperienceAvailabilityId ?? i.PackageAvailabilityId ?? i.ProviderFlightDepartureId,
                 i.Travelers
             })
             .Where(r => r.AvailabilityId.HasValue)
@@ -139,13 +139,20 @@ public class ReservationBookingService(
         {
             // El `reserved_slots >= n` de la condición hace imposible dejar la capacidad negativa
             // aunque alguien invocara esto de más; el CHECK de la tabla queda como última red.
-            var affectedRows = release.ProductType == ProductType.EXPERIENCE
-                ? await db.ExperienceAvailabilities
+            // Un vuelo de operador devuelve asientos de su salida: Travelers es la cantidad de pasajeros con
+            // asiento (los infantes viajan en brazos y nunca tomaron uno).
+            var affectedRows = release.ProductType switch
+            {
+                ProductType.EXPERIENCE => await db.ExperienceAvailabilities
                     .Where(a => a.Id == release.AvailabilityId && a.ReservedSlots >= release.Travelers)
-                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots - release.Travelers), ct)
-                : await db.PackageAvailabilities
+                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots - release.Travelers), ct),
+                ProductType.PACKAGE => await db.PackageAvailabilities
                     .Where(a => a.Id == release.AvailabilityId && a.ReservedSlots >= release.Travelers)
-                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots - release.Travelers), ct);
+                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReservedSlots, a => a.ReservedSlots - release.Travelers), ct),
+                _ => await db.ProviderFlightDepartures
+                    .Where(d => d.Id == release.AvailabilityId && d.ReservedSeats >= release.Travelers)
+                    .ExecuteUpdateAsync(s => s.SetProperty(d => d.ReservedSeats, d => d.ReservedSeats - release.Travelers), ct),
+            };
 
             if (affectedRows != 1)
             {

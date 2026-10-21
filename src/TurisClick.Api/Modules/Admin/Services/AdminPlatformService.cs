@@ -21,8 +21,9 @@ public interface IAdminPlatformService
     Task<PagedResult<AdminPackageRowResponse>> ListPackagesAsync(
         string? status, string? search, bool? withFlight, int page, int pageSize, CancellationToken ct);
 
+    /// <param name="productType">EXPERIENCE, PACKAGE o FLIGHT: reservas con al menos una línea de ese tipo.</param>
     Task<PagedResult<AdminReservationRowResponse>> ListReservationsAsync(
-        string? status, bool? needsAttention, int page, int pageSize, CancellationToken ct);
+        string? status, bool? needsAttention, int page, int pageSize, CancellationToken ct, string? productType = null);
 }
 
 /// <summary>
@@ -241,8 +242,14 @@ public class AdminPlatformService(TurisClickDbContext db) : IAdminPlatformServic
         };
     }
 
+    /// <summary>
+    /// Un vuelo de operador pagado y sin emitir pasado este plazo pide atención: la persona pagó y el operador
+    /// todavía no registró el pasaje.
+    /// </summary>
+    public static readonly TimeSpan IssuanceOverdueAfter = TimeSpan.FromHours(24);
+
     public async Task<PagedResult<AdminReservationRowResponse>> ListReservationsAsync(
-        string? status, bool? needsAttention, int page, int pageSize, CancellationToken ct)
+        string? status, bool? needsAttention, int page, int pageSize, CancellationToken ct, string? productType = null)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 100);
@@ -251,6 +258,11 @@ public class AdminPlatformService(TurisClickDbContext db) : IAdminPlatformServic
 
         if (Enum.TryParse<ReservationStatus>(status, ignoreCase: true, out var reservationStatus))
             query = query.Where(r => r.Status == reservationStatus);
+
+        if (Enum.TryParse<ProductType>(productType, ignoreCase: true, out var kind))
+            query = query.Where(r => r.Items.Any(i => i.ProductType == kind));
+
+        var overdueBefore = DateTimeOffset.UtcNow - IssuanceOverdueAfter;
 
         // "Necesita atención" es lo único que convierte este listado en una cola de trabajo: un pasaje sin
         // resolver o una cancelación que quedó a medias.
@@ -261,7 +273,12 @@ public class AdminPlatformService(TurisClickDbContext db) : IAdminPlatformServic
                 || db.ReservationCancellations.Any(c => c.ReservationId == r.Id
                     && (c.Status == ReservationCancellationStatus.REFUND_PENDING
                         || c.Status == ReservationCancellationStatus.REQUIRES_REVIEW
-                        || c.Status == ReservationCancellationStatus.ACCEPTED)));
+                        || c.Status == ReservationCancellationStatus.ACCEPTED))
+                // Un vuelo de operador pagado que el operador no emite.
+                || (r.ConfirmedAt < overdueBefore
+                    && r.Items.Any(i => i.ProductType == ProductType.FLIGHT
+                        && i.Status == ReservationItemStatus.CONFIRMED
+                        && i.IssuanceStatus == FlightIssuanceStatus.PENDING)));
 
         var total = await query.CountAsync(ct);
 
@@ -282,7 +299,13 @@ public class AdminPlatformService(TurisClickDbContext db) : IAdminPlatformServic
                 Items = r.Items.Select(i => new
                 {
                     i.ProductType,
-                    Title = i.ProductType == ProductType.PACKAGE ? i.Package!.Title : i.Experience!.Title,
+                    Title = i.ProductType == ProductType.PACKAGE
+                        ? i.Package!.Title
+                        : i.ProductType == ProductType.FLIGHT
+                            ? "Vuelo " + i.ProviderFlight!.FlightNumber + " " + i.ProviderFlight.OriginIata + "→" + i.ProviderFlight.DestinationIata
+                            : i.Experience!.Title,
+                    i.Status,
+                    i.IssuanceStatus,
                     Company = i.Company!.Name,
                     i.Travelers,
                     i.Subtotal,
@@ -333,6 +356,10 @@ public class AdminPlatformService(TurisClickDbContext db) : IAdminPlatformServic
                 FlightStatus = r.Flight?.Status.ToString(),
                 FlightRoute = r.Flight is null ? null : $"{r.Flight.OriginIata} → {r.Flight.DestinationIata}",
                 CancellationStatus = r.CancellationStatus?.ToString(),
+                FlightIssuancePending = r.Items.Any(i => i.ProductType == ProductType.FLIGHT
+                    && i.Status == ReservationItemStatus.CONFIRMED && i.IssuanceStatus == FlightIssuanceStatus.PENDING),
+                FlightIssuanceOverdue = r.ConfirmedAt < overdueBefore && r.Items.Any(i => i.ProductType == ProductType.FLIGHT
+                    && i.Status == ReservationItemStatus.CONFIRMED && i.IssuanceStatus == FlightIssuanceStatus.PENDING),
                 Charged = [.. r.Money
                     .Where(m => m.Type == PaymentTransactionType.CHARGE)
                     .GroupBy(m => m.Currency)

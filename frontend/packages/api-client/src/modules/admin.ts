@@ -56,9 +56,13 @@ export const listPackages = (
   params?: { status?: string; search?: string; withFlight?: boolean; page?: number; pageSize?: number },
 ) => http.get<Paged<AdminPackageRowResponse>>('/api/admin/packages', { params }).then((r) => r.data)
 
+/**
+ * `productType` (EXPERIENCE, PACKAGE o FLIGHT) filtra las reservas con al menos una línea de ese tipo.
+ * `needsAttention` incluye los vuelos de operador pagados que llevan más de 24 h sin emitir.
+ */
 export const listReservations = (
   http: AxiosInstance,
-  params?: { status?: string; needsAttention?: boolean; page?: number; pageSize?: number },
+  params?: { status?: string; needsAttention?: boolean; productType?: string; page?: number; pageSize?: number },
 ) => http.get<Paged<AdminReservationRowResponse>>('/api/admin/reservations', { params }).then((r) => r.data)
 
 /** El libro de pagos de una reserva, su saldo por moneda y sus cancelaciones. */

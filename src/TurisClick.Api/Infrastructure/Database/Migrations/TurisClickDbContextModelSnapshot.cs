@@ -450,6 +450,12 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("approved_by_user_id");
 
+                    b.Property<bool>("CanSellFlights")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("can_sell_flights");
+
                     b.Property<string>("ContactEmail")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -470,6 +476,19 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text")
                         .HasColumnName("description");
+
+                    b.Property<DateTimeOffset?>("FlightSellerAuthorizedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("flight_seller_authorized_at");
+
+                    b.Property<Guid?>("FlightSellerAuthorizedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("flight_seller_authorized_by");
+
+                    b.Property<string>("FlightSellerRegistration")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("flight_seller_registration");
 
                     b.Property<string>("LegalDocument")
                         .IsRequired()
@@ -1114,6 +1133,255 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TurisClick.Api.Modules.Flights.ProviderFlights.Entities.ProviderFlight", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("CabinClass")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("ECONOMY")
+                        .HasColumnName("cabin_class");
+
+                    b.Property<string>("CancellationPolicy")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("cancellation_policy");
+
+                    b.Property<string>("CarrierIata")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("carrier_iata");
+
+                    b.Property<string>("CarrierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("carrier_name");
+
+                    b.Property<int>("CarryOnBags")
+                        .HasColumnType("integer")
+                        .HasColumnName("carry_on_bags");
+
+                    b.Property<int>("CheckedBags")
+                        .HasColumnType("integer")
+                        .HasColumnName("checked_bags");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("DestinationIata")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("destination_iata");
+
+                    b.Property<string>("FareRules")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("fare_rules");
+
+                    b.Property<string>("FlightNumber")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("flight_number");
+
+                    b.Property<string>("OriginIata")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("origin_iata");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("DRAFT")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("SuspendedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("suspended_at");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId")
+                        .HasDatabaseName("ix_provider_flights_company");
+
+                    b.HasIndex("OriginIata", "DestinationIata", "Status")
+                        .HasDatabaseName("ix_provider_flights_route");
+
+                    b.ToTable("provider_flights", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_provider_flights_bags", "checked_bags BETWEEN 0 AND 3 AND carry_on_bags BETWEEN 0 AND 2");
+
+                            t.HasCheckConstraint("ck_provider_flights_cancellation_policy", "cancellation_policy IS NULL OR cancellation_policy ~ '^[0-9]{1,3}:[0-9]{1,3}(;[0-9]{1,3}:[0-9]{1,3}){0,5}$'");
+
+                            t.HasCheckConstraint("ck_provider_flights_iata", "origin_iata ~ '^[A-Z]{3}$' AND destination_iata ~ '^[A-Z]{3}$'");
+
+                            t.HasCheckConstraint("ck_provider_flights_route", "origin_iata <> destination_iata");
+                        });
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Flights.ProviderFlights.Entities.ProviderFlightDeparture", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<decimal>("AdultPrice")
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("adult_price");
+
+                    b.Property<DateTime>("ArrivalAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("arrival_at");
+
+                    b.Property<decimal>("ChildPrice")
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("child_price");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<DateTime>("DepartureAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("departure_at");
+
+                    b.Property<decimal>("InfantPrice")
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("infant_price");
+
+                    b.Property<Guid>("ProviderFlightId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("provider_flight_id");
+
+                    b.Property<int>("ReservedSeats")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("reserved_seats");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("OPEN")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TotalSeats")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_seats");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderFlightId", "DepartureAt")
+                        .HasDatabaseName("ix_provider_flight_departures_flight_date");
+
+                    b.ToTable("provider_flight_departures", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_provider_flight_departures_currency", "currency ~ '^[A-Z]{3}$'");
+
+                            t.HasCheckConstraint("ck_provider_flight_departures_prices", "adult_price >= 0 AND child_price >= 0 AND infant_price >= 0");
+
+                            t.HasCheckConstraint("ck_provider_flight_departures_seats", "total_seats > 0 AND reserved_seats >= 0 AND reserved_seats <= total_seats");
+
+                            t.HasCheckConstraint("ck_provider_flight_departures_times", "arrival_at > departure_at");
+                        });
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Flights.ProviderFlights.Entities.ReservationPassenger", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateOnly>("BornOn")
+                        .HasColumnType("date")
+                        .HasColumnName("born_on");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("FamilyName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("family_name");
+
+                    b.Property<string>("GivenName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("given_name");
+
+                    b.Property<Guid>("ReservationItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reservation_item_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservationItemId", "SortOrder")
+                        .IsUnique()
+                        .HasDatabaseName("ux_reservation_passengers_item_order");
+
+                    b.ToTable("reservation_passengers", (string)null);
+                });
+
             modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.Package", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1707,6 +1975,11 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                         .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<string>("BookingReference")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("booking_reference");
+
                     b.Property<string>("CancellationPolicy")
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)")
@@ -1749,6 +2022,27 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("experience_id");
 
+                    b.Property<string>("IssuanceNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("issuance_note");
+
+                    b.Property<string>("IssuanceStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("NOT_REQUIRED")
+                        .HasColumnName("issuance_status");
+
+                    b.Property<DateTimeOffset?>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<Guid?>("IssuedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("issued_by");
+
                     b.Property<Guid?>("PackageAvailabilityId")
                         .HasColumnType("uuid")
                         .HasColumnName("package_availability_id");
@@ -1762,6 +2056,14 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("product_type");
+
+                    b.Property<Guid?>("ProviderFlightDepartureId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("provider_flight_departure_id");
+
+                    b.Property<Guid?>("ProviderFlightId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("provider_flight_id");
 
                     b.Property<Guid>("ReservationId")
                         .HasColumnType("uuid")
@@ -1778,6 +2080,11 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.Property<decimal>("Subtotal")
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("subtotal");
+
+                    b.Property<string>("TicketNumbers")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("ticket_numbers");
 
                     b.Property<int>("Travelers")
                         .HasColumnType("integer")
@@ -1799,8 +2106,16 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
 
                     b.HasIndex("PackageId");
 
+                    b.HasIndex("ProviderFlightDepartureId")
+                        .HasDatabaseName("ix_reservation_items_provider_flight_departure");
+
+                    b.HasIndex("ProviderFlightId");
+
                     b.HasIndex("ReservationId")
                         .HasDatabaseName("ix_reservation_items_reservation_id");
+
+                    b.HasIndex("IssuanceStatus", "ProductType")
+                        .HasDatabaseName("ix_reservation_items_issuance");
 
                     b.HasIndex(new[] { "CompanyId", "Status" }, "ix_reservation_items_company_status");
 
@@ -1812,7 +2127,11 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
 
                             t.HasCheckConstraint("ck_reservation_items_currency", "currency ~ '^[A-Z]{3}$'");
 
-                            t.HasCheckConstraint("ck_reservation_items_product_shape", "(product_type = 'EXPERIENCE' AND experience_id IS NOT NULL AND package_id IS NULL AND experience_availability_id IS NOT NULL AND package_availability_id IS NULL) OR (product_type = 'PACKAGE' AND package_id IS NOT NULL AND experience_id IS NULL AND package_availability_id IS NOT NULL AND experience_availability_id IS NULL)");
+                            t.HasCheckConstraint("ck_reservation_items_issuance", "issuance_status = 'NOT_REQUIRED' OR product_type = 'FLIGHT'");
+
+                            t.HasCheckConstraint("ck_reservation_items_issued_tickets", "issuance_status <> 'ISSUED' OR (ticket_numbers IS NOT NULL AND issued_at IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_reservation_items_product_shape", "(product_type = 'EXPERIENCE' AND experience_id IS NOT NULL AND package_id IS NULL AND experience_availability_id IS NOT NULL AND package_availability_id IS NULL AND provider_flight_id IS NULL AND provider_flight_departure_id IS NULL) OR (product_type = 'PACKAGE' AND package_id IS NOT NULL AND experience_id IS NULL AND package_availability_id IS NOT NULL AND experience_availability_id IS NULL AND provider_flight_id IS NULL AND provider_flight_departure_id IS NULL) OR (product_type = 'FLIGHT' AND provider_flight_id IS NOT NULL AND provider_flight_departure_id IS NOT NULL AND experience_id IS NULL AND package_id IS NULL AND experience_availability_id IS NULL AND package_availability_id IS NULL)");
 
                             t.HasCheckConstraint("ck_reservation_items_travelers", "travelers > 0");
                         });
@@ -2099,6 +2418,39 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.Navigation("Package");
                 });
 
+            modelBuilder.Entity("TurisClick.Api.Modules.Flights.ProviderFlights.Entities.ProviderFlight", b =>
+                {
+                    b.HasOne("TurisClick.Api.Modules.Companies.Entities.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Flights.ProviderFlights.Entities.ProviderFlightDeparture", b =>
+                {
+                    b.HasOne("TurisClick.Api.Modules.Flights.ProviderFlights.Entities.ProviderFlight", "ProviderFlight")
+                        .WithMany("Departures")
+                        .HasForeignKey("ProviderFlightId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ProviderFlight");
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Flights.ProviderFlights.Entities.ReservationPassenger", b =>
+                {
+                    b.HasOne("TurisClick.Api.Modules.Reservations.Entities.ReservationItem", "ReservationItem")
+                        .WithMany("Passengers")
+                        .HasForeignKey("ReservationItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReservationItem");
+                });
+
             modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.Package", b =>
                 {
                     b.HasOne("TurisClick.Api.Modules.Companies.Entities.Company", "Company")
@@ -2246,6 +2598,16 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                         .HasForeignKey("PackageId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("TurisClick.Api.Modules.Flights.ProviderFlights.Entities.ProviderFlightDeparture", "ProviderFlightDeparture")
+                        .WithMany()
+                        .HasForeignKey("ProviderFlightDepartureId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TurisClick.Api.Modules.Flights.ProviderFlights.Entities.ProviderFlight", "ProviderFlight")
+                        .WithMany()
+                        .HasForeignKey("ProviderFlightId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("TurisClick.Api.Modules.Reservations.Entities.Reservation", "Reservation")
                         .WithMany("Items")
                         .HasForeignKey("ReservationId")
@@ -2261,6 +2623,10 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.Navigation("Package");
 
                     b.Navigation("PackageAvailability");
+
+                    b.Navigation("ProviderFlight");
+
+                    b.Navigation("ProviderFlightDeparture");
 
                     b.Navigation("Reservation");
                 });
@@ -2359,6 +2725,11 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.Navigation("Images");
                 });
 
+            modelBuilder.Entity("TurisClick.Api.Modules.Flights.ProviderFlights.Entities.ProviderFlight", b =>
+                {
+                    b.Navigation("Departures");
+                });
+
             modelBuilder.Entity("TurisClick.Api.Modules.Packages.Entities.Package", b =>
                 {
                     b.Navigation("Availabilities");
@@ -2378,6 +2749,11 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
             modelBuilder.Entity("TurisClick.Api.Modules.Reservations.Entities.ReservationCancellation", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("TurisClick.Api.Modules.Reservations.Entities.ReservationItem", b =>
+                {
+                    b.Navigation("Passengers");
                 });
 #pragma warning restore 612, 618
         }

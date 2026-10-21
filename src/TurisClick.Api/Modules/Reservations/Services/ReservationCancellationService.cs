@@ -151,8 +151,16 @@ public class ReservationCancellationService(
     /// </summary>
     private static ReservationCancellationLine BuildProductLine(ReservationItem item, DateOnly today)
     {
-        var component = item.ProductType == ProductType.PACKAGE ? PaymentComponent.PACKAGE : PaymentComponent.EXPERIENCE;
-        var label = item.Package?.Title ?? item.Experience?.Title ?? "Servicio";
+        if (item.ProductType == ProductType.FLIGHT && item.IssuanceStatus == FlightIssuanceStatus.PENDING)
+            return BuildUnissuedFlightLine(item, today);
+
+        var component = item.ProductType switch
+        {
+            ProductType.PACKAGE => PaymentComponent.PACKAGE,
+            ProductType.FLIGHT => PaymentComponent.PROVIDER_FLIGHT,
+            _ => PaymentComponent.EXPERIENCE,
+        };
+        var label = item.Package?.Title ?? item.Experience?.Title ?? FlightLabel(item) ?? "Servicio";
 
         if (!CancellationPolicy.TryParse(item.CancellationPolicy, out var policy))
             throw new ConflictAppException(
@@ -160,7 +168,9 @@ public class ReservationCancellationService(
                 "cancelar desde la app. Escribile al operador para resolverlo.",
                 ErrorCodes.CancellationPolicyMissing);
 
-        var startDate = item.PackageAvailability?.DepartureDate ?? item.ExperienceAvailability?.Date;
+        var startDate = item.PackageAvailability?.DepartureDate
+            ?? item.ExperienceAvailability?.Date
+            ?? (item.ProviderFlightDeparture is { } departure ? DateOnly.FromDateTime(departure.DepartureAt) : null);
         var daysBefore = startDate is { } start ? start.DayNumber - today.DayNumber : 0;
 
         var percentage = policy!.ResolvePercentage(Math.Max(daysBefore, 0));
@@ -185,6 +195,40 @@ public class ReservationCancellationService(
                 _ => $"Cancelás {Anticipacion(daysBefore)}: el operador devuelve el {percentage}%.",
             },
         };
+    }
+
+    /// <summary>
+    /// Un vuelo de operador pagado que el operador todavía no emitió: no hay pasaje que perder, así que se
+    /// devuelve todo, con o sin política. Recién con el pasaje emitido aplica la política que se aceptó.
+    /// </summary>
+    private static ReservationCancellationLine BuildUnissuedFlightLine(ReservationItem item, DateOnly today)
+    {
+        var startDate = item.ProviderFlightDeparture is { } departure ? DateOnly.FromDateTime(departure.DepartureAt) : today;
+        var daysBefore = startDate.DayNumber - today.DayNumber;
+
+        return new ReservationCancellationLine
+        {
+            Component = PaymentComponent.PROVIDER_FLIGHT,
+            ReservationItemId = item.Id,
+            Label = FlightLabel(item) ?? "Vuelo",
+            PaidAmount = item.Subtotal,
+            RefundAmount = item.Subtotal,
+            FeeAmount = 0m,
+            Currency = item.Currency,
+            PolicyApplied = item.CancellationPolicy,
+            RefundPercentage = 100,
+            RefundKnown = true,
+            Explanation = $"Cancelás {Anticipacion(daysBefore)} y el operador todavía no emitió el pasaje: se devuelve todo.",
+        };
+    }
+
+    /// <summary>"Vuelo OB 712 LPB→UYU": cómo se nombra un vuelo de operador en el presupuesto de cancelación.</summary>
+    private static string? FlightLabel(ReservationItem item)
+    {
+        var flight = item.ProviderFlightDeparture?.ProviderFlight ?? item.ProviderFlight;
+        return flight is null
+            ? null
+            : $"Vuelo {flight.CarrierIata ?? flight.CarrierName} {flight.FlightNumber} {flight.OriginIata}→{flight.DestinationIata}";
     }
 
     /// <summary>

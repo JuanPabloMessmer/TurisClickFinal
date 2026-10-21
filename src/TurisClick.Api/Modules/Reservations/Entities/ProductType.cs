@@ -4,5 +4,8 @@ namespace TurisClick.Api.Modules.Reservations.Entities;
 public enum ProductType
 {
     EXPERIENCE,
-    PACKAGE
+    PACKAGE,
+
+    /// <summary>Vuelo suelto publicado por un operador autorizado (Oleada 18). Sólo en ReservationItem.</summary>
+    FLIGHT
 }

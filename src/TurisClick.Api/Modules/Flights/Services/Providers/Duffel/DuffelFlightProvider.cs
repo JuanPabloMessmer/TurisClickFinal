@@ -65,7 +65,11 @@ public partial class DuffelFlightProvider : IFlightProvider
         var body = new DuffelEnvelope<DuffelOfferRequestBody>(new DuffelOfferRequestBody(
             [.. request.Slices.Select(s => new DuffelSliceRequest(
                 s.OriginIata, s.DestinationIata, s.DepartureDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)))],
-            [.. Enumerable.Range(0, request.Adults).Select(_ => new DuffelPassengerRequest("adult"))],
+            [
+                .. Enumerable.Range(0, request.Adults).Select(_ => new DuffelPassengerRequest("adult")),
+                .. request.Children.Select(age => new DuffelPassengerRequest(null, age)),
+                .. Enumerable.Range(0, request.Infants).Select(_ => new DuffelPassengerRequest("infant_without_seat")),
+            ],
             CabinClassValue(request.CabinClass)));
 
         var stopwatch = Stopwatch.StartNew();

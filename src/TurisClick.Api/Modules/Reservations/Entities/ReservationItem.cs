@@ -1,10 +1,11 @@
 using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
+using TurisClick.Api.Modules.Flights.ProviderFlights.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
 
 namespace TurisClick.Api.Modules.Reservations.Entities;
 
-/// <summary>Una línea reservable de un solo proveedor (decisión 2). ProductType = EXPERIENCE o PACKAGE (Oleada 4).</summary>
+/// <summary>Una línea reservable de un solo proveedor (decisión 2). ProductType = EXPERIENCE, PACKAGE (Oleada 4) o FLIGHT (Oleada 18).</summary>
 public class ReservationItem
 {
     public Guid Id { get; set; }
@@ -29,6 +30,13 @@ public class ReservationItem
 
     public Guid? PackageAvailabilityId { get; set; }
     public PackageAvailability? PackageAvailability { get; set; }
+
+    /// <summary>Vuelo de operador (ProductType FLIGHT): el vuelo y la salida concreta. Una salida por ítem; ida y vuelta son dos ítems.</summary>
+    public Guid? ProviderFlightId { get; set; }
+    public ProviderFlight? ProviderFlight { get; set; }
+
+    public Guid? ProviderFlightDepartureId { get; set; }
+    public ProviderFlightDeparture? ProviderFlightDeparture { get; set; }
 
     public int Travelers { get; set; }
 
@@ -62,4 +70,36 @@ public class ReservationItem
     public string? CancellationPolicy { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
+
+    // ------------------------------------------------------------------ emisión (vuelos de operador)
+    //
+    // El operador emite el pasaje fuera de TurisClick y lo registra. Hasta entonces nada en la app dice
+    // "pasaje emitido". NOT_REQUIRED en cualquier ítem que no sea un vuelo, y en un vuelo todavía sin pagar.
+
+    public FlightIssuanceStatus IssuanceStatus { get; set; } = FlightIssuanceStatus.NOT_REQUIRED;
+
+    /// <summary>Un número por pasajero, en el orden de <see cref="Passengers"/>, separados por coma.</summary>
+    public string? TicketNumbers { get; set; }
+
+    public string? BookingReference { get; set; }
+    public DateTimeOffset? IssuedAt { get; set; }
+    public Guid? IssuedByUserId { get; set; }
+    public string? IssuanceNote { get; set; }
+
+    public ICollection<ReservationPassenger> Passengers { get; set; } = new List<ReservationPassenger>();
+}
+
+public enum FlightIssuanceStatus
+{
+    /// <summary>No hay emisión en curso: ítems que no son vuelos de operador, o vuelos todavía sin pagar.</summary>
+    NOT_REQUIRED,
+
+    /// <summary>Pagado: el operador tiene que emitir y registrarlo.</summary>
+    PENDING,
+
+    /// <summary>El operador registró la emisión con los números de pasaje.</summary>
+    ISSUED,
+
+    /// <summary>El operador no pudo emitir: el ítem se cancela con reembolso total.</summary>
+    FAILED,
 }

@@ -31,6 +31,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             ValidationAppException => (StatusCodes.Status400BadRequest, "Solicitud inválida", exception.Message),
             GoneAppException => (StatusCodes.Status410Gone, "Recurso ya no disponible", exception.Message),
             ServiceUnavailableAppException => (StatusCodes.Status503ServiceUnavailable, "Servicio no disponible", exception.Message),
+            NotImplementedYetAppException => (StatusCodes.Status501NotImplemented, "Todavía no disponible", exception.Message),
 
             // Red de seguridad genérica: si algún Service todavía no valida explícitamente una FK antes
             // de borrar/modificar (como sí hace DestinationService.DeleteAsync para experiences/packages),
@@ -53,7 +54,8 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
 
         var traceId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
 
-        if (status >= StatusCodes.Status500InternalServerError)
+        // Un 501 declarado no es una falla: es una funcionalidad que todavía no existe, y no merece un error en el log.
+        if (status >= StatusCodes.Status500InternalServerError && exception is not NotImplementedYetAppException)
             logger.LogError(exception, "Excepción no controlada en {Method} {Path} (traceId {TraceId})",
                 httpContext.Request.Method, httpContext.Request.Path, traceId);
         else

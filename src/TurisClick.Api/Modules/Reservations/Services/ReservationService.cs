@@ -18,6 +18,8 @@ using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Flights.Dtos;
 using TurisClick.Api.Modules.Flights.Entities;
 using TurisClick.Api.Modules.Flights.Services;
+using TurisClick.Api.Modules.Flights.ProviderFlights.Dtos;
+using TurisClick.Api.Modules.Flights.ProviderFlights.Entities;
 
 namespace TurisClick.Api.Modules.Reservations.Services;
 
@@ -41,6 +43,11 @@ public class ReservationService(
 
     public async Task<ReservationResponse> CreateAsync(CreateReservationRequest request, CancellationToken ct)
     {
+        // Vuelo suelto de operador: su propio camino, que no comparte nada con el paquete ni con la cotización
+        // aérea. La forma (salidas y pasajeros) ya la validó CreateReservationRequest.
+        if (request.IsProviderFlight)
+            return await CreateProviderFlightReservationAsync(request, ct);
+
         // Idempotencia del paso que retiene cupo: una cotización de vuelo se reserva UNA vez. Un doble
         // toque, o un reintento del cliente después de un timeout, devuelve la reserva que ya existe en vez
         // de tomar cupo otra vez y comprar un segundo pasaje.
@@ -95,6 +102,186 @@ public class ReservationService(
             ?? throw new InvalidOperationException("La reserva recién creada no pudo leerse.");
 
         return ToResponse(created, flight: flightBooking);
+    }
+
+    /// <summary>
+    /// Reserva de un vuelo de operador (Oleada 18): una salida (sólo ida) o dos (ida y vuelta), con sus
+    /// pasajeros. Un ítem por tramo, cada uno con su lista de pasajeros: el operador emite por tramo.
+    ///
+    /// El cupo se toma igual que en el resto del catálogo —UPDATE condicional dentro de la transacción, en
+    /// orden determinístico— y sólo por los pasajeros con asiento: los infantes viajan en brazos. El precio se
+    /// congela acá, igual que en experiencias y paquetes.
+    /// </summary>
+    private async Task<ReservationResponse> CreateProviderFlightReservationAsync(
+        CreateReservationRequest request, CancellationToken ct)
+    {
+        var departureIds = request.FlightDepartureIds!;
+        var passengers = request.Passengers!;
+
+        var found = await db.ProviderFlightDepartures
+            .AsNoTracking()
+            .Include(d => d.ProviderFlight).ThenInclude(f => f!.Company)
+            .Where(d => departureIds.Contains(d.Id))
+            .ToListAsync(ct);
+
+        // En el orden en que llegaron: ida y, si hay, vuelta.
+        var legs = departureIds
+            .Select(id => found.FirstOrDefault(d => d.Id == id) ?? throw new NotFoundAppException("Vuelo no encontrado."))
+            .ToList();
+
+        foreach (var leg in legs) EnsureFlightIsBookable(leg);
+        if (legs.Count == 2) EnsureRoundTripMatches(legs[0], legs[1]);
+
+        // Cada tramo con su fecha: un infante que cumple 2 antes de la vuelta necesita asiento en la vuelta, y
+        // la misma lista de pasajeros no puede ser válida para un tramo e inválida para el otro.
+        foreach (var leg in legs)
+            EnsurePassengerAges(passengers, DateOnly.FromDateTime(leg.DepartureAt), legs.Count == 2 && leg == legs[1]);
+
+        var adults = passengers.Count(p => p.Type == PassengerTypes.Adult);
+        var children = passengers.Count(p => p.Type == PassengerTypes.Child);
+        var infants = passengers.Count(p => p.Type == PassengerTypes.Infant);
+        var seats = adults + children;
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        // Orden determinístico por id: dos reservas de ida y vuelta que compiten por las mismas salidas las
+        // toman en el mismo orden y no se bloquean mutuamente. Si una no tiene lugar, salir de este bloque
+        // dispone la transacción sin commit y el asiento de la otra también vuelve.
+        foreach (var leg in legs.OrderBy(l => l.Id))
+        {
+            var taken = await db.ProviderFlightDepartures
+                .Where(d => d.Id == leg.Id
+                    && d.Status == ProviderFlightDepartureStatus.OPEN
+                    && d.ReservedSeats + seats <= d.TotalSeats)
+                .ExecuteUpdateAsync(s => s.SetProperty(d => d.ReservedSeats, d => d.ReservedSeats + seats), ct);
+
+            if (taken != 1)
+                throw new ConflictAppException(
+                    "No quedan asientos suficientes en ese vuelo para todos los pasajeros.",
+                    ErrorCodes.InsufficientCapacity);
+        }
+
+        var now = DateTimeOffset.UtcNow;
+
+        var reservation = new Reservation
+        {
+            Id = Guid.NewGuid(),
+            TouristId = currentUser.UserId,
+            Status = ReservationStatus.PENDING_PAYMENT,
+            ExpiresAt = now.Add(HoldWindow),
+            CreatedAt = now
+        };
+
+        foreach (var leg in legs)
+        {
+            var flight = leg.ProviderFlight!;
+            var item = new ReservationItem
+            {
+                Id = Guid.NewGuid(),
+                CompanyId = flight.CompanyId,
+                ProductType = ProductType.FLIGHT,
+                ProviderFlightId = flight.Id,
+                ProviderFlightDepartureId = leg.Id,
+                Travelers = seats,
+                // UnitPrice es la tarifa de adulto; el subtotal suma cada pasajero con su propia tarifa.
+                UnitPrice = leg.AdultPrice,
+                Currency = leg.Currency,
+                Subtotal = adults * leg.AdultPrice + children * leg.ChildPrice + infants * leg.InfantPrice,
+                Status = ReservationItemStatus.PENDING_PAYMENT,
+                CancellationPolicy = flight.CancellationPolicy,
+                IssuanceStatus = FlightIssuanceStatus.NOT_REQUIRED,
+                CreatedAt = now
+            };
+
+            var order = 0;
+            foreach (var passenger in passengers)
+            {
+                item.Passengers.Add(new ReservationPassenger
+                {
+                    Id = Guid.NewGuid(),
+                    Type = Enum.Parse<PassengerType>(passenger.Type),
+                    GivenName = passenger.GivenName.Trim(),
+                    FamilyName = passenger.FamilyName.Trim(),
+                    BornOn = passenger.BornOn,
+                    SortOrder = order++,
+                    CreatedAt = now
+                });
+            }
+
+            reservation.Items.Add(item);
+        }
+
+        await reservationRepository.AddAsync(reservation, ct);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        logger.LogInformation(
+            "Reserva {ReservationId} de vuelo de operador: {Legs} tramo(s), {Seats} asiento(s), {Infants} infante(s).",
+            reservation.Id, legs.Count, seats, infants);
+
+        var created = await reservationRepository.GetByIdForReadAsync(reservation.Id, ct)
+            ?? throw new InvalidOperationException("La reserva recién creada no pudo leerse.");
+
+        return ToResponse(created);
+    }
+
+    /// <summary>
+    /// Lo que no está a la venta no existe para el turista: un vuelo sin publicar, suspendido, de una empresa
+    /// suspendida o que ya no está autorizada a vender vuelos. Una salida cerrada o ya partida es un 410.
+    /// </summary>
+    private static void EnsureFlightIsBookable(ProviderFlightDeparture departure)
+    {
+        var flight = departure.ProviderFlight!;
+
+        if (flight.Status != ProviderFlightStatus.PUBLISHED
+            || flight.SuspendedAt is not null
+            || flight.Company is not { Status: CompanyStatus.APPROVED, CanSellFlights: true })
+            throw new NotFoundAppException("Vuelo no encontrado.");
+
+        if (departure.Status != ProviderFlightDepartureStatus.OPEN)
+            throw new GoneAppException("Esa salida ya no está a la venta.");
+
+        // Hora local del aeropuerto contra la hora UTC: una comparación prudente, que sólo deja afuera
+        // salidas que en cualquier huso ya pasaron o están por pasar.
+        if (departure.DepartureAt <= DateTime.UtcNow)
+            throw new GoneAppException("Esa salida ya partió.");
+    }
+
+    private static void EnsureRoundTripMatches(ProviderFlightDeparture outbound, ProviderFlightDeparture inbound)
+    {
+        var there = outbound.ProviderFlight!;
+        var back = inbound.ProviderFlight!;
+
+        if (back.OriginIata != there.DestinationIata || back.DestinationIata != there.OriginIata)
+            throw new ValidationAppException("La vuelta tiene que volar el mismo trayecto que la ida, al revés.");
+
+        if (inbound.DepartureAt <= outbound.ArrivalAt)
+            throw new ValidationAppException("La vuelta tiene que salir después de que llegue la ida.");
+    }
+
+    /// <summary>La edad de cada pasajero tiene que corresponder a su tipo el día de cada vuelo.</summary>
+    private static void EnsurePassengerAges(
+        IReadOnlyList<ReservationPassengerRequest> passengers, DateOnly flightDate, bool isReturn = false)
+    {
+        var when = isReturn ? "el día de la vuelta" : "el día del vuelo";
+
+        foreach (var passenger in passengers)
+        {
+            var age = flightDate.Year - passenger.BornOn.Year - (flightDate < passenger.BornOn.AddYears(flightDate.Year - passenger.BornOn.Year) ? 1 : 0);
+            var name = $"{passenger.GivenName} {passenger.FamilyName}".Trim();
+
+            var problem = passenger.Type switch
+            {
+                PassengerTypes.Adult when age < 12 => $"{name} tiene {age} años {when}: viaja como niño o infante, no como adulto.",
+                PassengerTypes.Child when age is < 2 or > 11 => $"{name} tiene {age} años {when}: un niño tiene entre 2 y 11.",
+                PassengerTypes.Infant when age >= 2 && isReturn =>
+                    $"{name} cumple 2 años antes de la vuelta y en ese tramo necesita asiento: reservá la ida y la vuelta por separado.",
+                PassengerTypes.Infant when age >= 2 => $"{name} tiene {age} años {when}: un infante es menor de 2.",
+                _ => null,
+            };
+
+            if (problem is not null) throw new ValidationAppException(problem);
+        }
     }
 
     /// <summary>UC-T-08 — reserva directa de una Experience individual. Devuelve la transacción todavía abierta (se cierra en CreateAsync tras persistir la Reservation completa).</summary>
@@ -898,17 +1085,31 @@ public class ReservationService(
             .Where(i => ids.Contains(i.Id) && i.Status == ReservationItemStatus.PENDING_PAYMENT)
             .ExecuteUpdateAsync(s => s.SetProperty(i => i.Status, ReservationItemStatus.CONFIRMED), ct);
 
-        var currentStatus = await db.ReservationItems
+        // Un vuelo de operador pagado queda esperando que el operador lo emita. Sólo los que se acaban de
+        // confirmar: una línea cancelada en el medio no tiene nada que emitir.
+        await db.ReservationItems
+            .Where(i => ids.Contains(i.Id)
+                && i.Status == ReservationItemStatus.CONFIRMED
+                && i.ProductType == ProductType.FLIGHT
+                && i.IssuanceStatus == FlightIssuanceStatus.NOT_REQUIRED)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.IssuanceStatus, FlightIssuanceStatus.PENDING), ct);
+
+        var current = await db.ReservationItems
             .Where(i => ids.Contains(i.Id))
-            .Select(i => new { i.Id, i.Status })
-            .ToDictionaryAsync(i => i.Id, i => i.Status, ct);
+            .Select(i => new { i.Id, i.Status, i.IssuanceStatus })
+            .ToDictionaryAsync(i => i.Id, ct);
 
         // Original y actual iguales: la entidad refleja la base sin quedar marcada para escribirse otra vez.
         // (Poner IsModified = false no sirve: EF Core devuelve la propiedad a su valor original.)
         foreach (var item in payableItems)
         {
+            if (!current.TryGetValue(item.Id, out var row)) continue;
+
             var status = db.Entry(item).Property(i => i.Status);
-            status.OriginalValue = status.CurrentValue = currentStatus.GetValueOrDefault(item.Id, item.Status);
+            status.OriginalValue = status.CurrentValue = row.Status;
+
+            var issuance = db.Entry(item).Property(i => i.IssuanceStatus);
+            issuance.OriginalValue = issuance.CurrentValue = row.IssuanceStatus;
         }
     }
 
@@ -993,15 +1194,69 @@ public class ReservationService(
         Status = item.Status.ToString(),
         CancelledAt = item.CancelledAt,
         CancellationReason = item.CancellationReason,
-        Date = item.ExperienceAvailability?.Date ?? item.PackageAvailability?.DepartureDate,
-        StartTime = item.ExperienceAvailability?.StartTime,
+        Date = item.ExperienceAvailability?.Date
+            ?? item.PackageAvailability?.DepartureDate
+            ?? (item.ProviderFlightDeparture is { } departure ? DateOnly.FromDateTime(departure.DepartureAt) : null),
+        StartTime = item.ExperienceAvailability?.StartTime
+            ?? (item.ProviderFlightDeparture is { } leg ? TimeOnly.FromDateTime(leg.DepartureAt) : null),
         CreatedAt = item.CreatedAt,
         PriceChanged = revalidation?.Changed ?? false,
         CurrentUnitPrice = revalidation?.Changed == true ? revalidation.CurrentUnitPrice : null,
         CurrentCurrency = revalidation?.Changed == true ? revalidation.CurrentCurrency : null,
         CancellationPolicy = CancellationPolicyRules.Deserialize(item.CancellationPolicy),
-        RefundedAmount = refundedAmount
+        RefundedAmount = refundedAmount,
+        Flight = item.ProductType == ProductType.FLIGHT ? ToFlightItemResponse(item) : null
     };
+
+    /// <summary>
+    /// El vuelo de operador de una línea: lo que se compró y en qué está la emisión. "Pasaje emitido" sólo
+    /// existe cuando el operador lo registró (ISSUED); hasta entonces la app lo dice como pendiente.
+    /// </summary>
+    internal static ProviderFlightItemResponse ToFlightItemResponse(ReservationItem item)
+    {
+        var departure = item.ProviderFlightDeparture;
+        var flight = departure?.ProviderFlight ?? item.ProviderFlight;
+
+        return new ProviderFlightItemResponse
+        {
+            ProviderFlightId = item.ProviderFlightId ?? Guid.Empty,
+            DepartureId = item.ProviderFlightDepartureId ?? Guid.Empty,
+            OriginIata = flight?.OriginIata ?? string.Empty,
+            OriginLabel = flight is null ? string.Empty : AirportCatalog.Describe(flight.OriginIata),
+            DestinationIata = flight?.DestinationIata ?? string.Empty,
+            DestinationLabel = flight is null ? string.Empty : AirportCatalog.Describe(flight.DestinationIata),
+            DepartureAt = departure?.DepartureAt ?? default,
+            ArrivalAt = departure?.ArrivalAt ?? default,
+            CarrierName = flight?.CarrierName ?? string.Empty,
+            CarrierIata = flight?.CarrierIata,
+            FlightNumber = flight?.FlightNumber ?? string.Empty,
+            CabinClass = flight?.CabinClass.ToString() ?? string.Empty,
+            CheckedBags = flight?.CheckedBags ?? 0,
+            CarryOnBags = flight?.CarryOnBags ?? 0,
+            OperatorName = item.Company?.Name ?? string.Empty,
+            IssuanceStatus = item.IssuanceStatus.ToString(),
+            TicketNumbers = SplitTickets(item.TicketNumbers),
+            BookingReference = item.BookingReference,
+            IssuedAt = item.IssuedAt,
+            Passengers =
+            [
+                .. item.Passengers
+                    .OrderBy(p => p.SortOrder)
+                    .Select(p => new ReservationPassengerResponse
+                    {
+                        Type = p.Type.ToString(),
+                        GivenName = p.GivenName,
+                        FamilyName = p.FamilyName,
+                        BornOn = p.BornOn,
+                    }),
+            ],
+            // No existe todavía un entorno de venta real de vuelos de operador: todo lo que se reserva es demo.
+            Demo = true,
+        };
+    }
+
+    internal static List<string> SplitTickets(string? tickets) =>
+        string.IsNullOrWhiteSpace(tickets) ? [] : [.. tickets.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 
     /// <summary>La última cancelación de una reserva: es la que describe en qué quedó.</summary>
     private async Task<ReservationCancellation?> LoadLastCancellationAsync(Guid reservationId, CancellationToken ct) =>
