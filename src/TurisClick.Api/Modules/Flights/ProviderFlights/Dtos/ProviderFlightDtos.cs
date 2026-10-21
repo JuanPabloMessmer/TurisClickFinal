@@ -43,7 +43,7 @@ public static class ProviderFlightDepartureStatuses
 /// </summary>
 public static class FlightIssuanceStatuses
 {
-    /// <summary>Ítems que no son vuelos de operador.</summary>
+    /// <summary>No hay emisión en curso: ítems que no son vuelos de operador, o vuelos todavía sin pagar.</summary>
     public const string NotRequired = "NOT_REQUIRED";
 
     /// <summary>Pagado: el operador tiene que emitir y registrarlo.</summary>
@@ -163,6 +163,9 @@ public class ProviderFlightResponse
     /// <summary>Salidas futuras abiertas con al menos un asiento libre.</summary>
     public int UpcomingDepartures { get; set; }
 
+    /// <summary>true en el entorno de demostración: lo que se vende no es un pasaje real. Las salidas heredan el rótulo.</summary>
+    public bool Demo { get; set; } = true;
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
@@ -250,7 +253,7 @@ public class RecordIssuanceRequest : IValidatableObject
     public List<string> TicketNumbers { get; set; } = [];
 
     /// <summary>Localizador de la reserva en la aerolínea, si el operador lo tiene.</summary>
-    [RegularExpression("^[A-Z0-9]{5,8}$", ErrorMessage = "El localizador tiene de 5 a 8 letras o números.")]
+    [RegularExpression("^[A-Za-z0-9]{5,8}$", ErrorMessage = "El localizador tiene de 5 a 8 letras o números.")]
     public string? BookingReference { get; set; }
 
     [StringLength(500)]

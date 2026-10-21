@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Flights.Dtos;
 using TurisClick.Api.Modules.Flights.ProviderFlights.Dtos;
 using Xunit;
@@ -12,10 +9,8 @@ using static TurisClick.Api.Tests.Integration.TestClients;
 namespace TurisClick.Api.Tests.Integration;
 
 /// <summary>
-/// Contratos de los vuelos de operador (Workstream B1). Las rutas, los permisos y la validación de entrada
-/// son los definitivos —el Backoffice y la app trabajan contra ellos— y la lógica llega en B2. Lo que se fija
-/// acá: quién puede llamar a cada endpoint, que un pedido mal formado se rechaza igual que siempre, que uno
-/// válido recibe un 501 claro, y que nada de esto escribe en la base.
+/// Contratos de los vuelos de operador: quién puede llamar a cada endpoint y qué pedidos se rechazan antes de
+/// tocar nada. Los flujos completos (reservar, pagar, emitir, cancelar) están en ProviderFlightBookingTests.
 /// </summary>
 [Collection(ApiCollection.Name)]
 public class ProviderFlightContractTests(TurisClickApiFactory factory)
@@ -55,8 +50,8 @@ public class ProviderFlightContractTests(TurisClickApiFactory factory)
         }
     }
 
-    /// <summary>Los endpoints del operador, con un cuerpo válido para cada uno.</summary>
-    public static TheoryData<string, string, string?> ProviderEndpoints => new()
+    /// <summary>Los endpoints del catálogo del operador: exigen empresa autorizada a vender vuelos.</summary>
+    public static TheoryData<string, string, string?> CatalogEndpoints => new()
     {
         { "GET", "/api/companies/me/flights", null },
         { "POST", "/api/companies/me/flights", "flight" },
@@ -69,16 +64,6 @@ public class ProviderFlightContractTests(TurisClickApiFactory factory)
         { "PUT", $"/api/companies/me/flight-departures/{AnyId}", "departure" },
         { "DELETE", $"/api/companies/me/flight-departures/{AnyId}", null },
         { "POST", $"/api/companies/me/flight-departures/{AnyId}/close", null },
-        { "POST", $"/api/companies/me/reservation-items/{AnyId}/issuance", "issuance" },
-        { "POST", $"/api/companies/me/reservation-items/{AnyId}/issuance-failure", "failure" },
-    };
-
-    public static TheoryData<string, string, string?> AdminEndpoints => new()
-    {
-        { "PUT", $"/api/admin/companies/{AnyId}/flight-seller", "seller" },
-        { "GET", "/api/admin/flights", null },
-        { "POST", $"/api/admin/flights/{AnyId}/suspend", null },
-        { "POST", $"/api/admin/flights/{AnyId}/unsuspend", null },
     };
 
     private static object? BodyFor(string? kind) => kind switch
@@ -120,42 +105,60 @@ public class ProviderFlightContractTests(TurisClickApiFactory factory)
         return client;
     }
 
-    private static async Task AssertNotAvailableYetAsync(HttpResponseMessage response)
+    private static async Task<string?> ErrorCodeAsync(HttpResponseMessage response)
     {
-        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
         using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("FEATURE_NOT_AVAILABLE", problem.RootElement.GetProperty("errorCode").GetString());
-        Assert.Contains("todavía no está disponible", problem.RootElement.GetProperty("detail").GetString());
+        return problem.RootElement.TryGetProperty("errorCode", out var code) ? code.GetString() : null;
     }
 
-    // ---------------------------------------------------------------- permisos y respuesta de B1
+    // ---------------------------------------------------------------- permisos
 
     [Theory]
-    [MemberData(nameof(ProviderEndpoints))]
-    public async Task LosEndpointsDelOperadorExigenRolDeOperador_YHastaB2RespondenNoDisponible(string method, string url, string? body)
+    [MemberData(nameof(CatalogEndpoints))]
+    public async Task ElCatalogoDeVuelosExigeOperadorAutorizadoAVenderVuelos(string method, string url, string? body)
     {
-        var anonymous = _factory.CreateClient();
-        Assert.Equal(HttpStatusCode.Unauthorized, (await SendAsync(anonymous, method, url, BodyFor(body))).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await SendAsync(_factory.CreateClient(), method, url, BodyFor(body))).StatusCode);
 
         var tourist = await TouristAsync("pf-contract-tourist");
         Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(tourist, method, url, BodyFor(body))).StatusCode);
 
+        // Una empresa aprobada pero no autorizada a vender vuelos recibe un 403 con su código, que el
+        // Backoffice usa para explicar que la autoriza un ADMIN.
         var provider = await ProviderAsync("pf-contract-provider");
-        await AssertNotAvailableYetAsync(await SendAsync(provider, method, url, BodyFor(body)));
+        var response = await SendAsync(provider, method, url, BodyFor(body));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("FLIGHT_SELLER_NOT_AUTHORIZED", await ErrorCodeAsync(response));
     }
 
     [Theory]
-    [MemberData(nameof(AdminEndpoints))]
-    public async Task LosEndpointsDeAdminExigenAdmin_YHastaB2RespondenNoDisponible(string method, string url, string? body)
+    [InlineData("issuance")]
+    [InlineData("issuance-failure")]
+    public async Task LaEmisionDeUnItemQueNoExisteEs404(string action)
     {
-        var provider = await ProviderAsync("pf-contract-admin-p");
-        Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(provider, method, url, BodyFor(body))).StatusCode);
+        var provider = await ProviderAsync("pf-contract-issue");
 
-        var admin = await AdminAsync();
-        await AssertNotAvailableYetAsync(await SendAsync(admin, method, url, BodyFor(body)));
+        var response = await provider.PostAsJsonAsync(
+            $"/api/companies/me/reservation-items/{AnyId}/{action}", BodyFor(action == "issuance" ? "issuance" : "failure"));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    // ---------------------------------------------------------------- validación de entrada (definitiva)
+    [Fact]
+    public async Task LosEndpointsDeAdminExigenAdmin()
+    {
+        var provider = await ProviderAsync("pf-contract-admin-p");
+        Assert.Equal(HttpStatusCode.Forbidden, (await provider.GetAsync("/api/admin/flights")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await provider.PutAsJsonAsync($"/api/admin/companies/{AnyId}/flight-seller", BodyFor("seller"))).StatusCode);
+
+        var admin = await AdminAsync();
+        Assert.Equal(HttpStatusCode.OK, (await admin.GetAsync("/api/admin/flights")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await admin.PutAsJsonAsync($"/api/admin/companies/{AnyId}/flight-seller", BodyFor("seller"))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PostAsync($"/api/admin/flights/{AnyId}/suspend", null)).StatusCode);
+    }
+
+    // ---------------------------------------------------------------- validación de entrada
 
     [Theory]
     [InlineData("LPB", "LIM")] // el destino tiene que estar en Bolivia
@@ -219,17 +222,14 @@ public class ProviderFlightContractTests(TurisClickApiFactory factory)
         new { type, givenName = "Prueba", familyName = "Demostración", bornOn };
 
     [Fact]
-    public async Task ReservarUnVueloDeOperadorExigeSesion_YHastaB2RespondeNoDisponible_SinEscribirNada()
+    public async Task ReservarUnVueloExigeSesion_YUnaSalidaInexistenteEs404()
     {
-        var body = FlightReservation([Passenger("ADULT", "1990-01-01"), Passenger("CHILD", "2018-05-05"), Passenger("INFANT", "2026-01-01")], travelers: 2);
+        var body = FlightReservation([Passenger("ADULT", "1990-01-01")], travelers: 1, [Guid.NewGuid()]);
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await _factory.CreateClient().PostAsJsonAsync("/api/reservations", body)).StatusCode);
 
         var tourist = await TouristAsync("pf-contract-book");
-        var before = await ReservationCountAsync();
-
-        await AssertNotAvailableYetAsync(await tourist.PostAsJsonAsync("/api/reservations", body));
-        Assert.Equal(before, await ReservationCountAsync());
+        Assert.Equal(HttpStatusCode.NotFound, (await tourist.PostAsJsonAsync("/api/reservations", body)).StatusCode);
     }
 
     [Fact]
@@ -284,7 +284,7 @@ public class ProviderFlightContractTests(TurisClickApiFactory factory)
     // ---------------------------------------------------------------- la búsqueda
 
     [Fact]
-    public async Task LasOfertasDeLaBusquedaSonDeAerolineaYNoReservables()
+    public async Task LasOfertasDeAerolineaNoSonReservables()
     {
         var response = await _factory.CreateClient().PostAsJsonAsync("/api/flights/search", new
         {
@@ -295,19 +295,12 @@ public class ProviderFlightContractTests(TurisClickApiFactory factory)
         });
         var result = await response.Content.ReadFromJsonAsync<SearchFlightsResponse>(JsonOptions);
 
-        Assert.NotEmpty(result!.Options);
-        Assert.All(result.Options, option =>
+        var airline = result!.Options.Where(o => o.Source == FlightOfferSources.Airline).ToList();
+        Assert.NotEmpty(airline);
+        Assert.All(airline, option =>
         {
-            Assert.Equal(FlightOfferSources.Airline, option.Source);
             Assert.False(option.Bookable);
             Assert.Null(option.ProviderFlight);
         });
-        Assert.False(result.Bookable);
-    }
-
-    private async Task<int> ReservationCountAsync()
-    {
-        using var scope = _factory.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<TurisClickDbContext>().Reservations.CountAsync();
     }
 }

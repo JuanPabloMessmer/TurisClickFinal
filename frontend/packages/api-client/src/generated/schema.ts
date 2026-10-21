@@ -819,6 +819,7 @@ export interface paths {
                     needsAttention?: boolean;
                     page?: number;
                     pageSize?: number;
+                    productType?: string;
                 };
                 header?: never;
                 path?: never;
@@ -4867,6 +4868,8 @@ export interface components {
             flightStatus?: string | null;
             flightRoute?: string | null;
             cancellationStatus?: string | null;
+            flightIssuancePending?: boolean;
+            flightIssuanceOverdue?: boolean;
             charged?: components["schemas"]["AdminMoneyResponse"][] | null;
             refunded?: components["schemas"]["AdminMoneyResponse"][] | null;
         };
@@ -5058,6 +5061,10 @@ export interface components {
             rejectionReason?: string | null;
             /** Format: date-time */
             createdAt?: string;
+            canSellFlights?: boolean;
+            flightSellerRegistration?: string | null;
+            /** Format: date-time */
+            flightSellerAuthorizedAt?: string | null;
         };
         CompanyResponsePagedResult: {
             items?: components["schemas"]["CompanyResponse"][] | null;
@@ -5909,6 +5916,7 @@ export interface components {
             suspended?: boolean;
             /** Format: int32 */
             upcomingDepartures?: number;
+            demo?: boolean;
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */

@@ -16,11 +16,22 @@ public class ReservationItemConfiguration : IEntityTypeConfiguration<Reservation
             t.HasCheckConstraint("ck_reservation_items_currency", "currency ~ '^[A-Z]{3}$'");
             t.HasCheckConstraint("ck_reservation_items_cancellation_policy",
                 $"cancellation_policy IS NULL OR cancellation_policy ~ '{Policies.CancellationPolicy.ColumnRegex}'");
+            // Exactamente un producto por línea, y las columnas de los otros vacías. Oleada 18 suma el vuelo de
+            // operador como tercera forma; las dos anteriores pasan a exigir también que no lleven vuelo.
             t.HasCheckConstraint("ck_reservation_items_product_shape",
                 "(product_type = 'EXPERIENCE' AND experience_id IS NOT NULL AND package_id IS NULL " +
-                "AND experience_availability_id IS NOT NULL AND package_availability_id IS NULL) " +
+                "AND experience_availability_id IS NOT NULL AND package_availability_id IS NULL " +
+                "AND provider_flight_id IS NULL AND provider_flight_departure_id IS NULL) " +
                 "OR (product_type = 'PACKAGE' AND package_id IS NOT NULL AND experience_id IS NULL " +
-                "AND package_availability_id IS NOT NULL AND experience_availability_id IS NULL)");
+                "AND package_availability_id IS NOT NULL AND experience_availability_id IS NULL " +
+                "AND provider_flight_id IS NULL AND provider_flight_departure_id IS NULL) " +
+                "OR (product_type = 'FLIGHT' AND provider_flight_id IS NOT NULL AND provider_flight_departure_id IS NOT NULL " +
+                "AND experience_id IS NULL AND package_id IS NULL " +
+                "AND experience_availability_id IS NULL AND package_availability_id IS NULL)");
+            t.HasCheckConstraint("ck_reservation_items_issuance",
+                "issuance_status = 'NOT_REQUIRED' OR product_type = 'FLIGHT'");
+            t.HasCheckConstraint("ck_reservation_items_issued_tickets",
+                "issuance_status <> 'ISSUED' OR (ticket_numbers IS NOT NULL AND issued_at IS NOT NULL)");
         });
 
         builder.HasKey(i => i.Id);
@@ -64,6 +75,35 @@ public class ReservationItemConfiguration : IEntityTypeConfiguration<Reservation
             .HasColumnName("cancellation_policy")
             .HasMaxLength(TurisClick.Api.Modules.Reservations.Policies.CancellationPolicy.MaxLength);
         builder.Property(i => i.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
+
+        // Vuelo de operador (Oleada 18).
+        builder.Property(i => i.ProviderFlightId).HasColumnName("provider_flight_id");
+        builder.Property(i => i.ProviderFlightDepartureId).HasColumnName("provider_flight_departure_id");
+        builder.Property(i => i.IssuanceStatus)
+            .HasColumnName("issuance_status")
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(FlightIssuanceStatus.NOT_REQUIRED);
+        builder.Property(i => i.TicketNumbers).HasColumnName("ticket_numbers").HasMaxLength(500);
+        builder.Property(i => i.BookingReference).HasColumnName("booking_reference").HasMaxLength(20);
+        builder.Property(i => i.IssuedAt).HasColumnName("issued_at");
+        builder.Property(i => i.IssuedByUserId).HasColumnName("issued_by");
+        builder.Property(i => i.IssuanceNote).HasColumnName("issuance_note").HasMaxLength(500);
+
+        builder.HasIndex(i => i.ProviderFlightDepartureId).HasDatabaseName("ix_reservation_items_provider_flight_departure");
+        // La alerta del ADMIN ("pagado sin emitir") busca por este par.
+        builder.HasIndex(i => new { i.IssuanceStatus, i.ProductType }).HasDatabaseName("ix_reservation_items_issuance");
+
+        builder.HasOne(i => i.ProviderFlight)
+            .WithMany()
+            .HasForeignKey(i => i.ProviderFlightId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(i => i.ProviderFlightDeparture)
+            .WithMany()
+            .HasForeignKey(i => i.ProviderFlightDepartureId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(i => i.ReservationId).HasDatabaseName("ix_reservation_items_reservation_id");
         builder.HasIndex(i => new { i.CompanyId, i.Status }, "ix_reservation_items_company_status");

@@ -55,6 +55,7 @@ public class AdminPlatformController(IAdminPlatformService platform) : Controlle
         [FromQuery] bool? needsAttention,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? productType = null,
         CancellationToken ct = default)
-        => Ok(await platform.ListReservationsAsync(status, needsAttention, page, pageSize, ct));
+        => Ok(await platform.ListReservationsAsync(status, needsAttention, page, pageSize, ct, productType));
 }

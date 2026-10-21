@@ -1,3 +1,4 @@
+using TurisClick.Api.Modules.Flights.ProviderFlights.Services;
 using TurisClick.Api.Modules.Flights.Services;
 using TurisClick.Api.Modules.Flights.Services.Providers;
 using TurisClick.Api.Modules.Flights.Services.Providers.Duffel;
@@ -35,6 +36,10 @@ public static class FlightsModuleExtensions
         services.AddScoped<IFlightSearchService, FlightSearchService>();
         services.AddScoped<IFlightBookingOrchestrator, FlightBookingOrchestrator>();
         services.AddScoped<IFlightReconciliationService, FlightReconciliationService>();
+
+        // Vuelos de operador (Oleada 18): inventario propio de las empresas autorizadas.
+        services.AddScoped<IProviderFlightService, ProviderFlightService>();
+        services.AddScoped<IAdminProviderFlightService, AdminProviderFlightService>();
 
         services.Configure<FlightReconciliationOptions>(
             configuration.GetSection(FlightReconciliationOptions.SectionName));

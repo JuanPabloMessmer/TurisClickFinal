@@ -4,8 +4,15 @@ import type { components } from '../generated/schema'
 /**
  * Vuelos de operador (Workstream B). Contratos en docs/vuelos-sueltos-contratos.md.
  *
- * Hasta B2 cada endpoint responde 501 con `errorCode: 'FEATURE_NOT_AVAILABLE'` y un mensaje que se puede
- * mostrar tal cual. Las pantallas tienen que manejar ese caso: no es un error del usuario ni un 5xx genérico.
+ * Implementado (B2). Errores con código que las pantallas tienen que distinguir:
+ * - 403 `FLIGHT_SELLER_NOT_AUTHORIZED`: la empresa no está autorizada a vender vuelos (lo decide un ADMIN).
+ *   La emisión de lo ya vendido sigue funcionando aunque se revoque.
+ * - 409 al editar lo que ya se vendió (ruta, aerolínea, número, cabina, equipaje; horarios y tarifas de una
+ *   salida con reservas; asientos por debajo de lo vendido; borrar una salida con reservas: se cierra).
+ * - 409 al registrar la emisión de algo que no está pagado y pendiente de emitir.
+ *
+ * Horarios: hora local del aeropuerto, "yyyy-MM-ddTHH:mm:ss" SIN huso. Emisión: un número de pasaje por
+ * pasajero (infantes incluidos), en el orden de `item.flight.passengers`; ida y vuelta son dos ítems.
  */
 
 type Schemas = components['schemas']

@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Flights.Dtos;
+using TurisClick.Api.Modules.Flights.ProviderFlights.Dtos;
+using TurisClick.Api.Modules.Flights.ProviderFlights.Entities;
+using TurisClick.Api.Modules.Reservations.Policies;
 using TurisClick.Api.Modules.Packages.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
 
@@ -13,16 +16,16 @@ public interface IFlightSearchService
 }
 
 /// <summary>
-/// Búsqueda de vuelos sin paquete: el explorador de la app.
+/// Búsqueda de vuelos sin paquete: el buscador de la app. **No escribe nada.**
 ///
-/// La diferencia con <see cref="PackageFlightService"/> no es técnica, es de dominio. Cotizar el vuelo de un
-/// paquete **escribe** filas (`flight_quotes`) porque esa cotización se va a reservar y hay que poder
-/// revalidarla, atribuirla a una persona y cobrarla. Buscar vuelos sueltos **no escribe nada**: en TurisClick
-/// un pasaje no se vende solo —la reserva aérea cuelga de una reserva de paquete— así que una búsqueda
-/// suelta que devolviera un identificador reservable estaría prometiendo algo que el sistema no hace.
-///
-/// Por eso la respuesta no trae ningún id de cotización, y por eso incluye los paquetes que vuelan esa misma
-/// ruta: es el único camino real desde "qué vuelos hay" hasta "esto lo puedo comprar".
+/// Junta dos fuentes que no se mezclan:
+/// <list type="bullet">
+/// <item><b>Vuelos de operador</b> (Source PROVIDER, reservables con sesión): los publica una empresa autorizada,
+/// con su cupo y su tarifa. Se reservan con sus <c>departureIds</c> en /api/reservations.</item>
+/// <item><b>Ofertas de aerolínea</b> (Source AIRLINE, nunca reservables sueltas): las del proveedor aéreo (hoy el
+/// simulado). No llevan ningún id de cotización, porque desde acá no se compran.</item>
+/// </list>
+/// Además devuelve los paquetes que vuelan la misma ruta.
 /// </summary>
 public class FlightSearchService(
     IFlightProvider flightProvider,
@@ -58,11 +61,18 @@ public class FlightSearchService(
             Packages = await RoutePackagesAsync(origin, destination, ct),
         };
 
+        // Primero los vuelos de operador: son lo único que se puede reservar desde acá, y no dependen de
+        // que el proveedor aéreo responda.
+        var providerOptions = await ProviderFlightOptionsAsync(origin, destination, cabin, request, ct);
+        response.Options.AddRange(providerOptions);
+        response.Bookable = providerOptions.Count > 0;
+
         var slices = new List<FlightSliceRequest> { new(origin, destination, request.DepartureDate) };
         if (request.ReturnDate is { } back)
             slices.Add(new FlightSliceRequest(destination, origin, back));
 
-        FlightSearchResult search;
+        FlightSearchResult? search = null;
+        string? airlineNotice = null;
         try
         {
             search = await flightProvider.SearchAsync(
@@ -74,18 +84,10 @@ public class FlightSearchService(
             // Que el proveedor falle no es un error de la app: se dice y se deja lo demás en pie, igual que
             // en la ficha de un paquete.
             logger.LogWarning(ex, "Falló la búsqueda de vuelos {Origin}→{Destination}.", origin, destination);
-            response.Notice = "No pudimos consultar vuelos en este momento. Probá de nuevo en unos minutos.";
-            return response;
+            airlineNotice = "No pudimos consultar vuelos en este momento. Probá de nuevo en unos minutos.";
         }
 
-        if (search.Offers.Count == 0)
-        {
-            response.Notice =
-                $"No encontramos vuelos para el {request.DepartureDate:dd/MM} entre {AirportCatalog.Describe(origin)} y {AirportCatalog.Describe(destination)}.";
-            return response;
-        }
-
-        foreach (var offer in search.Offers.OrderBy(o => o.Price.Amount).Take(MaxOptions))
+        foreach (var offer in (search?.Offers ?? []).OrderBy(o => o.Price.Amount).Take(MaxOptions))
         {
             response.Options.Add(new FlightOptionResponse
             {
@@ -93,18 +95,143 @@ public class FlightSearchService(
                 CarrierName = offer.OwnerName,
                 CarrierIata = offer.OwnerIataCode,
                 Slices = FlightResponseMapper.ToSlices(offer),
+                Source = FlightOfferSources.Airline,
+                Bookable = false,
             });
 
             response.TestMode |= !offer.LiveMode;
         }
 
-        response.InventoryMode = InventoryModeFor(flightProvider, search.Offers);
+        if (search is not null) response.InventoryMode = InventoryModeFor(flightProvider, search.Offers);
+
+        // Sin nada que mostrar se explica por qué, y "el proveedor falló" no se disfraza de "no hay vuelos".
+        if (response.Options.Count == 0)
+            response.Notice = airlineNotice
+                ?? $"No encontramos vuelos para el {request.DepartureDate:dd/MM} entre {AirportCatalog.Describe(origin)} y {AirportCatalog.Describe(destination)}.";
 
         logger.LogInformation(
-            "Búsqueda de vuelos {Origin}→{Destination} el {Date}: {Count} oferta(s).",
-            origin, destination, request.DepartureDate, response.Options.Count);
+            "Búsqueda de vuelos {Origin}→{Destination} el {Date}: {Provider} de operador, {Airline} de aerolínea.",
+            origin, destination, request.DepartureDate, providerOptions.Count, response.Options.Count - providerOptions.Count);
 
         return response;
+    }
+
+    /// <summary>Techo de opciones de operador: con ida y vuelta, las combinaciones crecen rápido.</summary>
+    private const int MaxProviderOptions = 10;
+
+    /// <summary>
+    /// Vuelos de operador para la búsqueda: publicados, no suspendidos, de una empresa aprobada y autorizada,
+    /// en la ruta, la fecha y la cabina pedidas, con asientos para todos los que viajan sentados. En ida y vuelta,
+    /// pares del mismo operador y en la misma moneda, con la vuelta saliendo después de que llegue la ida.
+    ///
+    /// La duración no se informa: los horarios son locales de cada aeropuerto y el sistema no conoce sus husos,
+    /// así que una resta daría una duración falsa en cuanto el vuelo cruce de huso.
+    /// </summary>
+    private async Task<List<FlightOptionResponse>> ProviderFlightOptionsAsync(
+        string origin, string destination, FlightCabinClass cabin, SearchFlightsRequest request, CancellationToken ct)
+    {
+        var adults = request.EffectiveAdults;
+        var children = request.ChildrenAges.Count;
+        var infants = request.Infants;
+        var seats = adults + children;
+
+        var outbound = await SellableDeparturesAsync(origin, destination, request.DepartureDate, cabin, seats, ct);
+        if (outbound.Count == 0) return [];
+
+        var inbound = request.ReturnDate is { } back
+            ? await SellableDeparturesAsync(destination, origin, back, cabin, seats, ct)
+            : null;
+
+        decimal LegPrice(ProviderFlightDeparture d) => adults * d.AdultPrice + children * d.ChildPrice + infants * d.InfantPrice;
+
+        var combinations = inbound is null
+            ? outbound.Select(d => new[] { d })
+            : outbound.SelectMany(there => inbound
+                .Where(home => home.ProviderFlight!.CompanyId == there.ProviderFlight!.CompanyId
+                    && home.Currency == there.Currency
+                    && home.DepartureAt > there.ArrivalAt)
+                .Select(home => new[] { there, home }));
+
+        return
+        [
+            .. combinations
+                .Select(legs => new { Legs = legs, Price = legs.Sum(LegPrice) })
+                .OrderBy(c => c.Price)
+                .Take(MaxProviderOptions)
+                .Select(c =>
+                {
+                    var first = c.Legs[0].ProviderFlight!;
+                    return new FlightOptionResponse
+                    {
+                        Price = new MoneyResponse { Amount = c.Price, Currency = c.Legs[0].Currency },
+                        CarrierName = first.CarrierName,
+                        CarrierIata = first.CarrierIata,
+                        Slices = [.. c.Legs.Select(ToSlice)],
+                        Source = FlightOfferSources.Provider,
+                        Bookable = true,
+                        ProviderFlight = new ProviderFlightOfferResponse
+                        {
+                            DepartureIds = [.. c.Legs.Select(l => l.Id)],
+                            OperatorCompanyId = first.CompanyId,
+                            OperatorName = first.Company!.Name,
+                            SeatsLeft = c.Legs.Min(l => l.AvailableSeats),
+                            CancellationPolicy = CancellationPolicyRules.Deserialize(first.CancellationPolicy),
+                            FareRules = first.FareRules,
+                        },
+                    };
+                }),
+        ];
+    }
+
+    private Task<List<ProviderFlightDeparture>> SellableDeparturesAsync(
+        string origin, string destination, DateOnly date, FlightCabinClass cabin, int seats, CancellationToken ct)
+    {
+        var dayStart = date.ToDateTime(TimeOnly.MinValue);
+        var dayEnd = dayStart.AddDays(1);
+        // La columna es timestamp SIN huso (hora local del aeropuerto): el parámetro tiene que ir sin Kind, o
+        // Npgsql lo rechaza. Comparar con la hora UTC es una aproximación prudente (ver EnsureFlightIsBookable).
+        var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+        return db.ProviderFlightDepartures
+            .AsNoTracking()
+            .Include(d => d.ProviderFlight).ThenInclude(f => f!.Company)
+            .Where(d => d.Status == ProviderFlightDepartureStatus.OPEN
+                && d.DepartureAt >= dayStart && d.DepartureAt < dayEnd && d.DepartureAt > now
+                && d.TotalSeats - d.ReservedSeats >= seats
+                && d.ProviderFlight!.OriginIata == origin
+                && d.ProviderFlight.DestinationIata == destination
+                && d.ProviderFlight.CabinClass == cabin
+                && d.ProviderFlight.Status == ProviderFlightStatus.PUBLISHED
+                && d.ProviderFlight.SuspendedAt == null
+                && d.ProviderFlight.Company!.Status == CompanyStatus.APPROVED
+                && d.ProviderFlight.Company.CanSellFlights)
+            .ToListAsync(ct);
+    }
+
+    private static FlightSliceResponse ToSlice(ProviderFlightDeparture departure)
+    {
+        var flight = departure.ProviderFlight!;
+        return new FlightSliceResponse
+        {
+            OriginIata = flight.OriginIata,
+            DestinationIata = flight.DestinationIata,
+            DurationMinutes = null,
+            Stops = 0,
+            Segments =
+            [
+                new FlightSegmentResponse
+                {
+                    OriginIata = flight.OriginIata,
+                    DestinationIata = flight.DestinationIata,
+                    DepartingAt = departure.DepartureAt,
+                    ArrivingAt = departure.ArrivalAt,
+                    CarrierIata = flight.CarrierIata,
+                    CarrierName = flight.CarrierName,
+                    FlightNumber = flight.FlightNumber,
+                    CheckedBags = flight.CheckedBags,
+                },
+            ],
+        };
     }
 
     /// <summary>

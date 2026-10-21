@@ -1,20 +1,49 @@
 # Vuelos sueltos — contratos y dependencias (Workstreams B, C y D)
 
-Estado: **contratos aprobados. B1 (contratos en código) hecho; B2 (lógica + migración 0015) pendiente de
-autorización.** Hasta B2, cada endpoint nuevo valida el pedido y responde **501** con
-`errorCode: "FEATURE_NOT_AVAILABLE"` y un mensaje que se puede mostrar. Ninguno escribe nada.
+Estado: **B1 (contratos) y B2 (backend + migración 0015) implementados** en
+`claude/flights-search-workstream-a`. Sin desplegar: la migración 0015 sobre `turisclick_db_v2` requiere
+autorización. C (Backoffice) y A2 (app) se construyen contra estos contratos.
+
+### Comportamiento de B2 que las pantallas tienen que conocer
+
+- **Un ítem por tramo.** Ida y vuelta son dos `ReservationItem` FLIGHT, cada uno con su lista de pasajeros y
+  su propia emisión. `travelers` = adultos + niños (los infantes van en brazos y no toman asiento).
+- **Emisión:** `NOT_REQUIRED` mientras el ítem no está pagado → `PENDING` al pagar → `ISSUED` cuando el
+  operador registra un número de pasaje **por pasajero, infantes incluidos**, en el orden de
+  `item.flight.passengers` → o `FAILED` (ítem cancelado, reembolso total simulado, asientos liberados; si era
+  lo último activo, la reserva queda cancelada).
+- **Pago:** sólo se cobran y confirman los ítems pendientes de pago (arreglo P0 de la release); un tramo que
+  el operador canceló antes del pago no se cobra ni revive.
+- **Cancelación del turista con el pasaje sin emitir:** se devuelve el 100% aunque la política diga otra cosa.
+  Con el pasaje emitido aplica la política congelada del vuelo. Componente de reembolso: `PROVIDER_FLIGHT`.
+- **Lo vendido no cambia:** con reservas, la ruta, aerolínea, número, cabina y equipaje de un vuelo, y los
+  horarios y tarifas de una salida, devuelven 409; los asientos no bajan de lo vendido; una salida con reservas
+  no se borra (se cierra).
+- **Búsqueda:** los vuelos de operador aparecen con `source: PROVIDER`, `bookable: true` y
+  `providerFlight.departureIds`; sólo publicados, no suspendidos, de empresas aprobadas y autorizadas, en la
+  cabina pedida y con asientos para todos. Ida y vuelta = pares del mismo operador y la misma moneda. La duración
+  no se informa (los horarios son locales y no hay husos).
+- **Empresa:** `CompanyResponse` trae `canSellFlights`, `flightSellerRegistration` y
+  `flightSellerAuthorizedAt`. Sin autorización, el catálogo del operador responde 403
+  `FLIGHT_SELLER_NOT_AUTHORIZED` (la emisión de lo vendido sigue funcionando).
+- **Admin:** `GET /api/admin/reservations?productType=FLIGHT`; cada fila trae `flightIssuancePending` y
+  `flightIssuanceOverdue` (pagado sin emitir hace más de 24 h, que también entra en `needsAttention`).
+- **DEMO:** `ProviderFlightResponse.demo` y `ReservationItemResponse.flight.demo` son `true` en este entorno.
 
 Decisiones del usuario: búsqueda sin sesión (con el proveedor simulado; la sesión se pide al reservar);
 pasajeros con nombre y fecha de nacimiento **sintéticos**, sin documento; sólo ida e ida y vuelta; Duffel
 apagado; "Pasaje emitido" sólo cuando el operador registra la emisión, y DEMO siempre en el entorno de prueba.
 
-En código (B1):
+En código:
 - Tipos: `src/TurisClick.Api/Modules/Flights/ProviderFlights/Dtos/ProviderFlightDtos.cs`.
 - Endpoints: `src/TurisClick.Api/Modules/Flights/ProviderFlights/Controllers/ProviderFlightsController.cs`
   (operador y admin), y en `POST /api/reservations` la forma `flightDepartureIds` + `passengers`.
 - Cliente: `frontend/packages/api-client/src/modules/providerFlights.ts` (`providerFlightsApi`), más los
   campos nuevos de `flightsApi` (`source`, `bookable`, `providerFlight`) y de `ReservationItemResponse.flight`.
-- Tests de contrato: `tests/TurisClick.Api.Tests/Integration/ProviderFlightContractTests.cs`.
+- Servicios: `Modules/Flights/ProviderFlights/Services/` (operador y admin); reserva y pago en
+  `ReservationService`; liberación de asientos en `ReservationBookingService.ReleaseHoldsAsync`.
+- Migración: `20261021012403_0015_Oleada18_VuelosDeOperador`.
+- Tests: `ProviderFlightContractTests.cs` (permisos y validación) y `ProviderFlightBookingTests.cs` (flujos).
 
 Objetivo de producto: además del paquete con vuelo, TurisClick vende **vuelos sueltos publicados por
 operadores autorizados**. El turista busca, elige, reserva y paga (pago simulado en la tesis); después del

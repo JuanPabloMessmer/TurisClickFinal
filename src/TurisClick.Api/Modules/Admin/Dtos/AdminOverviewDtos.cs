@@ -120,6 +120,12 @@ public class AdminReservationRowResponse
     /// <summary>Estado de la última cancelación, si hubo alguna.</summary>
     public string? CancellationStatus { get; set; }
 
+    /// <summary>Un vuelo de operador pagado espera que el operador registre la emisión.</summary>
+    public bool FlightIssuancePending { get; set; }
+
+    /// <summary>Y lleva más de 24 horas así: pide atención (también entra en needsAttention).</summary>
+    public bool FlightIssuanceOverdue { get; set; }
+
     /// <summary>Lo efectivamente cobrado y devuelto, por moneda.</summary>
     public List<AdminMoneyResponse> Charged { get; set; } = [];
     public List<AdminMoneyResponse> Refunded { get; set; } = [];

@@ -450,8 +450,8 @@ public class SearchFlightsResponse
     public string InventoryMode { get; set; } = FlightInventoryModes.Simulated;
 
     /// <summary>
-    /// true si alguna opción se puede reservar (ver <see cref="FlightOptionResponse.Bookable"/>). Hoy siempre
-    /// false: los vuelos de operador, que son los reservables, llegan con B2.
+    /// true si alguna opción se puede reservar (ver <see cref="FlightOptionResponse.Bookable"/>): hay al menos un
+    /// vuelo de operador. Las ofertas de aerolínea nunca son reservables sueltas.
     /// </summary>
     public bool Bookable { get; set; }
 }

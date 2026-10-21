@@ -6,6 +6,7 @@ using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Destinations.Entities;
 using TurisClick.Api.Modules.Experiences.Entities;
 using TurisClick.Api.Modules.Flights.Entities;
+using TurisClick.Api.Modules.Flights.ProviderFlights.Entities;
 using TurisClick.Api.Modules.Packages.Entities;
 using TurisClick.Api.Modules.Preferences.Entities;
 using TurisClick.Api.Modules.Reservations.Entities;
@@ -43,6 +44,9 @@ public class TurisClickDbContext(DbContextOptions<TurisClickDbContext> options) 
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
     public DbSet<ReservationCancellation> ReservationCancellations => Set<ReservationCancellation>();
     public DbSet<ReservationCancellationLine> ReservationCancellationLines => Set<ReservationCancellationLine>();
+    public DbSet<ProviderFlight> ProviderFlights => Set<ProviderFlight>();
+    public DbSet<ProviderFlightDeparture> ProviderFlightDepartures => Set<ProviderFlightDeparture>();
+    public DbSet<ReservationPassenger> ReservationPassengers => Set<ReservationPassenger>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

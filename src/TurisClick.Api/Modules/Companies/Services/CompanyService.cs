@@ -154,6 +154,9 @@ public class CompanyService(ICompanyRepository companyRepository, TurisClickDbCo
         Status = company.Status.ToString(),
         ApprovedAt = company.ApprovedAt,
         RejectionReason = company.RejectionReason,
-        CreatedAt = company.CreatedAt
+        CreatedAt = company.CreatedAt,
+        CanSellFlights = company.CanSellFlights,
+        FlightSellerRegistration = company.FlightSellerRegistration,
+        FlightSellerAuthorizedAt = company.FlightSellerAuthorizedAt
     };
 }

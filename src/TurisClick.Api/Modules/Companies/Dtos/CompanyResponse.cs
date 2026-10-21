@@ -13,4 +13,13 @@ public class CompanyResponse
     public DateTimeOffset? ApprovedAt { get; set; }
     public string? RejectionReason { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Si un ADMIN autorizó a la empresa a vender vuelos (Oleada 18).</summary>
+    public bool CanSellFlights { get; set; }
+
+    /// <summary>Registro o licencia declarada al autorizarla. Se conserva aunque se revoque.</summary>
+    public string? FlightSellerRegistration { get; set; }
+
+    /// <summary>Cuándo se la autorizó. Nulo si nunca se la autorizó o se revocó.</summary>
+    public DateTimeOffset? FlightSellerAuthorizedAt { get; set; }
 }

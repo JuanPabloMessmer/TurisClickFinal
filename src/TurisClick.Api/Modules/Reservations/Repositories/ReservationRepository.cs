@@ -47,6 +47,8 @@ public class ReservationRepository(TurisClickDbContext db) : IReservationReposit
             .Include(r => r.Items).ThenInclude(i => i.ExperienceAvailability)
             .Include(r => r.Items).ThenInclude(i => i.Package)
             .Include(r => r.Items).ThenInclude(i => i.PackageAvailability)
+            .Include(r => r.Items).ThenInclude(i => i.ProviderFlightDeparture).ThenInclude(d => d!.ProviderFlight)
+            .Include(r => r.Items).ThenInclude(i => i.Passengers)
             .FirstOrDefaultAsync(r => r.Id == id, ct);
 
     public Task<Reservation?> GetByIdForPaymentAsync(Guid id, CancellationToken ct) =>
@@ -57,6 +59,8 @@ public class ReservationRepository(TurisClickDbContext db) : IReservationReposit
             .Include(r => r.Items).ThenInclude(i => i.ExperienceAvailability)
             .Include(r => r.Items).ThenInclude(i => i.Package)
             .Include(r => r.Items).ThenInclude(i => i.PackageAvailability)
+            .Include(r => r.Items).ThenInclude(i => i.ProviderFlightDeparture).ThenInclude(d => d!.ProviderFlight)
+            .Include(r => r.Items).ThenInclude(i => i.Passengers)
             .FirstOrDefaultAsync(r => r.Id == id, ct);
 
     public async Task<(List<Reservation> Items, int TotalCount)> ListByTouristAsync(
@@ -72,6 +76,8 @@ public class ReservationRepository(TurisClickDbContext db) : IReservationReposit
             .Include(r => r.Items).ThenInclude(i => i.ExperienceAvailability)
             .Include(r => r.Items).ThenInclude(i => i.Package)
             .Include(r => r.Items).ThenInclude(i => i.PackageAvailability)
+            .Include(r => r.Items).ThenInclude(i => i.ProviderFlightDeparture).ThenInclude(d => d!.ProviderFlight)
+            .Include(r => r.Items).ThenInclude(i => i.Passengers)
             .AsSplitQuery()
             .OrderByDescending(r => r.CreatedAt)
             .Skip((page - 1) * pageSize)

@@ -88,5 +88,13 @@ public enum PaymentComponent
 {
     PACKAGE,
     EXPERIENCE,
+
+    /// <summary>El pasaje de un paquete con vuelo, comprado al proveedor aéreo (FlightBooking).</summary>
     FLIGHT,
+
+    /// <summary>
+    /// Un vuelo de operador (ReservationItem con ProductType FLIGHT). Separado de FLIGHT a propósito: FLIGHT
+    /// dispara la cancelación con la aerolínea vía proveedor aéreo, y un vuelo de operador no tiene orden ahí.
+    /// </summary>
+    PROVIDER_FLIGHT,
 }
