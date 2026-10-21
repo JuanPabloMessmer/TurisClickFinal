@@ -1,4 +1,6 @@
-import { toApiError } from '@/lib/errors'
+import { FEATURE_NOT_AVAILABLE, toApiError } from '@/lib/errors'
+
+export const RESERVATION_NO_LONGER_PAYABLE = 'RESERVATION_NO_LONGER_PAYABLE'
 
 /**
  * Traducción de los errores REALES de cada endpoint de reservas a algo que la pantalla sepa manejar.
@@ -55,7 +57,44 @@ export function describeCreateFailure(error: unknown, travelers: number): Failur
   }
 }
 
+export type FlightCreateFailureKind =
+  | CreateReservationFailureKind
+  /** 501 FEATURE_NOT_AVAILABLE: el contrato existe pero reservar vuelos de operador todavía no. */
+  | 'NOT_AVAILABLE'
+
+/**
+ * Crear la reserva de un vuelo de operador. Mismo endpoint que experiencias y paquetes, pero lo que se agota
+ * son asientos de una salida y no cupos de una fecha, así que los mensajes hablan de eso.
+ */
+export function describeFlightCreateFailure(error: unknown, seated: number): Failure<FlightCreateFailureKind> {
+  const apiError = toApiError(error)
+
+  if (apiError.status === 501 && apiError.code === FEATURE_NOT_AVAILABLE) {
+    return {
+      kind: 'NOT_AVAILABLE',
+      message: `${apiError.message} No se creó ninguna reserva ni se retuvo ningún asiento.`,
+    }
+  }
+
+  switch (apiError.status) {
+    case 409:
+      return {
+        kind: 'NO_CAPACITY',
+        message: `Ya no quedan ${seated === 1 ? 'asientos' : `${seated} asientos`} libres en este vuelo. Volvé a los resultados para elegir otro.`,
+      }
+    case 410:
+      return { kind: 'SLOT_UNAVAILABLE', message: 'El operador dejó de vender esta salida. Volvé a los resultados para elegir otra.' }
+    case 404:
+      return { kind: 'PRODUCT_UNAVAILABLE', message: 'Este vuelo ya no está a la venta.' }
+    default:
+      return describeCreateFailure(error, seated)
+  }
+}
+
 export type PayFailureKind =
+  | 'NOT_AVAILABLE'
+  /** 409 RESERVATION_NO_LONGER_PAYABLE: el operador canceló lo que había para pagar (p. ej. el vuelo). */
+  | 'NO_LONGER_PAYABLE'
   | 'EXPIRED'
   | 'STALE'
   | 'NOT_FOUND'
@@ -113,6 +152,19 @@ export function describePayFailure(error: unknown): Failure<PayFailureKind> {
   }
 
   if (apiError.code && FLIGHT_FAILURES[apiError.code]) return FLIGHT_FAILURES[apiError.code]
+
+  if (apiError.status === 501 && apiError.code === FEATURE_NOT_AVAILABLE) {
+    return { kind: 'NOT_AVAILABLE', message: `${apiError.message} No se cobró nada.` }
+  }
+
+  // El mismo código llega también como 410 (expirada): ese caso sigue siendo EXPIRED, más abajo. Como 409
+  // significa que no queda nada que pagar porque el operador lo canceló, y reintentar no lo cambia.
+  if (apiError.status === 409 && apiError.code === RESERVATION_NO_LONGER_PAYABLE) {
+    return {
+      kind: 'NO_LONGER_PAYABLE',
+      message: 'Esta reserva ya no se puede pagar: el operador canceló los servicios que tenía. No se cobró nada.',
+    }
+  }
 
   switch (apiError.status) {
     // Dos formas reales: con RESERVATION_NO_LONGER_PAYABLE (ya EXPIRED o carrera perdida) y SIN código

@@ -7,6 +7,8 @@ import type {
 import { formatCurrency, formatDate } from '@turisclick/utils'
 import { useRouter, type Href } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
+import { flightItemsOf, issuanceDisplay } from '@/features/flights/booking/model'
+import { DemoTag, ProviderFlightItemCard } from '@/features/flights/booking/ProviderFlightItemCard'
 import {
   displayStatus,
   isCancelledByOperator,
@@ -77,10 +79,16 @@ export function travelersLabel(travelers?: number) {
 export function ReservationItemCard({
   item,
   reservationStatus,
+  legLabel,
 }: {
   item: ReservationItemResponse
   reservationStatus?: string | null
+  /** Sólo vuelos de operador: "Ida" o "Vuelta". */
+  legLabel?: string | null
 }) {
+  // Vuelo suelto de operador: tiene su propia tarjeta (pasajeros, emisión, DEMO).
+  if (item.flight) return <ProviderFlightItemCard item={item} legLabel={legLabel} />
+
   const statusLabel = itemStatusLabel(item, reservationStatus)
   const cancelledByOperator = isCancelledByOperator(item, reservationStatus)
   const when = formatItemWhen(item)
@@ -111,6 +119,33 @@ export function ReservationItemCard({
       {cancelledByOperator && item.cancellationReason ? (
         <Text className="mt-1 text-sm leading-5 text-[#5B7285]">Motivo del operador: {item.cancellationReason}</Text>
       ) : null}
+    </View>
+  )
+}
+
+/**
+ * Las líneas de una reserva. Los vuelos de operador van en orden de salida y, si son dos, rotulados ida y
+ * vuelta; el resto, en el orden del backend.
+ */
+export function ReservationItems({
+  items,
+  reservationStatus,
+}: {
+  items?: ReservationItemResponse[] | null
+  reservationStatus?: string | null
+}) {
+  const flights = flightItemsOf(items)
+  const others = (items ?? []).filter((item) => !item.flight)
+  const legLabel = (index: number) => (flights.length === 2 ? (index === 0 ? 'Ida' : 'Vuelta') : null)
+
+  return (
+    <View className="gap-3">
+      {flights.map((item, index) => (
+        <ReservationItemCard key={item.id} item={item} reservationStatus={reservationStatus} legLabel={legLabel(index)} />
+      ))}
+      {others.map((item) => (
+        <ReservationItemCard key={item.id} item={item} reservationStatus={reservationStatus} />
+      ))}
     </View>
   )
 }
@@ -266,6 +301,8 @@ export function TripCard({
           ) : null}
         </View>
 
+        <TripFlightSummary reservation={reservation} />
+
         <View className="mt-3">
           <TotalsList totals={reservation.totals} />
         </View>
@@ -280,6 +317,33 @@ export function TripCard({
           <Button label="Pagar" onPress={() => router.push(`/checkout/${reservation.id}` as Href)} />
         </View>
       ) : null}
+    </View>
+  )
+}
+
+/**
+ * En "Mis viajes", el estado del pasaje de cada vuelo de operador: es lo que la persona viene a mirar después
+ * de pagar. Con DEMO siempre a la vista.
+ */
+function TripFlightSummary({ reservation }: { reservation: ReservationResponse }) {
+  const flights = flightItemsOf(reservation.items)
+  if (flights.length === 0) return null
+
+  return (
+    <View className="mt-2 gap-1" testID="trip-flight-summary">
+      {flights.map((item, index) => {
+        const issuance = issuanceDisplay(item.flight!, item.status)
+        const leg = flights.length === 2 ? (index === 0 ? 'Ida' : 'Vuelta') : 'Vuelo'
+        return (
+          <View key={item.id} className="flex-row flex-wrap items-center gap-2">
+            <Text className="text-sm text-ink">
+              {leg} {item.flight!.departureAt ? formatDate(item.flight!.departureAt.slice(0, 10)) : ''}
+            </Text>
+            <StatusBadge status={{ kind: 'UNKNOWN', label: issuance.label, tone: issuance.tone }} />
+            {item.flight!.demo !== false ? <DemoTag /> : null}
+          </View>
+        )
+      })}
     </View>
   )
 }

@@ -13,7 +13,7 @@ import { CancellationPreview } from '@/features/reservations/CancellationSheet'
 import {
   CancellationOutcome,
   CountdownBanner,
-  ReservationItemCard,
+  ReservationItems,
   StatusBadge,
   TotalsList,
 } from '@/features/reservations/components'
@@ -128,11 +128,7 @@ export function ReservationDetail({ id }: { id: string }) {
         </Text>
       ) : null}
 
-      <View className="gap-3">
-        {(reservation.items ?? []).map((item) => (
-          <ReservationItemCard key={item.id} item={item} reservationStatus={reservation.status} />
-        ))}
-      </View>
+      <ReservationItems items={reservation.items} reservationStatus={reservation.status} />
 
       {reservation.flight ? <FlightBookingCard flight={reservation.flight} /> : null}
 
