@@ -5,7 +5,9 @@ import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableEmptyRow, TableHead, TableHeader, TableLoadingRow, TableRow } from '@/components/ui/table'
+import { formatLocalDateTime, issuanceLabel, issuanceVariant } from '@/modules/provider-flights/labels'
 import { useCompanyReservations } from './api'
+import { isFlightItem, itemTitle } from './itemTitle'
 
 const statusVariant: Record<string, 'success' | 'warning' | 'neutral'> = {
   CONFIRMED: 'success',
@@ -25,13 +27,13 @@ export function ProviderReservationsPage() {
 
   return (
     <div>
-      <PageHeader title="Reservas" description="Las reservas que recibieron tus experiencias y paquetes." />
+      <PageHeader title="Reservas" description="Las reservas que recibieron tus experiencias, paquetes y vuelos." />
 
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Experiencia</TableHead>
+              <TableHead>Producto</TableHead>
               <TableHead>Turista</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Viajeros</TableHead>
@@ -47,13 +49,23 @@ export function ProviderReservationsPage() {
             )}
             {items.map((item) => (
               <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.experienceTitle}</TableCell>
+                <TableCell className="font-medium">{itemTitle(item)}</TableCell>
                 <TableCell className="text-muted-foreground">{item.touristName}</TableCell>
-                <TableCell>{item.date ? formatDate(item.date) : '—'}</TableCell>
+                <TableCell>
+                  {isFlightItem(item) ? formatLocalDateTime(item.flight?.departureAt) : item.date ? formatDate(item.date) : '—'}
+                </TableCell>
                 <TableCell>{item.travelers}</TableCell>
                 <TableCell>{formatCurrency(item.subtotal ?? 0, item.currency ?? 'USD')}</TableCell>
                 <TableCell>
-                  <Badge variant={statusVariant[item.status ?? ''] ?? 'neutral'}>{statusLabel[item.status ?? ''] ?? item.status}</Badge>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant={statusVariant[item.status ?? ''] ?? 'neutral'}>{statusLabel[item.status ?? ''] ?? item.status}</Badge>
+                    {/* Sólo lo que pide una acción del operador o ya la tuvo: NOT_REQUIRED (sin pagar) no se muestra. */}
+                    {isFlightItem(item) && item.flight?.issuanceStatus && item.flight.issuanceStatus !== 'NOT_REQUIRED' && (
+                      <Badge variant={issuanceVariant[item.flight.issuanceStatus] ?? 'neutral'}>
+                        {issuanceLabel[item.flight.issuanceStatus] ?? item.flight.issuanceStatus}
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <Link

@@ -16,6 +16,7 @@ import { CompaniesApprovalPage } from '@/modules/companies/CompaniesApprovalPage
 import { CompanyDetailPage } from '@/modules/companies/CompanyDetailPage'
 import { NewProviderAccountPage } from '@/modules/companies/NewProviderAccountPage'
 import { AdminExperiencesPage, AdminPackagesPage } from '@/modules/platform/AdminCatalogPages'
+import { AdminFlightsPage } from '@/modules/platform/AdminFlightsPage'
 import { AdminReservationDetailPage } from '@/modules/platform/AdminReservationDetailPage'
 import { AdminReservationsPage } from '@/modules/platform/AdminReservationsPage'
 import { DestinationsPage } from '@/modules/destinations/DestinationsPage'
@@ -26,6 +27,9 @@ import { RequireApprovedCompany } from '@/modules/my-company/RequireApprovedComp
 import { PackageAvailabilityPage } from '@/modules/package-availability/PackageAvailabilityPage'
 import { PackageFormPage } from '@/modules/packages/PackageFormPage'
 import { PackagesPage } from '@/modules/packages/PackagesPage'
+import { ProviderFlightDeparturesPage } from '@/modules/provider-flights/ProviderFlightDeparturesPage'
+import { ProviderFlightFormPage } from '@/modules/provider-flights/ProviderFlightFormPage'
+import { ProviderFlightsPage } from '@/modules/provider-flights/ProviderFlightsPage'
 import { ProviderReservationDetailPage } from '@/modules/provider-reservations/ProviderReservationDetailPage'
 import { ProviderReservationsPage } from '@/modules/provider-reservations/ProviderReservationsPage'
 import { UsersPage } from '@/modules/users/UsersPage'
@@ -63,6 +67,7 @@ export default function App() {
                 <Route path="/admin/companies/:id" element={<CompanyDetailPage />} />
                 <Route path="/admin/experiences" element={<AdminExperiencesPage />} />
                 <Route path="/admin/packages" element={<AdminPackagesPage />} />
+                <Route path="/admin/flights" element={<AdminFlightsPage />} />
                 <Route path="/admin/reservations" element={<AdminReservationsPage />} />
                 <Route path="/admin/reservations/:id" element={<AdminReservationDetailPage />} />
               </Route>
@@ -80,6 +85,10 @@ export default function App() {
                   <Route path="/provider/packages/new" element={<PackageFormPage />} />
                   <Route path="/provider/packages/:id/edit" element={<PackageFormPage />} />
                   <Route path="/provider/packages/:id/availability" element={<PackageAvailabilityPage />} />
+                  <Route path="/provider/flights" element={<ProviderFlightsPage />} />
+                  <Route path="/provider/flights/new" element={<ProviderFlightFormPage />} />
+                  <Route path="/provider/flights/:id/edit" element={<ProviderFlightFormPage />} />
+                  <Route path="/provider/flights/:id/departures" element={<ProviderFlightDeparturesPage />} />
                   <Route path="/provider/reservations" element={<ProviderReservationsPage />} />
                   <Route path="/provider/reservations/:id" element={<ProviderReservationDetailPage />} />
                 </Route>
