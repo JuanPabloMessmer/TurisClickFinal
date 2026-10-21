@@ -132,7 +132,10 @@ public class ReservationService(
         foreach (var leg in legs) EnsureFlightIsBookable(leg);
         if (legs.Count == 2) EnsureRoundTripMatches(legs[0], legs[1]);
 
-        EnsurePassengerAges(passengers, DateOnly.FromDateTime(legs[0].DepartureAt));
+        // Cada tramo con su fecha: un infante que cumple 2 antes de la vuelta necesita asiento en la vuelta, y
+        // la misma lista de pasajeros no puede ser válida para un tramo e inválida para el otro.
+        foreach (var leg in legs)
+            EnsurePassengerAges(passengers, DateOnly.FromDateTime(leg.DepartureAt), legs.Count == 2 && leg == legs[1]);
 
         var adults = passengers.Count(p => p.Type == PassengerTypes.Adult);
         var children = passengers.Count(p => p.Type == PassengerTypes.Child);
@@ -256,9 +259,12 @@ public class ReservationService(
             throw new ValidationAppException("La vuelta tiene que salir después de que llegue la ida.");
     }
 
-    /// <summary>La edad de cada pasajero tiene que corresponder a su tipo el día del vuelo de ida.</summary>
-    private static void EnsurePassengerAges(IReadOnlyList<ReservationPassengerRequest> passengers, DateOnly flightDate)
+    /// <summary>La edad de cada pasajero tiene que corresponder a su tipo el día de cada vuelo.</summary>
+    private static void EnsurePassengerAges(
+        IReadOnlyList<ReservationPassengerRequest> passengers, DateOnly flightDate, bool isReturn = false)
     {
+        var when = isReturn ? "el día de la vuelta" : "el día del vuelo";
+
         foreach (var passenger in passengers)
         {
             var age = flightDate.Year - passenger.BornOn.Year - (flightDate < passenger.BornOn.AddYears(flightDate.Year - passenger.BornOn.Year) ? 1 : 0);
@@ -266,9 +272,11 @@ public class ReservationService(
 
             var problem = passenger.Type switch
             {
-                PassengerTypes.Adult when age < 12 => $"{name} tiene {age} años el día del vuelo: viaja como niño o infante, no como adulto.",
-                PassengerTypes.Child when age is < 2 or > 11 => $"{name} tiene {age} años el día del vuelo: un niño tiene entre 2 y 11.",
-                PassengerTypes.Infant when age >= 2 => $"{name} tiene {age} años el día del vuelo: un infante es menor de 2.",
+                PassengerTypes.Adult when age < 12 => $"{name} tiene {age} años {when}: viaja como niño o infante, no como adulto.",
+                PassengerTypes.Child when age is < 2 or > 11 => $"{name} tiene {age} años {when}: un niño tiene entre 2 y 11.",
+                PassengerTypes.Infant when age >= 2 && isReturn =>
+                    $"{name} cumple 2 años antes de la vuelta y en ese tramo necesita asiento: reservá la ida y la vuelta por separado.",
+                PassengerTypes.Infant when age >= 2 => $"{name} tiene {age} años {when}: un infante es menor de 2.",
                 _ => null,
             };
 

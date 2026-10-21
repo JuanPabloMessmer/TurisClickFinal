@@ -248,6 +248,7 @@ public class ProviderFlightBookingTests(TurisClickApiFactory factory)
         Assert.Equal(FlightOfferSources.Provider, option.Source);
         Assert.True(option.Bookable);
         Assert.True(result.Bookable);
+        Assert.True(option.ProviderFlight!.Demo);
         Assert.Equal([s.OutboundId], option.ProviderFlight!.DepartureIds);
         Assert.Equal(20, option.ProviderFlight.SeatsLeft);
         Assert.Equal(s.CompanyId, option.ProviderFlight.OperatorCompanyId);
@@ -379,6 +380,26 @@ public class ProviderFlightBookingTests(TurisClickApiFactory factory)
             .Where(p => p.ReservationId == reservation.Id && p.Type == PaymentTransactionType.CHARGE && p.Status == PaymentTransactionStatus.SUCCEEDED)
             .SumAsync(p => p.Amount));
         Assert.Equal(returnItem.Subtotal, charged);
+    }
+
+    [Fact]
+    public async Task LaEdadSeValidaEnCadaTramo_UnInfanteQueCumple2AntesDeLaVueltaNecesitaAsiento()
+    {
+        var s = await PublishedFlightAsync("pfb-rt-ages");
+        var back = await PublishReturnAsync(s);
+        var tourist = await TouristAsync("pfb-rt-ages-t");
+
+        // Cumple 2 años el día después de la ida: es infante a la ida y ya no a la vuelta (dos días después).
+        var infant = Passenger("INFANT", s.Date.AddDays(1).AddYears(-2).ToString("yyyy-MM-dd"), "Mateo");
+        var response = await ReserveAsync(tourist, [s.OutboundId, back], [Passenger("ADULT", "1990-01-01"), infant], seats: 1);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("antes de la vuelta", await response.Content.ReadAsStringAsync());
+        Assert.Equal(0, await ReservedSeatsAsync(s.OutboundId));
+
+        // Sólo ida, el mismo pasajero es un infante válido.
+        Assert.Equal(HttpStatusCode.Created,
+            (await ReserveAsync(tourist, [s.OutboundId], [Passenger("ADULT", "1990-01-01"), infant], seats: 1)).StatusCode);
     }
 
     [Fact]

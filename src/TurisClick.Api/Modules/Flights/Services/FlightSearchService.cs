@@ -177,6 +177,7 @@ public class FlightSearchService(
                             SeatsLeft = c.Legs.Min(l => l.AvailableSeats),
                             CancellationPolicy = CancellationPolicyRules.Deserialize(first.CancellationPolicy),
                             FareRules = first.FareRules,
+                            Demo = true,
                         },
                     };
                 }),

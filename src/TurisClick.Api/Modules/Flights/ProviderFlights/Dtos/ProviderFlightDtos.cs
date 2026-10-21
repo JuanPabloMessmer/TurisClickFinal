@@ -436,6 +436,12 @@ public class ProviderFlightOfferResponse
 
     public List<CancellationTierDto> CancellationPolicy { get; set; } = [];
     public string? FareRules { get; set; }
+
+    /// <summary>
+    /// true en el entorno de demostración, igual que <c>ProviderFlightItemResponse.Demo</c>: el rótulo DEMO de
+    /// un vuelo de operador no depende del modo del proveedor aéreo (inventoryMode), que es otra fuente.
+    /// </summary>
+    public bool Demo { get; set; } = true;
 }
 
 /// <summary>Página de vuelos de operador para el ADMIN.</summary>

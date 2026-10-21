@@ -80,6 +80,11 @@ public class ReservationItemResponse
     public string TouristName { get; set; } = string.Empty;
 
     public int Travelers { get; set; }
+
+    /// <summary>
+    /// Precio unitario congelado. En un vuelo de operador (ProductType FLIGHT) es la tarifa de ADULTO: con niños
+    /// o infantes, UnitPrice × Travelers no es el subtotal. El importe de la línea es siempre <see cref="Subtotal"/>.
+    /// </summary>
     public decimal UnitPrice { get; set; }
     public string Currency { get; set; } = string.Empty;
     public decimal Subtotal { get; set; }

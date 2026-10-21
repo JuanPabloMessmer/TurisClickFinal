@@ -5876,6 +5876,7 @@ export interface components {
             seatsLeft?: number;
             cancellationPolicy?: components["schemas"]["CancellationTierDto"][] | null;
             fareRules?: string | null;
+            demo?: boolean;
         };
         ProviderFlightRequest: {
             originIata: string;
