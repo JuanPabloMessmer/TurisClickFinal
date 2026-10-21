@@ -5,6 +5,7 @@ import { SlidersHorizontal } from 'lucide-react-native'
 import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFlightSearchResults } from '@/features/flights/api'
+import { bookingParams, isBookableProviderOption, isDemoOffer } from '@/features/flights/booking/model'
 import {
   activeFilterCount,
   applyFilters,
@@ -24,9 +25,9 @@ import { Badge, Button, Chip, EmptyState, ErrorState, Icon, Skeleton, Surface } 
 /**
  * Resultados de una búsqueda de vuelos: orden, filtros y las ofertas.
  *
- * Lo que esta pantalla **no** hace, a propósito: ofrecer reservar. La compra de vuelos sueltos todavía no
- * existe y el backend no devuelve nada reservable (`bookable: false`); un botón de "Seleccionar" acá sería
- * prometer algo que el sistema no hace. Lo que sí lleva es a los paquetes que vuelan la ruta.
+ * "Seleccionar" aparece sólo en los vuelos que publica un operador autorizado y que el backend marca como
+ * reservables. Las ofertas de aerolínea (el proveedor simulado) se muestran para comparar, rotuladas DEMO, y
+ * nunca se ofrecen para comprar. Mirar no exige sesión: la sesión se pide al empezar la reserva.
  */
 export function FlightResultsScreen({ request }: { request: flightsApi.SearchFlightsRequest | null }) {
   const router = useRouter()
@@ -53,7 +54,11 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
     infants: request.infants ?? 0,
   }
   const totalPassengers = passengers.adults + passengers.childrenAges.length + passengers.infants
-  const demo = data ? data.inventoryMode !== 'LIVE' : true
+  const hasBookable = options.some(isBookableProviderOption)
+  const bookableDemo = options.some((option) => isBookableProviderOption(option) && isDemoOffer(option))
+
+  const onSelect = (option: flightsApi.FlightOptionResponse) =>
+    router.push({ pathname: '/book/flight', params: bookingParams(request, option) })
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
@@ -95,7 +100,7 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
       ) : data ? (
         <>
           <View className="mt-4 px-5">
-            <InventoryBanner mode={data.inventoryMode} testMode={data.testMode} />
+            <InventoryBanner mode={data.inventoryMode} testMode={data.testMode} hasBookable={hasBookable} bookableDemo={bookableDemo} />
           </View>
 
           {data.notice ? (
@@ -140,7 +145,7 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
               ) : (
                 <View className="mt-3 gap-3 px-5">
                   {visible.map((option, index) => (
-                    <FlightOfferCard key={index} option={option} passengers={totalPassengers} demo={demo} />
+                    <FlightOfferCard key={index} option={option} passengers={totalPassengers} demo={isDemoOffer(option, data.inventoryMode)} onSelect={onSelect} />
                   ))}
                 </View>
               )}
@@ -148,10 +153,13 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
           ) : null}
 
           <View className="mt-8 px-5">
-            <Text className="font-display text-heading text-ink">¿Se puede comprar este vuelo?</Text>
+            <Text className="font-display text-heading text-ink">
+              {hasBookable ? '¿Preferís un paquete con vuelo?' : '¿Se puede comprar este vuelo?'}
+            </Text>
             <Text className="mt-1 font-sans text-body text-ink-muted">
-              Todavía no: la compra de vuelos sueltos no está disponible. Hoy el vuelo se compra dentro de un paquete de
-              TurisClick, y el operador se hace cargo de los dos.
+              {hasBookable
+                ? 'Los vuelos con "Seleccionar" se compran sueltos. También podés llevar el vuelo dentro de un paquete de TurisClick, y el operador se hace cargo de los dos.'
+                : 'Todavía no: la compra de vuelos sueltos no está disponible. Hoy el vuelo se compra dentro de un paquete de TurisClick, y el operador se hace cargo de los dos.'}
             </Text>
 
             {(data.packages ?? []).length === 0 ? (

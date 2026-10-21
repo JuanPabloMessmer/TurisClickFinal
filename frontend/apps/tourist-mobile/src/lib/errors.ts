@@ -28,6 +28,10 @@ const UNEXPECTED_MESSAGE = 'Algo salió mal. Intentá de nuevo en un momento.'
 const SERVER_MESSAGE = 'Tuvimos un problema de nuestro lado. Intentá de nuevo en un momento.'
 const VALIDATION_MESSAGE = 'Revisá los datos e intentá de nuevo.'
 
+/** `errorCode` de un 501: el endpoint existe con su contrato definitivo, pero la funcionalidad todavía no. */
+export const FEATURE_NOT_AVAILABLE = 'FEATURE_NOT_AVAILABLE'
+const FEATURE_NOT_AVAILABLE_MESSAGE = 'Esto todavía no está disponible.'
+
 const MESSAGE_BY_STATUS: Record<number, string> = {
   400: VALIDATION_MESSAGE,
   401: 'Tu sesión expiró. Iniciá sesión de nuevo.',
@@ -67,6 +71,17 @@ export function toApiError(error: unknown): ApiError {
 
   const status = error.response.status
   const problem = error.response.data as ProblemDetails | undefined
+
+  // La única excepción: un 501 declarado (`FEATURE_NOT_AVAILABLE`). No es una falla sino una funcionalidad
+  // cuyo contrato existe y que todavía no está habilitada; el backend escribe ese mensaje para la persona.
+  if (status === 501 && problem?.errorCode === FEATURE_NOT_AVAILABLE) {
+    return {
+      message: problem.detail?.trim() || FEATURE_NOT_AVAILABLE_MESSAGE,
+      status,
+      code: FEATURE_NOT_AVAILABLE,
+      isNetworkError: false,
+    }
+  }
 
   // Un 5xx NUNCA muestra `detail`: hoy el GlobalExceptionHandler del backend pone ahí el mensaje crudo de
   // la excepción (nombres de tablas, stack de EF...). Tampoco se expone un código.

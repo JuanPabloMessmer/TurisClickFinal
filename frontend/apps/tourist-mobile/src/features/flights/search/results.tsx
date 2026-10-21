@@ -3,6 +3,7 @@ import { formatCurrency } from '@turisclick/utils'
 import { Briefcase, Plane } from 'lucide-react-native'
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
+import { isBookableProviderOption } from '@/features/flights/booking/model'
 import { formatDuration, formatTime, stopsLabel } from '@/features/flights/components'
 import {
   activeFilterCount,
@@ -27,7 +28,19 @@ type Slice = NonNullable<Option['slices']>[number]
  * los vuelos NO existen: son datos de demostración que TurisClick genera, y una pantalla que los mostrara
  * como vuelos reales estaría mintiendo. Sin el dato (un backend anterior) se asume lo prudente.
  */
-export function InventoryBanner({ mode, testMode }: { mode?: string | null; testMode?: boolean }) {
+export function InventoryBanner({
+  mode,
+  testMode,
+  hasBookable = false,
+  bookableDemo = true,
+}: {
+  mode?: string | null
+  testMode?: boolean
+  /** Hay vuelos de operador reservables en la lista: el aviso tiene que distinguirlos de las ofertas simuladas. */
+  hasBookable?: boolean
+  /** Alguno de esos vuelos de operador es de demostración (`providerFlight.demo`). */
+  bookableDemo?: boolean
+}) {
   if (mode === 'LIVE' || (!mode && !testMode)) return null
 
   const sandbox = mode === 'SANDBOX'
@@ -41,9 +54,13 @@ export function InventoryBanner({ mode, testMode }: { mode?: string | null; test
         {sandbox ? 'MODO PRUEBA · no se emiten pasajes' : 'DEMO · vuelos simulados'}
       </Text>
       <Text className="mt-1 font-sans text-caption text-warning-fg">
-        {sandbox
-          ? 'Ofertas del entorno de prueba del proveedor aéreo. Horarios y precios no corresponden a vuelos comerciales y nada se puede comprar.'
-          : 'TurisClick genera estos vuelos para la demostración. No son vuelos reales, no tienen asientos ni se pueden comprar.'}
+        {hasBookable && bookableDemo
+          ? 'Las ofertas de aerolínea son simuladas y no se pueden comprar. Los vuelos con "Seleccionar" los publica un operador de prueba: se reservan con un pago simulado y ningún pasaje es real.'
+          : hasBookable
+            ? 'Las ofertas de aerolínea son simuladas y no se pueden comprar. Sólo se reservan los vuelos con "Seleccionar", que vende un operador.'
+          : sandbox
+            ? 'Ofertas del entorno de prueba del proveedor aéreo. Horarios y precios no corresponden a vuelos comerciales y nada se puede comprar.'
+            : 'TurisClick genera estos vuelos para la demostración. No son vuelos reales, no tienen asientos ni se pueden comprar.'}
       </Text>
     </View>
   )
@@ -54,12 +71,17 @@ export function FlightOfferCard({
   option,
   passengers,
   demo,
+  onSelect,
 }: {
   option: Option
   passengers: number
   demo: boolean
+  /** Sólo se usa si la opción es un vuelo de operador reservable. */
+  onSelect?: (option: Option) => void
 }) {
   const bags = checkedBagsOf(option)
+  const bookable = isBookableProviderOption(option)
+  const provider = option.providerFlight
 
   return (
     <Surface className="rounded-lg">
@@ -79,7 +101,14 @@ export function FlightOfferCard({
         </View>
 
         {(option.slices ?? []).map((slice, index) => (
-          <SliceRow key={index} slice={slice} label={(option.slices?.length ?? 0) > 1 ? (index === 0 ? 'Ida' : 'Vuelta') : null} />
+          <SliceRow
+            key={index}
+            slice={slice}
+            label={(option.slices?.length ?? 0) > 1 ? (index === 0 ? 'Ida' : 'Vuelta') : null}
+            // Un vuelo de operador no informa duración: sus horarios son locales y sin huso, así que restarlos
+            // daría cualquier cosa entre aeropuertos de husos distintos.
+            showDuration={option.source !== 'PROVIDER'}
+          />
         ))}
 
         <View className="mt-3 flex-row items-end justify-between border-t border-border pt-3">
@@ -104,16 +133,38 @@ export function FlightOfferCard({
             </Text>
           </View>
         </View>
+
+        {bookable && provider ? (
+          <View className="mt-3 gap-3 border-t border-border pt-3">
+            <View className="flex-row flex-wrap items-center justify-between gap-2">
+              <Text className="flex-1 font-sans text-caption text-ink-muted" numberOfLines={2}>
+                Vendido por {provider.operatorName || 'un operador'}
+              </Text>
+              {(provider.seatsLeft ?? 0) > 0 && (provider.seatsLeft ?? 0) <= 9 ? (
+                <Text className="font-ui600 text-caption text-accent-700">
+                  {provider.seatsLeft === 1 ? 'Queda 1 asiento' : `Quedan ${provider.seatsLeft} asientos`}
+                </Text>
+              ) : null}
+            </View>
+            {onSelect ? (
+              <Button
+                label="Seleccionar"
+                accessibilityLabel={`Seleccionar vuelo de ${option.carrierName ?? 'aerolínea'} vendido por ${provider.operatorName ?? 'un operador'}`}
+                onPress={() => onSelect(option)}
+              />
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </Surface>
   )
 }
 
-function SliceRow({ slice, label }: { slice: Slice; label: string | null }) {
+function SliceRow({ slice, label, showDuration = true }: { slice: Slice; label: string | null; showDuration?: boolean }) {
   const segments = slice.segments ?? []
   const first = segments[0]
   const last = segments[segments.length - 1]
-  const minutes = sliceMinutes(slice)
+  const minutes = showDuration ? sliceMinutes(slice) : null
   const offset = arrivalDayOffset(first?.departingAt, last?.arrivingAt)
   const via = segments.slice(0, -1).map((segment) => segment.destinationIata).join(', ')
   const stops = slice.stops ?? Math.max(segments.length - 1, 0)

@@ -59,8 +59,14 @@ export function displayStatus(reservation: ReservationResponse, now: number): Re
       const items = reservation.items ?? []
       const cancelled = items.filter((item) => isCancelledByOperator(item, reservation.status)).length
 
+      // Vuelos de operador: la emisión fallida cancela el vuelo con reembolso total, y se dice así.
+      const flights = items.filter((item) => item.flight)
+      const failedFlights = flights.filter((item) => item.flight?.issuanceStatus === 'FAILED').length
+
       if (items.length > 0 && cancelled === items.length) {
-        return { kind: 'CANCELLED_BY_OPERATOR', label: 'Cancelada por el operador', tone: 'danger' }
+        return failedFlights === items.length
+          ? { kind: 'CANCELLED_BY_OPERATOR', label: 'Emisión fallida · reembolso total', tone: 'danger' }
+          : { kind: 'CANCELLED_BY_OPERATOR', label: 'Cancelada por el operador', tone: 'danger' }
       }
       if (cancelled > 0) {
         return {
@@ -68,6 +74,13 @@ export function displayStatus(reservation: ReservationResponse, now: number): Re
           label: `Confirmada · ${cancelled} ${cancelled === 1 ? 'servicio cancelado' : 'servicios cancelados'} por el operador`,
           tone: 'warning',
         }
+      }
+      // Pagada no es emitida: con vuelos de operador, "Pasaje emitido" sólo cuando todos están ISSUED.
+      if (flights.length > 0) {
+        if (flights.every((item) => item.flight?.issuanceStatus === 'ISSUED'))
+          return { kind: 'CONFIRMED', label: 'Pasaje emitido', tone: 'success' }
+        if (flights.some((item) => item.flight?.issuanceStatus === 'PENDING'))
+          return { kind: 'CONFIRMED', label: 'Pagada · emisión pendiente', tone: 'warning' }
       }
       return { kind: 'CONFIRMED', label: 'Confirmada', tone: 'success' }
     }
@@ -88,6 +101,7 @@ export function displayStatus(reservation: ReservationResponse, now: number): Re
 
 /** Estado de UNA línea, en palabras. `null` cuando coincide con el de la reserva y no aporta nada. */
 export function itemStatusLabel(item: ReservationItemResponse, reservationStatus?: string | null): string | null {
+  if (item.flight?.issuanceStatus === 'FAILED') return 'Emisión fallida · reembolso total'
   if (isCancelledByOperator(item, reservationStatus)) return 'Cancelado por el operador'
   if (item.status === reservationStatus) return null
 
@@ -106,13 +120,21 @@ export function itemStatusLabel(item: ReservationItemResponse, reservationStatus
 }
 
 export function itemTitle(item: ReservationItemResponse): string {
+  if (item.flight) return `Vuelo ${item.flight.originIata} → ${item.flight.destinationIata}`
   return item.experienceTitle ?? item.packageTitle ?? 'Producto'
 }
 
-/** Título de la reserva en una tarjeta: el primer producto y cuántos más hay. */
+/**
+ * Título de la reserva en una tarjeta: el primer producto y cuántos más hay. Un vuelo de ida y vuelta son dos
+ * líneas pero una sola compra: se titula por la ida y no cuenta la vuelta como "+1 más".
+ */
 export function reservationTitle(reservation: ReservationResponse): { title: string; extraCount: number } {
   const items = reservation.items ?? []
   if (items.length === 0) return { title: 'Reserva', extraCount: 0 }
+  if (items.every((item) => item.flight)) {
+    const ordered = [...items].sort((a, b) => (a.flight!.departureAt ?? '').localeCompare(b.flight!.departureAt ?? ''))
+    return { title: `${itemTitle(ordered[0])}${items.length === 2 ? ' · ida y vuelta' : ''}`, extraCount: 0 }
+  }
   return { title: itemTitle(items[0]), extraCount: items.length - 1 }
 }
 

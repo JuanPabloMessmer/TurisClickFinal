@@ -19,7 +19,9 @@ import {
   usePayReservation,
   useReservation,
 } from '@/features/reservations/api'
-import { CountdownBanner, ReservationItemCard, TotalsList } from '@/features/reservations/components'
+import { CountdownBanner, ReservationItems, TotalsList } from '@/features/reservations/components'
+import { flightItemsOf } from '@/features/flights/booking/model'
+import { DemoTag } from '@/features/flights/booking/ProviderFlightItemCard'
 import { describeCancelFailure, describePayFailure, isReservationNotFound } from '@/features/reservations/errors'
 import { priceChangeLines, projectedTotals } from '@/features/reservations/model'
 import { confirmCancellation } from '@/features/reservations/ReservationDetail'
@@ -65,6 +67,7 @@ export function Checkout({
   const [declineReason, setDeclineReason] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [expiredByServer, setExpiredByServer] = useState(false)
+  const [noLongerPayable, setNoLongerPayable] = useState(false)
   const [travelerErrors, setTravelerErrors] = useState<TravelerErrors[]>([])
 
   // Un borrador por pasajero. Se arma a partir de lo que dice el backend que trae la reserva, y se reajusta
@@ -102,6 +105,7 @@ export function Checkout({
 
   if (reservation.status === 'CONFIRMED') return <PaymentSuccess reservation={reservation} />
   if (reservation.status === 'EXPIRED' || expiredByServer) return <CheckoutClosed kind="EXPIRED" id={id} />
+  if (noLongerPayable) return <CheckoutClosed kind="NO_LONGER_PAYABLE" id={id} />
   if (reservation.status === 'CANCELLED') return <CheckoutClosed kind="CANCELLED" id={id} />
   if (reservation.status !== 'PENDING_PAYMENT') return <CheckoutClosed kind="UNKNOWN" id={id} />
 
@@ -163,6 +167,10 @@ export function Checkout({
             setExpiredByServer(true)
             return
           }
+          if (failure.kind === 'NO_LONGER_PAYABLE') {
+            setNoLongerPayable(true)
+            return
+          }
           if (failure.kind === 'STALE') setPriceChange(null)
           setActionError(failure.message)
         },
@@ -206,11 +214,7 @@ export function Checkout({
         </View>
       ) : null}
 
-      <View className="gap-3">
-        {items.map((item) => (
-          <ReservationItemCard key={item.id} item={item} reservationStatus={reservation.status} />
-        ))}
-      </View>
+      <ReservationItems items={items} reservationStatus={reservation.status} />
 
       {flight ? <FlightBookingCard flight={flight} /> : null}
 
@@ -237,7 +241,10 @@ export function Checkout({
       ) : null}
 
       <View accessibilityRole="text" className="rounded-2xl border border-dashed border-[#CBD5E1] p-4">
-        <Text className="text-sm font-semibold text-ink">Pago de demostración</Text>
+        <View className="flex-row items-center gap-2">
+          <DemoTag />
+          <Text className="text-sm font-semibold text-ink">Pago de demostración</Text>
+        </View>
         <Text className="mt-1 text-sm leading-5 text-[#5B7285]">
           TurisClick todavía no procesa pagos reales: no se realiza ningún cobro ni se piden datos de tarjeta.
         </Text>
@@ -462,6 +469,8 @@ function FlightTotals({ reservation }: { reservation: ReservationResponse }) {
 
 function PaymentSuccess({ reservation }: { reservation: ReservationResponse }) {
   const router = useRouter()
+  // Pagar un vuelo de operador no emite el pasaje: lo emite el operador después, y recién ahí se dice.
+  const providerFlights = flightItemsOf(reservation.items)
 
   const goTo = (href: Href) => {
     if (router.canDismiss()) router.dismissAll()
@@ -472,19 +481,19 @@ function PaymentSuccess({ reservation }: { reservation: ReservationResponse }) {
     <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }} showsVerticalScrollIndicator={false}>
       <View className="items-center rounded-2xl bg-[#DCFCE7] p-6">
         <Icon icon={CircleCheckBig} size={36} color={colors.successFg} />
-        <Text className="mt-2 text-xl font-bold text-[#166534]">¡Reserva confirmada!</Text>
+        <Text className="mt-2 text-xl font-bold text-[#166534]">
+          {providerFlights.length > 0 ? '¡Pago confirmado!' : '¡Reserva confirmada!'}
+        </Text>
         <Text className="mt-1 text-center text-sm leading-5 text-[#166534]">
-          {reservation.flight?.status === 'CONFIRMED'
-            ? 'Tu lugar y tu pasaje quedaron asegurados. Podés ver los detalles cuando quieras en Mis viajes.'
-            : 'Tu lugar quedó asegurado. Podés ver los detalles cuando quieras en Mis viajes.'}
+          {providerFlights.length > 0
+            ? `Pago confirmado · emisión pendiente por ${providerFlights[0].flight?.operatorName || 'el operador'}. Te avisamos en Mis viajes cuando registre el pasaje.`
+            : reservation.flight?.status === 'CONFIRMED'
+              ? 'Tu lugar y tu pasaje quedaron asegurados. Podés ver los detalles cuando quieras en Mis viajes.'
+              : 'Tu lugar quedó asegurado. Podés ver los detalles cuando quieras en Mis viajes.'}
         </Text>
       </View>
 
-      <View className="gap-3">
-        {(reservation.items ?? []).map((item) => (
-          <ReservationItemCard key={item.id} item={item} reservationStatus={reservation.status} />
-        ))}
-      </View>
+      <ReservationItems items={reservation.items} reservationStatus={reservation.status} />
 
       {reservation.flight ? <FlightBookingCard flight={reservation.flight} /> : null}
 
@@ -498,7 +507,7 @@ function PaymentSuccess({ reservation }: { reservation: ReservationResponse }) {
   )
 }
 
-function CheckoutClosed({ kind, id }: { kind: 'EXPIRED' | 'CANCELLED' | 'UNKNOWN'; id: string }) {
+function CheckoutClosed({ kind, id }: { kind: 'EXPIRED' | 'CANCELLED' | 'NO_LONGER_PAYABLE' | 'UNKNOWN'; id: string }) {
   const router = useRouter()
 
   const copy = {
@@ -507,6 +516,10 @@ function CheckoutClosed({ kind, id }: { kind: 'EXPIRED' | 'CANCELLED' | 'UNKNOWN
       message: 'La reserva no se pagó a tiempo y el cupo retenido se liberó. Podés volver a elegir una fecha.',
     },
     CANCELLED: { title: 'Cancelaste esta reserva', message: 'El cupo se liberó. Podés volver a reservar cuando quieras.' },
+    NO_LONGER_PAYABLE: {
+      title: 'Esta reserva ya no se puede pagar',
+      message: 'El operador canceló los servicios que tenía, así que no queda nada por cobrar. No se te cobró nada.',
+    },
     UNKNOWN: { title: 'Esta reserva no se puede pagar', message: 'Revisá su estado en el detalle de la reserva.' },
   }[kind]
 
