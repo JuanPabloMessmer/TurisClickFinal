@@ -144,15 +144,17 @@ export function ageOn(bornOn: string, on: string): number {
 export interface TravelDates {
   /** Día de la ida, YYYY-MM-DD (hora local del aeropuerto). */
   departure: string
-  /** Día de la vuelta, si es ida y vuelta. Hoy las edades se validan contra la ida, como en el backend. */
+  /** Día de la vuelta, si es ida y vuelta: un infante tiene que seguir siendo menor de 2 ese día. */
   return?: string | null
   /** Hoy, YYYY-MM-DD. Se pasa para que los tests sean determinísticos. */
   today: string
 }
 
 /**
- * La edad tiene que corresponder al tipo **el día de la ida**, no el día en que se reserva — la misma regla
- * que aplica el backend (B2): adulto 12 o más, niño de 2 a 11, infante menor de 2.
+ * La edad tiene que corresponder al tipo **el día de cada vuelo**, no el día en que se reserva — la misma
+ * regla que aplica el backend (B2): adulto 12 o más y niño de 2 a 11 al salir; infante menor de 2 en la ida y
+ * también en la vuelta, porque el día que cumple 2 ya necesita asiento. El mensaje que cuenta es el del
+ * servidor; esto sólo evita mandar algo que va a rechazar.
  */
 export function validatePassenger(draft: PassengerDraft, slot: PassengerSlot, dates: TravelDates): PassengerErrors {
   const errors: PassengerErrors = {}
@@ -184,8 +186,11 @@ export function validatePassenger(draft: PassengerDraft, slot: PassengerSlot, da
     errors.bornOn = `Un adulto tiene que tener ${CHILD_MAX_AGE + 1} años o más el día del vuelo.`
   } else if (slot.type === CHILD && (age < CHILD_MIN_AGE || age > CHILD_MAX_AGE)) {
     errors.bornOn = `Un niño tiene que tener de ${CHILD_MIN_AGE} a ${CHILD_MAX_AGE} años el día del vuelo.`
-  } else if (slot.type === INFANT && age >= CHILD_MIN_AGE) {
-    errors.bornOn = 'Un infante tiene que ser menor de 2 años el día del vuelo.'
+  } else if (slot.type === INFANT) {
+    if (age >= CHILD_MIN_AGE) errors.bornOn = 'Un infante tiene que ser menor de 2 años el día del vuelo.'
+    else if (dates.return && ageOn(born, dates.return) >= CHILD_MIN_AGE)
+      errors.bornOn =
+        'Cumple 2 años antes de la vuelta y en ese tramo necesita asiento: reservá la ida y la vuelta por separado.'
   }
 
   return errors

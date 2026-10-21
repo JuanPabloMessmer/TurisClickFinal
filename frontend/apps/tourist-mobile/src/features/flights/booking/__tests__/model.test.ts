@@ -116,8 +116,9 @@ describe('pasajeros: edades el día del vuelo', () => {
     expect(validatePassenger(person('2024-11-19'), infant, ONE_WAY).bornOn).toMatch(/menor de 2 años/)
   })
 
-  it('la edad se mide el día de la ida, como en el backend (B2), también en ida y vuelta', () => {
-    expect(validatePassenger(person('2025-01-15'), infant, ROUND)).toEqual({})
+  it('infante que cumple 2 antes de la vuelta: en ese tramo necesita asiento (regla del backend por tramo)', () => {
+    expect(validatePassenger(person('2025-01-15'), infant, ONE_WAY)).toEqual({})
+    expect(validatePassenger(person('2025-01-15'), infant, ROUND).bornOn).toMatch(/antes de la vuelta.*por separado/)
     expect(validatePassenger(person('2014-11-21'), adult, ROUND).bornOn).toMatch(/12 años o más/)
   })
 
