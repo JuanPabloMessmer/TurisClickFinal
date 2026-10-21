@@ -5,7 +5,7 @@ import { SlidersHorizontal } from 'lucide-react-native'
 import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFlightSearchResults } from '@/features/flights/api'
-import { bookingParams, isBookableProviderOption } from '@/features/flights/booking/model'
+import { bookingParams, isBookableProviderOption, isDemoOffer } from '@/features/flights/booking/model'
 import {
   activeFilterCount,
   applyFilters,
@@ -54,8 +54,8 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
     infants: request.infants ?? 0,
   }
   const totalPassengers = passengers.adults + passengers.childrenAges.length + passengers.infants
-  const demo = data ? data.inventoryMode !== 'LIVE' || Boolean(data.testMode) : true
   const hasBookable = options.some(isBookableProviderOption)
+  const bookableDemo = options.some((option) => isBookableProviderOption(option) && isDemoOffer(option))
 
   const onSelect = (option: flightsApi.FlightOptionResponse) =>
     router.push({ pathname: '/book/flight', params: bookingParams(request, option) })
@@ -100,7 +100,7 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
       ) : data ? (
         <>
           <View className="mt-4 px-5">
-            <InventoryBanner mode={data.inventoryMode} testMode={data.testMode} hasBookable={hasBookable} />
+            <InventoryBanner mode={data.inventoryMode} testMode={data.testMode} hasBookable={hasBookable} bookableDemo={bookableDemo} />
           </View>
 
           {data.notice ? (
@@ -145,7 +145,7 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
               ) : (
                 <View className="mt-3 gap-3 px-5">
                   {visible.map((option, index) => (
-                    <FlightOfferCard key={index} option={option} passengers={totalPassengers} demo={demo} onSelect={onSelect} />
+                    <FlightOfferCard key={index} option={option} passengers={totalPassengers} demo={isDemoOffer(option, data.inventoryMode)} onSelect={onSelect} />
                   ))}
                 </View>
               )}

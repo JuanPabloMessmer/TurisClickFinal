@@ -33,6 +33,16 @@ export function isBookableProviderOption(option: Option): boolean {
   return option.source === providerFlightsApi.OFFER_SOURCE.PROVIDER && option.bookable === true && ids.length >= 1 && ids.length <= 2
 }
 
+/**
+ * Si una opción de la búsqueda se rotula DEMO. Cada fuente con su propio dato:
+ * - vuelo de operador: `providerFlight.demo`, que decide el backend (B2). Sin el dato, DEMO: es lo prudente;
+ * - oferta de aerolínea: el modo del proveedor aéreo — todo lo que no es LIVE (simulado o de prueba) es DEMO.
+ */
+export function isDemoOffer(option: Option, inventoryMode?: string | null): boolean {
+  if (option.source === providerFlightsApi.OFFER_SOURCE.PROVIDER) return option.providerFlight?.demo !== false
+  return inventoryMode !== 'LIVE'
+}
+
 /** Con qué salidas se reserva la opción, en el orden ida → vuelta que manda el backend. */
 export function departureIdsOf(option: Option): string[] {
   return option.providerFlight?.departureIds ?? []

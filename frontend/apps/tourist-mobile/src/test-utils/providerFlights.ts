@@ -41,6 +41,7 @@ export function providerOption(roundTrip = false, overrides: Partial<flightsApi.
       seatsLeft: 4,
       cancellationPolicy: [],
       fareRules: 'Cambios con cargo hasta 24 h antes.',
+      demo: true,
     },
     ...overrides,
   }

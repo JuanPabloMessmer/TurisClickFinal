@@ -5,6 +5,7 @@ import {
   departureIdsFromParam,
   findSelectedOption,
   isBookableProviderOption,
+  isDemoOffer,
   issuanceDisplay,
   passengerMixProblem,
   passengerSlots,
@@ -52,6 +53,26 @@ describe('qué se puede reservar', () => {
     expect(findSelectedOption(options, [OUT_ID, BACK_ID])).toBe(options[2])
     expect(findSelectedOption(options, [OUT_ID])).toBe(options[1])
     expect(findSelectedOption([airlineOption()], [OUT_ID])).toBeNull()
+  })
+})
+
+describe('rótulo DEMO de cada opción', () => {
+  it('vuelo de operador: lo decide su propio `providerFlight.demo`, no el modo del proveedor aéreo', () => {
+    const real = providerOption(false, { providerFlight: { ...providerOption().providerFlight, demo: false } })
+    expect(isDemoOffer(providerOption(), 'LIVE')).toBe(true)
+    expect(isDemoOffer(real, 'SIMULATED')).toBe(false)
+  })
+
+  it('vuelo de operador sin el dato (backend anterior): DEMO, por prudencia', () => {
+    const { demo: _omitted, ...withoutFlag } = providerOption().providerFlight!
+    expect(isDemoOffer(providerOption(false, { providerFlight: withoutFlag }), 'LIVE')).toBe(true)
+  })
+
+  it('oferta de aerolínea: DEMO con el proveedor simulado o de prueba, no en LIVE', () => {
+    expect(isDemoOffer(airlineOption(), 'SIMULATED')).toBe(true)
+    expect(isDemoOffer(airlineOption(), 'SANDBOX')).toBe(true)
+    expect(isDemoOffer(airlineOption(), undefined)).toBe(true)
+    expect(isDemoOffer(airlineOption(), 'LIVE')).toBe(false)
   })
 })
 

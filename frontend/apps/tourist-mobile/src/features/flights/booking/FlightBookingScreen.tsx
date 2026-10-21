@@ -11,6 +11,7 @@ import {
   buildFlightReservationRequest,
   emptyPassenger,
   findSelectedOption,
+  isDemoOffer,
   hasErrors,
   passengerMixProblem,
   passengerSlots,
@@ -179,7 +180,7 @@ function BookingForm({
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 220, gap: 16 }} showsVerticalScrollIndicator={false}>
         <Text className="font-ui700 text-title text-ink">{roundTrip ? 'Tu vuelo de ida y vuelta' : 'Tu vuelo de ida'}</Text>
 
-        <FlightOfferCard option={option} passengers={totalPassengers} demo />
+        <FlightOfferCard option={option} passengers={totalPassengers} demo={isDemoOffer(option)} />
 
         {option.providerFlight?.fareRules ? (
           <View className="rounded-md bg-surface p-4">
@@ -204,7 +205,7 @@ function BookingForm({
             <View className="gap-2">
               <View className="flex-row items-center justify-between gap-2">
                 <Text className="font-ui700 text-heading text-ink">Pasajeros</Text>
-                <DemoTag />
+                {isDemoOffer(option) ? <DemoTag /> : null}
               </View>
               <Text className="font-sans text-caption text-ink-muted">
                 Es una demostración: usá nombres y fechas de nacimiento ficticios. No te pedimos documento de identidad.

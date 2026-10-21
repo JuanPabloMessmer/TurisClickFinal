@@ -32,11 +32,14 @@ export function InventoryBanner({
   mode,
   testMode,
   hasBookable = false,
+  bookableDemo = true,
 }: {
   mode?: string | null
   testMode?: boolean
   /** Hay vuelos de operador reservables en la lista: el aviso tiene que distinguirlos de las ofertas simuladas. */
   hasBookable?: boolean
+  /** Alguno de esos vuelos de operador es de demostración (`providerFlight.demo`). */
+  bookableDemo?: boolean
 }) {
   if (mode === 'LIVE' || (!mode && !testMode)) return null
 
@@ -51,8 +54,10 @@ export function InventoryBanner({
         {sandbox ? 'MODO PRUEBA · no se emiten pasajes' : 'DEMO · vuelos simulados'}
       </Text>
       <Text className="mt-1 font-sans text-caption text-warning-fg">
-        {hasBookable
+        {hasBookable && bookableDemo
           ? 'Las ofertas de aerolínea son simuladas y no se pueden comprar. Los vuelos con "Seleccionar" los publica un operador de prueba: se reservan con un pago simulado y ningún pasaje es real.'
+          : hasBookable
+            ? 'Las ofertas de aerolínea son simuladas y no se pueden comprar. Sólo se reservan los vuelos con "Seleccionar", que vende un operador.'
           : sandbox
             ? 'Ofertas del entorno de prueba del proveedor aéreo. Horarios y precios no corresponden a vuelos comerciales y nada se puede comprar.'
             : 'TurisClick genera estos vuelos para la demostración. No son vuelos reales, no tienen asientos ni se pueden comprar.'}

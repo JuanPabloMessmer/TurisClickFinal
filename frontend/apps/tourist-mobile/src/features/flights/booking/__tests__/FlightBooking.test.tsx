@@ -84,6 +84,37 @@ describe('resultados', () => {
     expect(screen.queryByText(/iniciá sesión/i)).toBeNull()
   })
 
+  it('DEMO del vuelo de operador sale de su propio flag: sin flag DEMO, sin rótulo aunque el proveedor aéreo sea simulado', async () => {
+    const real = providerOption(false, { providerFlight: { ...providerOption().providerFlight, demo: false } })
+    mockBackend(searchResponse([airlineOption(), real], { inventoryMode: 'SIMULATED', testMode: true }))
+    render(<FlightResultsScreen request={request} />, { wrapper: withClient(newClient()) })
+
+    await screen.findByRole('button', { name: /^Seleccionar vuelo/ })
+    // Un solo DEMO: el de la oferta de aerolínea simulada, que lo conserva.
+    expect(screen.getAllByText('DEMO')).toHaveLength(1)
+    const banner = screen.getByTestId('inventory-banner')
+    expect(within(banner).getByText(/Sólo se reservan los vuelos con "Seleccionar", que vende un operador/)).toBeTruthy()
+    expect(within(banner).queryByText(/operador de prueba/)).toBeNull()
+  })
+
+  it('con el proveedor aéreo en LIVE, el vuelo de operador DEMO sigue rotulado y la oferta de aerolínea no', async () => {
+    mockBackend(searchResponse([airlineOption(), providerOption()], { inventoryMode: 'LIVE', testMode: false }))
+    render(<FlightResultsScreen request={request} />, { wrapper: withClient(newClient()) })
+
+    await screen.findByRole('button', { name: /^Seleccionar vuelo/ })
+    expect(screen.getAllByText('DEMO')).toHaveLength(1)
+    expect(screen.queryByTestId('inventory-banner')).toBeNull()
+  })
+
+  it('sólo un vuelo de operador sin flag DEMO: ningún rótulo, aunque el proveedor aéreo esté simulado', async () => {
+    const real = providerOption(false, { providerFlight: { ...providerOption().providerFlight, demo: false } })
+    mockBackend(searchResponse([real], { inventoryMode: 'SIMULATED', testMode: true }))
+    render(<FlightResultsScreen request={request} />, { wrapper: withClient(newClient()) })
+
+    await screen.findByRole('button', { name: /^Seleccionar vuelo/ })
+    expect(screen.queryByText('DEMO')).toBeNull()
+  })
+
   it('sólo ofertas de aerolínea: ningún "Seleccionar"', async () => {
     mockBackend(searchResponse([airlineOption(), airlineOption({ bookable: true })]))
     render(<FlightResultsScreen request={request} />, { wrapper: withClient(newClient()) })
@@ -148,6 +179,23 @@ describe('iniciar sesión al empezar la reserva', () => {
 })
 
 describe('pasajeros', () => {
+  it('la revisión del vuelo usa el flag DEMO del vuelo de operador', async () => {
+    mockBackend(searchResponse([providerOption()], { inventoryMode: 'LIVE', testMode: false }))
+    const demo = renderBooking(oneWayParams)
+    await screen.findByTestId('passenger-form-0')
+    // La tarjeta del vuelo y la sección de pasajeros.
+    expect(screen.getAllByText('DEMO')).toHaveLength(2)
+    demo.unmount()
+
+    const real = providerOption(false, { providerFlight: { ...providerOption().providerFlight, demo: false } })
+    mockBackend(searchResponse([real], { inventoryMode: 'SIMULATED', testMode: true }))
+    renderBooking(oneWayParams)
+    await screen.findByTestId('passenger-form-0')
+    expect(screen.queryByText('DEMO')).toBeNull()
+    // Los datos siguen siendo ficticios: es una decisión de producto, no del rótulo.
+    expect(screen.getByText(/usá nombres y fechas de nacimiento ficticios/)).toBeTruthy()
+  })
+
   it('pide nombre, apellido y nacimiento, sin documento de identidad, y avisa que son datos ficticios', async () => {
     mockBackend(searchResponse([providerOption()]))
     renderBooking(oneWayParams)
