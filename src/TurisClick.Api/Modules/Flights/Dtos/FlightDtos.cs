@@ -449,7 +449,10 @@ public class SearchFlightsResponse
     /// </summary>
     public string InventoryMode { get; set; } = FlightInventoryModes.Simulated;
 
-    /// <summary>Siempre false hoy: la compra de vuelos sueltos todavía no existe. La app no ofrece reservar.</summary>
+    /// <summary>
+    /// true si alguna opción se puede reservar (ver <see cref="FlightOptionResponse.Bookable"/>). Hoy siempre
+    /// false: los vuelos de operador, que son los reservables, llegan con B2.
+    /// </summary>
     public bool Bookable { get; set; }
 }
 
@@ -470,6 +473,18 @@ public class FlightOptionResponse
     public string? CarrierName { get; set; }
     public string? CarrierIata { get; set; }
     public List<FlightSliceResponse> Slices { get; set; } = [];
+
+    /// <summary>
+    /// AIRLINE (oferta del proveedor aéreo, hoy nunca reservable suelta) o PROVIDER (vuelo publicado por un
+    /// operador autorizado). Ver <see cref="ProviderFlights.Dtos.FlightOfferSources"/>.
+    /// </summary>
+    public string Source { get; set; } = ProviderFlights.Dtos.FlightOfferSources.Airline;
+
+    /// <summary>Si esta opción se puede reservar (con sesión). Sólo los vuelos de operador lo son.</summary>
+    public bool Bookable { get; set; }
+
+    /// <summary>Con qué salidas se reserva, quién la vende y cuántos asientos quedan. Sólo con Source = PROVIDER.</summary>
+    public ProviderFlights.Dtos.ProviderFlightOfferResponse? ProviderFlight { get; set; }
 }
 
 /// <summary>Un paquete que vuela la ruta buscada, para pasar de mirar vuelos a comprar algo real.</summary>

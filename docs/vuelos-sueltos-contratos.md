@@ -1,7 +1,20 @@
 # Vuelos sueltos — contratos y dependencias (Workstreams B, C y D)
 
-Estado: **propuesta para aprobar. Nada de esto está implementado.** El Workstream A (buscador global,
-calendario, pasajeros, resultados) sí lo está: ver la sección final.
+Estado: **contratos aprobados. B1 (contratos en código) hecho; B2 (lógica + migración 0015) pendiente de
+autorización.** Hasta B2, cada endpoint nuevo valida el pedido y responde **501** con
+`errorCode: "FEATURE_NOT_AVAILABLE"` y un mensaje que se puede mostrar. Ninguno escribe nada.
+
+Decisiones del usuario: búsqueda sin sesión (con el proveedor simulado; la sesión se pide al reservar);
+pasajeros con nombre y fecha de nacimiento **sintéticos**, sin documento; sólo ida e ida y vuelta; Duffel
+apagado; "Pasaje emitido" sólo cuando el operador registra la emisión, y DEMO siempre en el entorno de prueba.
+
+En código (B1):
+- Tipos: `src/TurisClick.Api/Modules/Flights/ProviderFlights/Dtos/ProviderFlightDtos.cs`.
+- Endpoints: `src/TurisClick.Api/Modules/Flights/ProviderFlights/Controllers/ProviderFlightsController.cs`
+  (operador y admin), y en `POST /api/reservations` la forma `flightDepartureIds` + `passengers`.
+- Cliente: `frontend/packages/api-client/src/modules/providerFlights.ts` (`providerFlightsApi`), más los
+  campos nuevos de `flightsApi` (`source`, `bookable`, `providerFlight`) y de `ReservationItemResponse.flight`.
+- Tests de contrato: `tests/TurisClick.Api.Tests/Integration/ProviderFlightContractTests.cs`.
 
 Objetivo de producto: además del paquete con vuelo, TurisClick vende **vuelos sueltos publicados por
 operadores autorizados**. El turista busca, elige, reserva y paga (pago simulado en la tesis); después del
@@ -134,6 +147,24 @@ B2  migración 0015 + servicios + tests de integración ────────
 4. **D**: rama de integración; E2E completo (operador publica → turista busca → reserva → paga →
    operador registra emisión → turista ve el pasaje), cancelación con y sin emisión, expiración que libera
    asientos, dos turistas por el último asiento, y la suite completa de backend y de las dos apps.
+
+### Propiedad de archivos (sesiones en paralelo)
+
+| Sesión | Sólo esta edita |
+|---|---|
+| **B — backend** | `src/TurisClick.Api/**` (incluidas `Infrastructure/Database/Migrations/*` y `TurisClickDbContext.cs`), `tests/TurisClick.Api.Tests/**`, `.github/scripts/schema_preflight.py`, `frontend/packages/api-client/**` (incluido `schema.ts`, que sólo B regenera) |
+| **C — Backoffice** | `frontend/apps/backoffice/**`: nuevo `src/modules/provider-flights/*`, emisión en `src/modules/provider-reservations/*`, vuelos y autorización en `src/modules/platform/*` / `src/modules/companies/*`, rutas y navegación |
+| **A2 — app** | `frontend/apps/tourist-mobile/**`: nuevo `src/features/flights/booking/*`, tarjeta reservable en `src/features/flights/search/*`, ítem de vuelo en `src/features/reservations/*` y Mis viajes, rutas nuevas en `app/` |
+| **D — integración** | rama `integration/turisclick-flights`, `tools/provider-flight-e2e`, `docs/**` |
+
+- Nadie fuera de B corre `dotnet ef migrations add` ni toca entidades. Si C o A2 necesitan un cambio de
+  contrato, lo piden a B; no lo inventan en el cliente.
+- `schema.ts` se regenera, no se mergea: ante un conflicto se toma cualquier versión y B vuelve a correr
+  `npm run generate:types` contra la API de la rama integrada.
+- Mientras B2 no exista, C y A2 prueban contra respuestas simuladas (mocks del `httpClient`) y manejan el
+  501 `FEATURE_NOT_AVAILABLE` con un mensaje claro, no como un error genérico.
+- La release administrativa (moderación, suspensión de empresas, cancelación por el operador) no se
+  reescribe: B rebasa sobre la versión final, con el arreglo P0 de pago/cancelación incluido.
 
 Despliegue: la migración 0015 requiere autorización para `turisclick_db_v2` y el preflight de esquema
 (`schema_preflight.py`) actualizado. Ninguna parte toca V1.

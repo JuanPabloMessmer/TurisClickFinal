@@ -14,6 +14,12 @@ public interface IHasErrorCode
 /// <summary>Códigos usados por el booking de itinerarios IA (UC-T-18) — ver docs/backend-architecture.md.</summary>
 public static class ErrorCodes
 {
+    /// <summary>El endpoint existe con su contrato definitivo pero la funcionalidad todavía no está implementada.</summary>
+    public const string FeatureNotAvailable = "FEATURE_NOT_AVAILABLE";
+
+    /// <summary>La empresa del operador no está autorizada a vender vuelos (la autoriza un ADMIN). Lo devuelve B2.</summary>
+    public const string FlightSellerNotAuthorized = "FLIGHT_SELLER_NOT_AUTHORIZED";
+
     public const string PriceChanged = "PRICE_CHANGED";
     public const string CurrencyChanged = "CURRENCY_CHANGED";
     public const string ProductUnavailable = "PRODUCT_UNAVAILABLE";
@@ -128,3 +134,14 @@ public class GoneAppException(string message, string? errorCode = null) : Except
 /// imágenes). Se mapea a 503: el pedido era válido y se puede reintentar más tarde.
 /// </summary>
 public class ServiceUnavailableAppException(string message) : Exception(message);
+
+/// <summary>
+/// La funcionalidad tiene su contrato publicado pero todavía no está implementada (p. ej. los vuelos de
+/// operador entre B1 y B2). Se mapea a 501: el pedido no está mal, y reintentarlo no cambia nada hasta que
+/// la funcionalidad exista. El mensaje es para la persona y sí se devuelve.
+/// </summary>
+public class NotImplementedYetAppException(string message, string? errorCode = ErrorCodes.FeatureNotAvailable)
+    : Exception(message), IHasErrorCode
+{
+    public string? ErrorCode { get; } = errorCode;
+}

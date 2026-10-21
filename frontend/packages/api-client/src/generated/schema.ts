@@ -979,6 +979,172 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/companies/{companyId}/flight-seller": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    companyId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["FlightSellerAuthorizationRequest"];
+                    "text/json": components["schemas"]["FlightSellerAuthorizationRequest"];
+                    "application/*+json": components["schemas"]["FlightSellerAuthorizationRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["FlightSellerAuthorizationResponse"];
+                        "application/json": components["schemas"]["FlightSellerAuthorizationResponse"];
+                        "text/json": components["schemas"]["FlightSellerAuthorizationResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/flights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    CompanyId?: string;
+                    Status?: string;
+                    Suspended?: boolean;
+                    Page?: number;
+                    PageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightResponsePagedResult"];
+                        "application/json": components["schemas"]["ProviderFlightResponsePagedResult"];
+                        "text/json": components["schemas"]["ProviderFlightResponsePagedResult"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/flights/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightResponse"];
+                        "application/json": components["schemas"]["ProviderFlightResponse"];
+                        "text/json": components["schemas"]["ProviderFlightResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/flights/{id}/unsuspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightResponse"];
+                        "application/json": components["schemas"]["ProviderFlightResponse"];
+                        "text/json": components["schemas"]["ProviderFlightResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/users": {
         parameters: {
             query?: never;
@@ -3649,6 +3815,477 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/companies/me/flights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightResponse"][];
+                        "application/json": components["schemas"]["ProviderFlightResponse"][];
+                        "text/json": components["schemas"]["ProviderFlightResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ProviderFlightRequest"];
+                    "text/json": components["schemas"]["ProviderFlightRequest"];
+                    "application/*+json": components["schemas"]["ProviderFlightRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightResponse"];
+                        "application/json": components["schemas"]["ProviderFlightResponse"];
+                        "text/json": components["schemas"]["ProviderFlightResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/companies/me/flights/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightResponse"];
+                        "application/json": components["schemas"]["ProviderFlightResponse"];
+                        "text/json": components["schemas"]["ProviderFlightResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ProviderFlightRequest"];
+                    "text/json": components["schemas"]["ProviderFlightRequest"];
+                    "application/*+json": components["schemas"]["ProviderFlightRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightResponse"];
+                        "application/json": components["schemas"]["ProviderFlightResponse"];
+                        "text/json": components["schemas"]["ProviderFlightResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/companies/me/flights/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightResponse"];
+                        "application/json": components["schemas"]["ProviderFlightResponse"];
+                        "text/json": components["schemas"]["ProviderFlightResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/companies/me/flights/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightResponse"];
+                        "application/json": components["schemas"]["ProviderFlightResponse"];
+                        "text/json": components["schemas"]["ProviderFlightResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/companies/me/flights/{id}/departures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightDepartureResponse"][];
+                        "application/json": components["schemas"]["ProviderFlightDepartureResponse"][];
+                        "text/json": components["schemas"]["ProviderFlightDepartureResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ProviderFlightDepartureRequest"];
+                    "text/json": components["schemas"]["ProviderFlightDepartureRequest"];
+                    "application/*+json": components["schemas"]["ProviderFlightDepartureRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightDepartureResponse"];
+                        "application/json": components["schemas"]["ProviderFlightDepartureResponse"];
+                        "text/json": components["schemas"]["ProviderFlightDepartureResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/companies/me/flight-departures/{departureId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    departureId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ProviderFlightDepartureRequest"];
+                    "text/json": components["schemas"]["ProviderFlightDepartureRequest"];
+                    "application/*+json": components["schemas"]["ProviderFlightDepartureRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightDepartureResponse"];
+                        "application/json": components["schemas"]["ProviderFlightDepartureResponse"];
+                        "text/json": components["schemas"]["ProviderFlightDepartureResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    departureId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/companies/me/flight-departures/{departureId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    departureId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderFlightDepartureResponse"];
+                        "application/json": components["schemas"]["ProviderFlightDepartureResponse"];
+                        "text/json": components["schemas"]["ProviderFlightDepartureResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/companies/me/reservation-items/{itemId}/issuance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RecordIssuanceRequest"];
+                    "text/json": components["schemas"]["RecordIssuanceRequest"];
+                    "application/*+json": components["schemas"]["RecordIssuanceRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["FlightItemIssuanceResponse"];
+                        "application/json": components["schemas"]["FlightItemIssuanceResponse"];
+                        "text/json": components["schemas"]["FlightItemIssuanceResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/companies/me/reservation-items/{itemId}/issuance-failure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["IssuanceFailureRequest"];
+                    "text/json": components["schemas"]["IssuanceFailureRequest"];
+                    "application/*+json": components["schemas"]["IssuanceFailureRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["FlightItemIssuanceResponse"];
+                        "application/json": components["schemas"]["FlightItemIssuanceResponse"];
+                        "text/json": components["schemas"]["FlightItemIssuanceResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/categories": {
         parameters: {
             query?: never;
@@ -4581,6 +5218,8 @@ export interface components {
             travelers?: number;
             /** Format: uuid */
             flightQuoteId?: string | null;
+            flightDepartureIds?: string[] | null;
+            passengers?: components["schemas"]["ReservationPassengerRequest"][] | null;
         };
         DestinationResponse: {
             /** Format: uuid */
@@ -4709,11 +5348,24 @@ export interface components {
             inProgress?: boolean;
             inventoryMode?: string | null;
         };
+        FlightItemIssuanceResponse: {
+            /** Format: uuid */
+            reservationItemId?: string;
+            issuanceStatus?: string | null;
+            ticketNumbers?: string[] | null;
+            bookingReference?: string | null;
+            /** Format: date-time */
+            issuedAt?: string | null;
+            note?: string | null;
+        };
         FlightOptionResponse: {
             price?: components["schemas"]["MoneyResponse"];
             carrierName?: string | null;
             carrierIata?: string | null;
             slices?: components["schemas"]["FlightSliceResponse"][] | null;
+            source?: string | null;
+            bookable?: boolean;
+            providerFlight?: components["schemas"]["ProviderFlightOfferResponse"];
         };
         FlightOriginResponse: {
             iata?: string | null;
@@ -4765,6 +5417,20 @@ export interface components {
             /** Format: int32 */
             checkedBags?: number | null;
         };
+        FlightSellerAuthorizationRequest: {
+            authorized?: boolean;
+            registration?: string | null;
+        };
+        FlightSellerAuthorizationResponse: {
+            /** Format: uuid */
+            companyId?: string;
+            canSellFlights?: boolean;
+            registration?: string | null;
+            /** Format: date-time */
+            authorizedAt?: string | null;
+            /** Format: uuid */
+            authorizedBy?: string | null;
+        };
         FlightSliceResponse: {
             originIata?: string | null;
             destinationIata?: string | null;
@@ -4784,6 +5450,9 @@ export interface components {
             /** Format: email */
             email: string;
             phoneNumber: string;
+        };
+        IssuanceFailureRequest: {
+            reason: string;
         };
         ItemExplanationResponse: {
             /** Format: uuid */
@@ -5123,6 +5792,139 @@ export interface components {
             temporaryPassword?: string | null;
             mustChangePassword?: boolean;
         };
+        ProviderFlightDepartureRequest: {
+            /** Format: date-time */
+            departureAt?: string;
+            /** Format: date-time */
+            arrivalAt?: string;
+            /** Format: int32 */
+            totalSeats?: number;
+            /** Format: double */
+            adultPrice?: number;
+            /** Format: double */
+            childPrice?: number;
+            /** Format: double */
+            infantPrice?: number;
+            currency: string;
+        };
+        ProviderFlightDepartureResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            providerFlightId?: string;
+            /** Format: date-time */
+            departureAt?: string;
+            /** Format: date-time */
+            arrivalAt?: string;
+            /** Format: int32 */
+            totalSeats?: number;
+            /** Format: int32 */
+            availableSeats?: number;
+            /** Format: double */
+            adultPrice?: number;
+            /** Format: double */
+            childPrice?: number;
+            /** Format: double */
+            infantPrice?: number;
+            currency?: string | null;
+            status?: string | null;
+            hasReservations?: boolean;
+        };
+        ProviderFlightItemResponse: {
+            /** Format: uuid */
+            providerFlightId?: string;
+            /** Format: uuid */
+            departureId?: string;
+            originIata?: string | null;
+            originLabel?: string | null;
+            destinationIata?: string | null;
+            destinationLabel?: string | null;
+            /** Format: date-time */
+            departureAt?: string;
+            /** Format: date-time */
+            arrivalAt?: string;
+            carrierName?: string | null;
+            carrierIata?: string | null;
+            flightNumber?: string | null;
+            cabinClass?: string | null;
+            /** Format: int32 */
+            checkedBags?: number;
+            /** Format: int32 */
+            carryOnBags?: number;
+            operatorName?: string | null;
+            issuanceStatus?: string | null;
+            ticketNumbers?: string[] | null;
+            bookingReference?: string | null;
+            /** Format: date-time */
+            issuedAt?: string | null;
+            passengers?: components["schemas"]["ReservationPassengerResponse"][] | null;
+            demo?: boolean;
+        };
+        ProviderFlightOfferResponse: {
+            departureIds?: string[] | null;
+            /** Format: uuid */
+            operatorCompanyId?: string;
+            operatorName?: string | null;
+            /** Format: int32 */
+            seatsLeft?: number;
+            cancellationPolicy?: components["schemas"]["CancellationTierDto"][] | null;
+            fareRules?: string | null;
+        };
+        ProviderFlightRequest: {
+            originIata: string;
+            destinationIata: string;
+            carrierName: string;
+            carrierIata?: string | null;
+            flightNumber: string;
+            /** Format: Enumeration */
+            cabinClass?: string | null;
+            /** Format: int32 */
+            checkedBags?: number;
+            /** Format: int32 */
+            carryOnBags?: number;
+            cancellationPolicy?: components["schemas"]["CancellationTierDto"][] | null;
+            fareRules?: string | null;
+        };
+        ProviderFlightResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            companyId?: string;
+            companyName?: string | null;
+            originIata?: string | null;
+            originLabel?: string | null;
+            destinationIata?: string | null;
+            destinationLabel?: string | null;
+            carrierName?: string | null;
+            carrierIata?: string | null;
+            flightNumber?: string | null;
+            cabinClass?: string | null;
+            /** Format: int32 */
+            checkedBags?: number;
+            /** Format: int32 */
+            carryOnBags?: number;
+            cancellationPolicy?: components["schemas"]["CancellationTierDto"][] | null;
+            fareRules?: string | null;
+            status?: string | null;
+            suspended?: boolean;
+            /** Format: int32 */
+            upcomingDepartures?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        ProviderFlightResponsePagedResult: {
+            items?: components["schemas"]["ProviderFlightResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            readonly totalPages?: number;
+        };
         PublicDestinationResponse: {
             /** Format: uuid */
             id?: string;
@@ -5140,6 +5942,11 @@ export interface components {
         PublicHealthResponse: {
             status?: string | null;
             schemaMatches?: boolean | null;
+        };
+        RecordIssuanceRequest: {
+            ticketNumbers: string[];
+            bookingReference?: string | null;
+            note?: string | null;
         };
         RefreshTokenRequest: {
             refreshToken: string;
@@ -5197,6 +6004,7 @@ export interface components {
             cancellationPolicy?: components["schemas"]["CancellationTierDto"][] | null;
             /** Format: double */
             refundedAmount?: number | null;
+            flight?: components["schemas"]["ProviderFlightItemResponse"];
         };
         ReservationItemResponsePagedResult: {
             items?: components["schemas"]["ReservationItemResponse"][] | null;
@@ -5208,6 +6016,20 @@ export interface components {
             totalCount?: number;
             /** Format: int32 */
             readonly totalPages?: number;
+        };
+        ReservationPassengerRequest: {
+            type: string;
+            givenName: string;
+            familyName: string;
+            /** Format: date */
+            bornOn?: string;
+        };
+        ReservationPassengerResponse: {
+            type?: string | null;
+            givenName?: string | null;
+            familyName?: string | null;
+            /** Format: date */
+            bornOn?: string;
         };
         ReservationPaymentsResponse: {
             /** Format: uuid */

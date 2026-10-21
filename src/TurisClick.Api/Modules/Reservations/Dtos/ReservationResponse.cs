@@ -1,4 +1,5 @@
 using TurisClick.Api.Modules.Flights.Dtos;
+using TurisClick.Api.Modules.Flights.ProviderFlights.Dtos;
 
 namespace TurisClick.Api.Modules.Reservations.Dtos;
 
@@ -113,6 +114,12 @@ public class ReservationItemResponse
 
     /// <summary>Cuánto se reembolsó de esta línea, si se canceló. Nulo mientras no haya habido reembolso.</summary>
     public decimal? RefundedAmount { get; set; }
+
+    /// <summary>
+    /// Vuelo de operador (ProductType = "FLIGHT"): la ruta, los horarios, los pasajeros y el estado de la
+    /// emisión. Null en cualquier otro ítem. (Contrato de B1: se llena a partir de B2.)
+    /// </summary>
+    public ProviderFlightItemResponse? Flight { get; set; }
 }
 
 public class ReservationTotalResponse

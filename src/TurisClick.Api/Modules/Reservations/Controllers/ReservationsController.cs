@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TurisClick.Api.Modules.Reservations.Dtos;
 using TurisClick.Api.Modules.Reservations.Services;
+using TurisClick.Api.Shared.Exceptions;
 using TurisClick.Api.Shared.Responses;
 
 namespace TurisClick.Api.Modules.Reservations.Controllers;
@@ -18,6 +19,11 @@ public class ReservationsController(
     [ProducesResponseType(typeof(ReservationResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<ReservationResponse>> Create([FromBody] CreateReservationRequest request, CancellationToken ct)
     {
+        // Vuelo suelto de operador: el contrato ya es el definitivo y se valida igual que los demás pedidos,
+        // pero reservarlo llega con B2. Hasta entonces se dice con claridad en vez de tratarlo como otra cosa.
+        if (request.IsProviderFlight)
+            throw new NotImplementedYetAppException("La reserva de vuelos de operador todavía no está disponible.");
+
         var result = await reservationService.CreateAsync(request, ct);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
