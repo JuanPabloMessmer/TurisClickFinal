@@ -28,14 +28,15 @@ export function sellerOf(option: Option): string {
   return option.redirect?.sellerName?.trim() || option.carrierName?.trim() || 'el vendedor'
 }
 
+/**
+ * Segunda barrera, después de la del backend: https, con host, sin usuario en la URL, sin espacios ni barras
+ * invertidas. Sin `new URL()`: en React Native sus getters no están garantizados sin un polyfill, y un fallo ahí
+ * dejaría todas las ofertas como no disponibles.
+ */
 export function isSafeOfferUrl(url: string | null | undefined): url is string {
   if (!url || /[\s\\]/.test(url)) return false
-  try {
-    const parsed = new URL(url)
-    return parsed.protocol === 'https:' && !parsed.username && !parsed.password
-  } catch {
-    return false
-  }
+  const authority = /^https:\/\/([^/?#]*)/i.exec(url)?.[1]
+  return !!authority && !authority.includes('@')
 }
 
 /** Abre el sitio del vendedor en el navegador del teléfono. */

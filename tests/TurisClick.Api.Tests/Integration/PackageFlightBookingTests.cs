@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
@@ -346,6 +347,30 @@ public class PackageFlightBookingTests(TurisClickApiFactory factory)
         Assert.NotNull(booking.OutboundFlightNumber);
         Assert.NotNull(booking.OutboundDepartureAt);
         Assert.NotNull(booking.ConfirmedAt);
+    }
+
+    /// <summary>
+    /// Oleada 19: apagar los vuelos sueltos de operador no toca los paquetes. Esta clase corre con la configuración
+    /// de producción, y un paquete con transporte aéreo se reserva y se paga como siempre.
+    /// </summary>
+    [Fact]
+    public async Task ConLosVuelosDeOperadorApagadosElPaqueteConVueloSeReservaYPaga()
+    {
+        using (var scope = _factory.Services.CreateScope())
+            Assert.False(scope.ServiceProvider.GetRequiredService<IOptions<FlightsOptions>>().Value.ProviderFlights.Enabled);
+
+        var scenario = await SeedAsync("fb-o19");
+        var quoteId = await QuoteAsync(scenario);
+        var reserved = await ReserveAsync(scenario, quoteId);
+        Assert.Equal(HttpStatusCode.Created, reserved.StatusCode);
+        var reservation = await reserved.Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+
+        var response = await PayAsync(scenario, reservation!.Id);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var paid = await response.Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("CONFIRMED", paid!.Status);
+        Assert.Equal("CONFIRMED", paid.Flight!.Status);
+        Assert.All(paid.Items, item => Assert.Equal("PACKAGE", item.ProductType));
     }
 
     [Fact]

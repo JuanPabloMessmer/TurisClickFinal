@@ -84,7 +84,8 @@ public class ReservationServiceTests
             _currentUser.Object,
             ownershipGuard.Object,
             Mock.Of<ILogger<ReservationService>>(),
-            db.Object);
+            db.Object,
+            Microsoft.Extensions.Options.Options.Create(new TurisClick.Api.Modules.Flights.Services.FlightsOptions()));
     }
 
     private ExperienceAvailability BookableAvailability() => new()

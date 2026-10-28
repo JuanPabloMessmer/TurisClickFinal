@@ -31,6 +31,9 @@ public class ProviderFlightBookingTests(TurisClickApiFactory factory)
     // Código de la Oleada 18, apagado por defecto desde la Oleada 19: estos tests lo prenden.
     private readonly WebApplicationFactory<Program> _factory = factory.WithProviderFlights;
 
+    /// <summary>La configuración de producción (vuelos de operador apagados), sobre la misma base.</summary>
+    private readonly TurisClickApiFactory _disabled = factory;
+
     // ================================================================ escenario
 
     private sealed record Scenario(
@@ -183,6 +186,38 @@ public class ProviderFlightBookingTests(TurisClickApiFactory factory)
 
         return client.PostAsJsonAsync("/api/flights/search", body)
             .ContinueWith(t => t.Result.Content.ReadFromJsonAsync<SearchFlightsResponse>(JsonOptions)).Unwrap()!;
+    }
+
+    // ================================================================ Oleada 19: reservas heredadas
+
+    [Fact]
+    public async Task ConLaFuncionalidadApagadaUnaReservaDeVueloPendienteNoSeCobra()
+    {
+        // La reserva se crea mientras la funcionalidad estaba prendida (una reserva de la Oleada 18 que quedó
+        // esperando pago) y se intenta pagar después de apagarla.
+        var s = await PublishedFlightAsync("pfb-legacy", seats: 6);
+        var tourist = await TouristAsync("pfb-legacy-t");
+        var created = await CreatedAsync<ReservationResponse>(await ReserveAsync(tourist, [s.OutboundId], OneAdult, 1));
+        var seatsHeld = await ReservedSeatsAsync(s.OutboundId);
+        var paymentsBefore = await DbAsync(db => db.PaymentTransactions.CountAsync(p => p.ReservationId == created.Id));
+
+        var disabledTourist = _disabled.CreateClient();
+        disabledTourist.DefaultRequestHeaders.Authorization = tourist.DefaultRequestHeaders.Authorization;
+        var refused = await disabledTourist.PostAsJsonAsync($"/api/reservations/{created.Id}/pay", new { success = true });
+
+        Assert.Equal(HttpStatusCode.NotImplemented, refused.StatusCode);
+        Assert.Contains("FEATURE_NOT_AVAILABLE", await refused.Content.ReadAsStringAsync());
+
+        // Nada cambió: ni cobro, ni confirmación, ni emisión pendiente, y el asiento sigue retenido hasta que venza.
+        var after = await (await disabledTourist.GetAsync($"/api/reservations/{created.Id}")).Content.ReadFromJsonAsync<ReservationResponse>(JsonOptions);
+        Assert.Equal("PENDING_PAYMENT", after!.Status);
+        Assert.All(after.Items, item => Assert.Equal("PENDING_PAYMENT", item.Status));
+        Assert.Equal(paymentsBefore, await DbAsync(db => db.PaymentTransactions.CountAsync(p => p.ReservationId == created.Id)));
+        Assert.Equal(seatsHeld, await ReservedSeatsAsync(s.OutboundId));
+        Assert.Equal(0, await DbAsync(db => db.ReservationItems.CountAsync(i => i.ReservationId == created.Id && i.IssuanceStatus != FlightIssuanceStatus.NOT_REQUIRED)));
+
+        // Con la funcionalidad prendida la misma reserva se paga: el bloqueo es la configuración y nada más.
+        Assert.Equal("CONFIRMED", (await PayAsync(tourist, created.Id)).Status);
     }
 
     // ================================================================ autorización y catálogo

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Infrastructure.Security;
 using TurisClick.Api.Modules.Experiences.Entities;
@@ -18,6 +19,7 @@ using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Flights.Dtos;
 using TurisClick.Api.Modules.Flights.Entities;
 using TurisClick.Api.Modules.Flights.Services;
+using TurisClick.Api.Modules.Flights.ProviderFlights;
 using TurisClick.Api.Modules.Flights.ProviderFlights.Dtos;
 using TurisClick.Api.Modules.Flights.ProviderFlights.Entities;
 
@@ -36,7 +38,8 @@ public class ReservationService(
     ICurrentUserContext currentUser,
     ICompanyOwnershipGuard ownershipGuard,
     ILogger<ReservationService> logger,
-    TurisClickDbContext db) : IReservationService
+    TurisClickDbContext db,
+    IOptions<FlightsOptions> flightsOptions) : IReservationService
 {
     /// <summary>Ventana del hold de cupo mientras la reserva está PENDING_PAYMENT. La liberación efectiva por expiración es UC-SYS-08 (Oleada 8) — acá solo se registra el límite.</summary>
     private static readonly TimeSpan HoldWindow = TimeSpan.FromMinutes(30);
@@ -524,6 +527,13 @@ public class ReservationService(
         // sigue siendo PENDING_PAYMENT, pero el hold de cupo (ExpiresAt) ya venció.
         if (reservation.ExpiresAt is { } expiresAt && expiresAt < now)
             throw new GoneAppException("La reserva expiró; el cupo retenido ya no es válido para pagar.");
+
+        // Vuelo suelto de operador (Oleada 18) con la funcionalidad apagada (Oleada 19, metabuscador): no se
+        // cobra. Pagarlo lo dejaría con la emisión pendiente y sin nadie que pueda registrarla, porque los
+        // endpoints de emisión también están apagados. No se toca la reserva: sigue esperando pago y su hold vence
+        // como cualquier otro. Los paquetes (con o sin vuelo, ProductType PACKAGE) y las experiencias no pasan por acá.
+        if (reservation.Items.Any(i => i.ProductType == ProductType.FLIGHT && i.Status == ReservationItemStatus.PENDING_PAYMENT))
+            ProviderFlightsFeature.EnsureEnabled(flightsOptions.Value);
 
         // ---- El vuelo, si lo hay. Una reserva sin vuelo sigue exactamente el mismo camino que antes ----
         var flight = await db.FlightBookings
