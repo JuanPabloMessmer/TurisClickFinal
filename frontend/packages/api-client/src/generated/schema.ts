@@ -5373,6 +5373,7 @@ export interface components {
             source?: string | null;
             bookable?: boolean;
             providerFlight?: components["schemas"]["ProviderFlightOfferResponse"];
+            redirect?: components["schemas"]["FlightRedirectResponse"];
         };
         FlightOriginResponse: {
             iata?: string | null;
@@ -5400,6 +5401,12 @@ export interface components {
             expiresAt?: string | null;
             message?: string | null;
             requiresAcceptance?: boolean;
+        };
+        FlightRedirectResponse: {
+            available?: boolean;
+            url?: string | null;
+            sellerName?: string | null;
+            unavailableReason?: string | null;
         };
         FlightRoutePackageResponse: {
             /** Format: uuid */

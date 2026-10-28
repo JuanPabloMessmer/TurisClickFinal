@@ -66,6 +66,18 @@ public record FlightOffer(
     /// <summary>Un lugar por pasajero, con el id que el proveedor asignó en la búsqueda: la orden los exige.</summary>
     IReadOnlyList<FlightPassengerSlot> Passengers)
 {
+    /// <summary>
+    /// Quién vende la oferta, si el proveedor lo informa (una agencia o la propia aerolínea). Sin valor se
+    /// muestra la aerolínea.
+    /// </summary>
+    public string? SellerName { get; init; }
+
+    /// <summary>
+    /// Enlace de compra **tal como lo dio el proveedor**. TurisClick nunca lo arma; FlightRedirectPolicy decide
+    /// si se puede abrir. El proveedor simulado y Duffel no dan ninguno.
+    /// </summary>
+    public string? BookingUrl { get; init; }
+
     public bool IsExpired(DateTimeOffset now) => ExpiresAt is { } expiry && expiry <= now;
 }
 

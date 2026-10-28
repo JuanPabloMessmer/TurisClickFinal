@@ -5,7 +5,7 @@ import { SlidersHorizontal } from 'lucide-react-native'
 import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFlightSearchResults } from '@/features/flights/api'
-import { bookingParams, isBookableProviderOption, isDemoOffer } from '@/features/flights/booking/model'
+import { isDemoOffer } from '@/features/flights/booking/model'
 import {
   activeFilterCount,
   applyFilters,
@@ -25,9 +25,12 @@ import { Badge, Button, Chip, EmptyState, ErrorState, Icon, Skeleton, Surface } 
 /**
  * Resultados de una búsqueda de vuelos: orden, filtros y las ofertas.
  *
- * "Seleccionar" aparece sólo en los vuelos que publica un operador autorizado y que el backend marca como
- * reservables. Las ofertas de aerolínea (el proveedor simulado) se muestran para comparar, rotuladas DEMO, y
- * nunca se ofrecen para comprar. Mirar no exige sesión: la sesión se pide al empezar la reserva.
+ * Es un metabuscador (Oleada 19): TurisClick muestra y compara ofertas, y la compra se hace en el sitio del
+ * vendedor ("Ver oferta", sólo con un enlace que el backend validó). Las ofertas DEMO no llevan a ningún lado.
+ * No hay reserva, pago ni emisión de vuelos dentro de la app, y mirar no exige sesión.
+ *
+ * Los paquetes de abajo son otra cosa: el marketplace de TurisClick, donde el transporte aéreo viene incluido
+ * en el paquete y sí se reserva y paga acá.
  */
 export function FlightResultsScreen({ request }: { request: flightsApi.SearchFlightsRequest | null }) {
   const router = useRouter()
@@ -54,11 +57,6 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
     infants: request.infants ?? 0,
   }
   const totalPassengers = passengers.adults + passengers.childrenAges.length + passengers.infants
-  const hasBookable = options.some(isBookableProviderOption)
-  const bookableDemo = options.some((option) => isBookableProviderOption(option) && isDemoOffer(option))
-
-  const onSelect = (option: flightsApi.FlightOptionResponse) =>
-    router.push({ pathname: '/book/flight', params: bookingParams(request, option) })
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
@@ -100,7 +98,7 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
       ) : data ? (
         <>
           <View className="mt-4 px-5">
-            <InventoryBanner mode={data.inventoryMode} testMode={data.testMode} hasBookable={hasBookable} bookableDemo={bookableDemo} />
+            <InventoryBanner mode={data.inventoryMode} testMode={data.testMode} />
           </View>
 
           {data.notice ? (
@@ -145,7 +143,7 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
               ) : (
                 <View className="mt-3 gap-3 px-5">
                   {visible.map((option, index) => (
-                    <FlightOfferCard key={index} option={option} passengers={totalPassengers} demo={isDemoOffer(option, data.inventoryMode)} onSelect={onSelect} />
+                    <FlightOfferCard key={index} option={option} passengers={totalPassengers} demo={isDemoOffer(option, data.inventoryMode)} />
                   ))}
                 </View>
               )}
@@ -153,13 +151,10 @@ export function FlightResultsScreen({ request }: { request: flightsApi.SearchFli
           ) : null}
 
           <View className="mt-8 px-5">
-            <Text className="font-display text-heading text-ink">
-              {hasBookable ? '¿Preferís un paquete con vuelo?' : '¿Se puede comprar este vuelo?'}
-            </Text>
+            <Text className="font-display text-heading text-ink">Paquetes con transporte aéreo incluido</Text>
             <Text className="mt-1 font-sans text-body text-ink-muted">
-              {hasBookable
-                ? 'Los vuelos con "Seleccionar" se compran sueltos. También podés llevar el vuelo dentro de un paquete de TurisClick, y el operador se hace cargo de los dos.'
-                : 'Todavía no: la compra de vuelos sueltos no está disponible. Hoy el vuelo se compra dentro de un paquete de TurisClick, y el operador se hace cargo de los dos.'}
+              Las ofertas de arriba se compran en el sitio de cada vendedor. Estos paquetes se reservan y pagan en
+              TurisClick, con el vuelo incluido y a cargo del operador del paquete.
             </Text>
 
             {(data.packages ?? []).length === 0 ? (

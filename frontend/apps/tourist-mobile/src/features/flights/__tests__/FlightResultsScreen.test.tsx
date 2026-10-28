@@ -1,14 +1,16 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native'
 import type { flightsApi } from '@turisclick/api-client'
+import { Linking } from 'react-native'
 import { FlightResultsScreen } from '@/features/flights/FlightResultsScreen'
 import { createTestQueryClient, httpError, ok, withClient } from '@/test-utils'
 
 /**
  * Resultados de vuelos.
  *
- * Lo que se protege es una frontera de producto: esta pantalla **no vende pasajes**. La compra de vuelos
- * sueltos todavía no existe, así que no puede haber un botón de reservar o elegir — si aparece, estos tests
- * tienen que romperse. Y los vuelos simulados se rotulan como simulados, en la lista y en cada oferta.
+ * Lo que se protege es una frontera de producto: esta pantalla **no vende pasajes**. Es un metabuscador
+ * (Oleada 19): la compra se hace en el sitio del vendedor, y sólo con un enlace que el backend validó. No puede
+ * haber un botón de reservar o elegir — si aparece, estos tests tienen que romperse. Los vuelos simulados se
+ * rotulan como simulados y nunca llevan a un sitio de compra.
  */
 
 const mockGet = jest.fn()
@@ -153,7 +155,7 @@ describe('resultados de vuelos', () => {
 
     const banner = await screen.findByTestId('inventory-banner')
     expect(within(banner).getByText('DEMO · vuelos simulados')).toBeTruthy()
-    expect(within(banner).getByText(/No son vuelos reales/)).toBeTruthy()
+    expect(within(banner).getByText(/No son vuelos ni precios reales/)).toBeTruthy()
     expect(screen.getAllByText('DEMO').length).toBe(2)
   })
 
@@ -165,16 +167,64 @@ describe('resultados de vuelos', () => {
   })
 
   /** La garantía central de la pantalla. */
-  it('no ofrece reservar ni elegir el vuelo, y dice por qué', async () => {
-    mockPost.mockReturnValue(ok(response()))
+  it('no ofrece reservar ni elegir el vuelo, y las ofertas DEMO no llevan a ningún sitio', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL')
+    const demoLink = { available: false, url: null, sellerName: 'Fake Airways', unavailableReason: 'DEMO' }
+    mockPost.mockReturnValue(ok(response({ options: [{ ...direct, redirect: demoLink }, { ...withStop, redirect: demoLink }] })))
     renderScreen()
 
     await screen.findByTestId('inventory-banner')
     expect(screen.queryByText(/^reservar/i)).toBeNull()
     expect(screen.queryByText(/^comprar/i)).toBeNull()
     expect(screen.queryByText(/^seleccionar/i)).toBeNull()
-    expect(screen.queryByText(/elegir este vuelo/i)).toBeNull()
-    expect(screen.getByText(/la compra de vuelos sueltos no está disponible/i)).toBeTruthy()
+    expect(screen.queryByText(/^ver oferta/i)).toBeNull()
+    expect(screen.getAllByText('Oferta de demostración · no se puede comprar').length).toBe(2)
+    expect(openURL).not.toHaveBeenCalled()
+  })
+
+  it('una oferta real con enlace validado abre el sitio del vendedor', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true)
+    const url = 'https://www.aerolinea-demo.com/compra?o=1'
+    mockPost.mockReturnValue(
+      ok(response({
+        inventoryMode: 'LIVE',
+        testMode: false,
+        options: [
+          { ...direct, redirect: { available: true, url, sellerName: 'Agencia Andina', unavailableReason: null } },
+          { ...withStop, redirect: { available: false, url: null, sellerName: 'Fake Airways', unavailableReason: 'NO_LINK' } },
+        ],
+      })),
+    )
+    renderScreen()
+
+    fireEvent.press(await screen.findByText('Ver oferta en Agencia Andina'))
+    await waitFor(() => expect(openURL).toHaveBeenCalledWith(url))
+    expect(screen.getByText('No disponible para compra desde TurisClick')).toBeTruthy()
+    expect(screen.queryByTestId('inventory-banner')).toBeNull()
+  })
+
+  it('no abre un enlace que no sea https aunque el backend lo marque disponible', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL')
+    mockPost.mockReturnValue(
+      ok(response({
+        inventoryMode: 'LIVE',
+        testMode: false,
+        options: [{ ...direct, redirect: { available: true, url: 'http://www.aerolinea-demo.com/', sellerName: 'X', unavailableReason: null } }],
+      })),
+    )
+    renderScreen()
+
+    expect(await screen.findByText('No disponible para compra desde TurisClick')).toBeTruthy()
+    expect(screen.queryByText(/^ver oferta/i)).toBeNull()
+    expect(openURL).not.toHaveBeenCalled()
+  })
+
+  it('los paquetes con transporte aéreo se presentan aparte del metabuscador', async () => {
+    mockPost.mockReturnValue(ok(response()))
+    renderScreen()
+
+    expect(await screen.findByText('Paquetes con transporte aéreo incluido')).toBeTruthy()
+    expect(screen.getByText(/se reservan y pagan en\s+TurisClick/)).toBeTruthy()
   })
 
   it('ordena por precio, por duración y por hora de salida', async () => {

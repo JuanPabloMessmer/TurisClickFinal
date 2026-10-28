@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Flights.Dtos;
@@ -16,20 +17,21 @@ public interface IFlightSearchService
 }
 
 /// <summary>
-/// Búsqueda de vuelos sin paquete: el buscador de la app. **No escribe nada.**
+/// Búsqueda de vuelos sin paquete: el buscador de la app, un **metabuscador** desde la Oleada 19. **No escribe nada.**
 ///
-/// Junta dos fuentes que no se mezclan:
 /// <list type="bullet">
-/// <item><b>Vuelos de operador</b> (Source PROVIDER, reservables con sesión): los publica una empresa autorizada,
-/// con su cupo y su tarifa. Se reservan con sus <c>departureIds</c> en /api/reservations.</item>
-/// <item><b>Ofertas de aerolínea</b> (Source AIRLINE, nunca reservables sueltas): las del proveedor aéreo (hoy el
-/// simulado). No llevan ningún id de cotización, porque desde acá no se compran.</item>
+/// <item><b>Ofertas de aerolínea</b> (Source AIRLINE, nunca reservables en TurisClick): las del proveedor de
+/// búsqueda (hoy el simulado). Cada una lleva <c>Redirect</c>: si se puede abrir en el sitio del vendedor
+/// (FlightRedirectPolicy). No llevan id de cotización, porque desde acá no se compran.</item>
+/// <item><b>Vuelos de operador</b> (Source PROVIDER, Oleada 18): sólo con <c>Flights:ProviderFlights:Enabled</c>,
+/// apagado por defecto. Con eso prendido se reservan con sus <c>departureIds</c> en /api/reservations.</item>
 /// </list>
 /// Además devuelve los paquetes que vuelan la misma ruta.
 /// </summary>
 public class FlightSearchService(
     IFlightProvider flightProvider,
     TurisClickDbContext db,
+    IOptions<FlightsOptions> options,
     ILogger<FlightSearchService> logger) : IFlightSearchService
 {
     /// <summary>Techo de ofertas mostradas. El proveedor devuelve decenas; una pantalla de teléfono no.</summary>
@@ -61,9 +63,10 @@ public class FlightSearchService(
             Packages = await RoutePackagesAsync(origin, destination, ct),
         };
 
-        // Primero los vuelos de operador: son lo único que se puede reservar desde acá, y no dependen de
-        // que el proveedor aéreo responda.
-        var providerOptions = await ProviderFlightOptionsAsync(origin, destination, cabin, request, ct);
+        // Vuelos de operador (Oleada 18), sólo si siguen prendidos: con el metabuscador no se ofrecen.
+        List<FlightOptionResponse> providerOptions = options.Value.ProviderFlights.Enabled
+            ? await ProviderFlightOptionsAsync(origin, destination, cabin, request, ct)
+            : [];
         response.Options.AddRange(providerOptions);
         response.Bookable = providerOptions.Count > 0;
 
@@ -87,6 +90,8 @@ public class FlightSearchService(
             airlineNotice = "No pudimos consultar vuelos en este momento. Probá de nuevo en unos minutos.";
         }
 
+        var simulated = flightProvider is Providers.FakeFlightProvider;
+        var redirectHosts = options.Value.RedirectHostsFor(options.Value.Provider);
         foreach (var offer in (search?.Offers ?? []).OrderBy(o => o.Price.Amount).Take(MaxOptions))
         {
             response.Options.Add(new FlightOptionResponse
@@ -97,6 +102,7 @@ public class FlightSearchService(
                 Slices = FlightResponseMapper.ToSlices(offer),
                 Source = FlightOfferSources.Airline,
                 Bookable = false,
+                Redirect = FlightRedirectPolicy.Evaluate(offer, simulated, redirectHosts),
             });
 
             response.TestMode |= !offer.LiveMode;

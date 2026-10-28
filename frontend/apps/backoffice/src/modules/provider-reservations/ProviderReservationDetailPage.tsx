@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { getErrorMessage } from '@/lib/errors'
 import { useCancelCompanyReservation, useCompanyReservation } from './api'
+import { PROVIDER_FLIGHTS_ENABLED } from '@/lib/features'
 import { FlightIssuanceSection } from './FlightIssuanceSection'
 import { isFlightItem, itemTitle } from './itemTitle'
 
@@ -116,7 +117,7 @@ export function ProviderReservationDetailPage() {
         </CardContent>
       </Card>
 
-      {flightItem && <FlightIssuanceSection item={item} />}
+      {PROVIDER_FLIGHTS_ENABLED && flightItem && <FlightIssuanceSection item={item} />}
 
       {canCancel && id && (
         <Card className="mt-6">

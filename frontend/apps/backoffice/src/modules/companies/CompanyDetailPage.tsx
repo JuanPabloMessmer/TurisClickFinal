@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom'
 import { FullScreenSpinner } from '@/components/FullScreenSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { CompanyAccountsCard } from './CompanyAccountsCard'
+import { PROVIDER_FLIGHTS_ENABLED } from '@/lib/features'
 import { FlightSellerCard } from './FlightSellerCard'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -72,7 +73,7 @@ export function CompanyDetailPage() {
 
       {id && <CompanyAccountsCard companyId={id} />}
 
-      {(company.status === 'APPROVED' || company.status === 'SUSPENDED') && <FlightSellerCard company={company} />}
+      {PROVIDER_FLIGHTS_ENABLED && (company.status === 'APPROVED' || company.status === 'SUSPENDED') && <FlightSellerCard company={company} />}
 
       {company.status === 'REJECTED' && company.rejectionReason && (
         <Alert variant="destructive" className="mb-6">

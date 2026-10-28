@@ -11,11 +11,13 @@ namespace TurisClick.Api.Modules.Flights.ProviderFlights.Controllers;
 /// pasajes vendidos. El catálogo exige que la empresa esté autorizada a vender vuelos (403
 /// FLIGHT_SELLER_NOT_AUTHORIZED); la emisión de lo ya vendido, no.
 ///
-/// Contratos en docs/vuelos-sueltos-contratos.md.
+/// Contratos en docs/vuelos-sueltos-contratos.md. Apagado por defecto desde la Oleada 19: 501 si
+/// <c>Flights:ProviderFlights:Enabled</c> es false (ver ProviderFlightsFeature).
 /// </summary>
 [ApiController]
 [Route("api/companies/me")]
 [Authorize(Policy = "RequireProvider")]
+[RequireProviderFlights]
 public class ProviderFlightsController(IProviderFlightService service) : ControllerBase
 {
     [HttpGet("flights")]
@@ -100,6 +102,7 @@ public class ProviderFlightsController(IProviderFlightService service) : Control
 [ApiController]
 [Route("api/admin")]
 [Authorize(Policy = "RequireAdmin")]
+[RequireProviderFlights]
 public class AdminProviderFlightsController(IAdminProviderFlightService service) : ControllerBase
 {
     [HttpPut("companies/{companyId:guid}/flight-seller")]

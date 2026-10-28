@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -15,7 +16,8 @@ namespace TurisClick.Api.Tests.Integration;
 [Collection(ApiCollection.Name)]
 public class ProviderFlightContractTests(TurisClickApiFactory factory)
 {
-    private readonly TurisClickApiFactory _factory = factory;
+    // Código de la Oleada 18, apagado por defecto desde la Oleada 19: estos tests lo prenden.
+    private readonly WebApplicationFactory<Program> _factory = factory.WithProviderFlights;
 
     private static readonly Guid AnyId = Guid.NewGuid();
 

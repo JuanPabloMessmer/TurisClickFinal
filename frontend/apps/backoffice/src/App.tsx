@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthBootstrap } from '@/auth/AuthBootstrap'
+import { PROVIDER_FLIGHTS_ENABLED } from '@/lib/features'
 import { ChangePasswordPage } from '@/auth/ChangePasswordPage'
 import { LoginPage } from '@/auth/LoginPage'
 import { RequireRole } from '@/auth/RequireRole'
@@ -67,7 +68,7 @@ export default function App() {
                 <Route path="/admin/companies/:id" element={<CompanyDetailPage />} />
                 <Route path="/admin/experiences" element={<AdminExperiencesPage />} />
                 <Route path="/admin/packages" element={<AdminPackagesPage />} />
-                <Route path="/admin/flights" element={<AdminFlightsPage />} />
+                <Route path="/admin/flights" element={PROVIDER_FLIGHTS_ENABLED ? <AdminFlightsPage /> : <Navigate to="/dashboard" replace />} />
                 <Route path="/admin/reservations" element={<AdminReservationsPage />} />
                 <Route path="/admin/reservations/:id" element={<AdminReservationDetailPage />} />
               </Route>
@@ -85,10 +86,16 @@ export default function App() {
                   <Route path="/provider/packages/new" element={<PackageFormPage />} />
                   <Route path="/provider/packages/:id/edit" element={<PackageFormPage />} />
                   <Route path="/provider/packages/:id/availability" element={<PackageAvailabilityPage />} />
-                  <Route path="/provider/flights" element={<ProviderFlightsPage />} />
-                  <Route path="/provider/flights/new" element={<ProviderFlightFormPage />} />
-                  <Route path="/provider/flights/:id/edit" element={<ProviderFlightFormPage />} />
-                  <Route path="/provider/flights/:id/departures" element={<ProviderFlightDeparturesPage />} />
+                  {PROVIDER_FLIGHTS_ENABLED ? (
+                    <>
+                      <Route path="/provider/flights" element={<ProviderFlightsPage />} />
+                      <Route path="/provider/flights/new" element={<ProviderFlightFormPage />} />
+                      <Route path="/provider/flights/:id/edit" element={<ProviderFlightFormPage />} />
+                      <Route path="/provider/flights/:id/departures" element={<ProviderFlightDeparturesPage />} />
+                    </>
+                  ) : (
+                    <Route path="/provider/flights/*" element={<Navigate to="/dashboard" replace />} />
+                  )}
                   <Route path="/provider/reservations" element={<ProviderReservationsPage />} />
                   <Route path="/provider/reservations/:id" element={<ProviderReservationDetailPage />} />
                 </Route>

@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using TurisClick.Api.Modules.Flights.ProviderFlights;
+using TurisClick.Api.Modules.Flights.Services;
 using TurisClick.Api.Modules.Reservations.Dtos;
 using TurisClick.Api.Modules.Reservations.Services;
 using TurisClick.Api.Shared.Responses;
@@ -16,8 +19,14 @@ public class ReservationsController(
     /// <summary>UC-T-08 — reserva directa de una Experience individual.</summary>
     [HttpPost]
     [ProducesResponseType(typeof(ReservationResponse), StatusCodes.Status201Created)]
-    public async Task<ActionResult<ReservationResponse>> Create([FromBody] CreateReservationRequest request, CancellationToken ct)
+    public async Task<ActionResult<ReservationResponse>> Create(
+        [FromBody] CreateReservationRequest request,
+        [FromServices] IOptionsSnapshot<FlightsOptions> flights,
+        CancellationToken ct)
     {
+        // Vuelo suelto de operador (Oleada 18): apagado con el metabuscador. Paquetes y experiencias, intactos.
+        if (request.IsProviderFlight) ProviderFlightsFeature.EnsureEnabled(flights.Value);
+
         var result = await reservationService.CreateAsync(request, ct);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }

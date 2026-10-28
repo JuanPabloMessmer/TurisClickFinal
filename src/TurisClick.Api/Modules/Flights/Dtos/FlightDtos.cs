@@ -485,6 +485,39 @@ public class FlightOptionResponse
 
     /// <summary>Con qué salidas se reserva, quién la vende y cuántos asientos quedan. Sólo con Source = PROVIDER.</summary>
     public ProviderFlights.Dtos.ProviderFlightOfferResponse? ProviderFlight { get; set; }
+
+    /// <summary>
+    /// Metabuscador (Oleada 19): si la oferta se puede abrir en el sitio del vendedor para comprarla. Siempre
+    /// presente en las ofertas de aerolínea. La app abre <c>Url</c> sólo con <c>Available</c> en true.
+    /// </summary>
+    public FlightRedirectResponse? Redirect { get; set; }
+}
+
+/// <summary>Dónde se compra una oferta del metabuscador. Validado por FlightRedirectPolicy.</summary>
+public class FlightRedirectResponse
+{
+    public bool Available { get; set; }
+
+    /// <summary>https y de un dominio autorizado para el proveedor. Null si no está disponible.</summary>
+    public string? Url { get; set; }
+
+    /// <summary>Quién la vende (agencia o aerolínea), si se sabe.</summary>
+    public string? SellerName { get; set; }
+
+    /// <summary>Por qué no se puede abrir: DEMO, NO_LINK o LINK_NOT_ALLOWED. Null si está disponible.</summary>
+    public string? UnavailableReason { get; set; }
+}
+
+public static class FlightRedirectReasons
+{
+    /// <summary>Oferta simulada o de prueba: no es un precio real ni hay compra.</summary>
+    public const string Demo = "DEMO";
+
+    /// <summary>El proveedor no dio enlace de compra.</summary>
+    public const string NoLink = "NO_LINK";
+
+    /// <summary>El enlace no pasó la validación (esquema, host no autorizado, URL manipulada).</summary>
+    public const string LinkNotAllowed = "LINK_NOT_ALLOWED";
 }
 
 /// <summary>Un paquete que vuela la ruta buscada, para pasar de mirar vuelos a comprar algo real.</summary>

@@ -1,9 +1,8 @@
 import type { flightsApi } from '@turisclick/api-client'
 import { formatCurrency } from '@turisclick/utils'
-import { Briefcase, Plane } from 'lucide-react-native'
+import { Briefcase, ExternalLink, Plane } from 'lucide-react-native'
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
-import { isBookableProviderOption } from '@/features/flights/booking/model'
 import { formatDuration, formatTime, stopsLabel } from '@/features/flights/components'
 import {
   activeFilterCount,
@@ -16,6 +15,7 @@ import {
   TIME_BUCKETS,
   type ResultFilters,
 } from '@/features/flights/search/model'
+import { offerActionOf, openOffer } from '@/features/flights/search/redirect'
 import { SheetModal } from '@/features/flights/search/SheetModal'
 import { colors } from '@/theme/colors'
 import { Button, Chip, Icon, SegmentedControl, Surface } from '@/ui'
@@ -28,19 +28,7 @@ type Slice = NonNullable<Option['slices']>[number]
  * los vuelos NO existen: son datos de demostración que TurisClick genera, y una pantalla que los mostrara
  * como vuelos reales estaría mintiendo. Sin el dato (un backend anterior) se asume lo prudente.
  */
-export function InventoryBanner({
-  mode,
-  testMode,
-  hasBookable = false,
-  bookableDemo = true,
-}: {
-  mode?: string | null
-  testMode?: boolean
-  /** Hay vuelos de operador reservables en la lista: el aviso tiene que distinguirlos de las ofertas simuladas. */
-  hasBookable?: boolean
-  /** Alguno de esos vuelos de operador es de demostración (`providerFlight.demo`). */
-  bookableDemo?: boolean
-}) {
+export function InventoryBanner({ mode, testMode }: { mode?: string | null; testMode?: boolean }) {
   if (mode === 'LIVE' || (!mode && !testMode)) return null
 
   const sandbox = mode === 'SANDBOX'
@@ -54,34 +42,21 @@ export function InventoryBanner({
         {sandbox ? 'MODO PRUEBA · no se emiten pasajes' : 'DEMO · vuelos simulados'}
       </Text>
       <Text className="mt-1 font-sans text-caption text-warning-fg">
-        {hasBookable && bookableDemo
-          ? 'Las ofertas de aerolínea son simuladas y no se pueden comprar. Los vuelos con "Seleccionar" los publica un operador de prueba: se reservan con un pago simulado y ningún pasaje es real.'
-          : hasBookable
-            ? 'Las ofertas de aerolínea son simuladas y no se pueden comprar. Sólo se reservan los vuelos con "Seleccionar", que vende un operador.'
-          : sandbox
-            ? 'Ofertas del entorno de prueba del proveedor aéreo. Horarios y precios no corresponden a vuelos comerciales y nada se puede comprar.'
-            : 'TurisClick genera estos vuelos para la demostración. No son vuelos reales, no tienen asientos ni se pueden comprar.'}
+        {sandbox
+          ? 'Ofertas del entorno de prueba del proveedor aéreo. Horarios y precios no corresponden a vuelos comerciales y no llevan a ningún sitio de compra.'
+          : 'TurisClick genera estas ofertas para la demostración. No son vuelos ni precios reales y no llevan a ningún sitio de compra.'}
       </Text>
     </View>
   )
 }
 
-/** Una oferta como la muestra cualquier buscador: horarios grandes, duración, escalas, equipaje y total. */
-export function FlightOfferCard({
-  option,
-  passengers,
-  demo,
-  onSelect,
-}: {
-  option: Option
-  passengers: number
-  demo: boolean
-  /** Sólo se usa si la opción es un vuelo de operador reservable. */
-  onSelect?: (option: Option) => void
-}) {
+/**
+ * Una oferta como la muestra cualquier metabuscador: horarios grandes, duración, escalas, equipaje, total y
+ * quién la vende. La compra se hace en el sitio del vendedor ("Ver oferta"); TurisClick no reserva vuelos.
+ */
+export function FlightOfferCard({ option, passengers, demo }: { option: Option; passengers: number; demo: boolean }) {
   const bags = checkedBagsOf(option)
-  const bookable = isBookableProviderOption(option)
-  const provider = option.providerFlight
+  const action = offerActionOf(option, demo)
 
   return (
     <Surface className="rounded-lg">
@@ -134,27 +109,26 @@ export function FlightOfferCard({
           </View>
         </View>
 
-        {bookable && provider ? (
-          <View className="mt-3 gap-3 border-t border-border pt-3">
-            <View className="flex-row flex-wrap items-center justify-between gap-2">
-              <Text className="flex-1 font-sans text-caption text-ink-muted" numberOfLines={2}>
-                Vendido por {provider.operatorName || 'un operador'}
+        <View className="mt-3 gap-2 border-t border-border pt-3">
+          {action.kind === 'open' ? (
+            <>
+              <Text className="font-sans text-caption text-ink-muted" numberOfLines={2}>
+                Vendido por {action.seller} · la compra se hace en su sitio
               </Text>
-              {(provider.seatsLeft ?? 0) > 0 && (provider.seatsLeft ?? 0) <= 9 ? (
-                <Text className="font-ui600 text-caption text-accent-700">
-                  {provider.seatsLeft === 1 ? 'Queda 1 asiento' : `Quedan ${provider.seatsLeft} asientos`}
-                </Text>
-              ) : null}
-            </View>
-            {onSelect ? (
               <Button
-                label="Seleccionar"
-                accessibilityLabel={`Seleccionar vuelo de ${option.carrierName ?? 'aerolínea'} vendido por ${provider.operatorName ?? 'un operador'}`}
-                onPress={() => onSelect(option)}
+                label={`Ver oferta en ${action.seller}`}
+                icon={ExternalLink}
+                onPress={() => void openOffer(action.url)}
               />
-            ) : null}
-          </View>
-        ) : null}
+            </>
+          ) : (
+            <Text testID="offer-not-purchasable" className="font-sans text-caption text-ink-muted">
+              {action.kind === 'demo'
+                ? 'Oferta de demostración · no se puede comprar'
+                : 'No disponible para compra desde TurisClick'}
+            </Text>
+          )}
+        </View>
       </View>
     </Surface>
   )

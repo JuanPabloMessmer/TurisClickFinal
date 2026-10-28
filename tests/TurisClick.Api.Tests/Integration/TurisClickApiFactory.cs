@@ -63,6 +63,16 @@ public class TurisClickApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         });
     }
 
+    private WebApplicationFactory<Program>? _providerFlights;
+
+    /// <summary>
+    /// La misma app con los vuelos de operador (Oleada 18) prendidos. Desde la Oleada 19 están apagados por
+    /// defecto (metabuscador), así que el resto de la suite corre como producción y sólo los tests de ese
+    /// código, que sigue en el repositorio, lo prenden. Comparte la base: no repite la migración ni el admin.
+    /// </summary>
+    public WebApplicationFactory<Program> WithProviderFlights =>
+        _providerFlights ??= WithWebHostBuilder(b => b.UseSetting("Flights:ProviderFlights:Enabled", "true"));
+
     public async Task InitializeAsync()
     {
         // Se resuelve antes de construir el host: si falla dentro de ConfigureWebHost, el host de
@@ -101,7 +111,7 @@ public class TurisClickApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
 
     async Task IAsyncLifetime.DisposeAsync()
     {
-        await Task.CompletedTask;
+        if (_providerFlights is not null) await _providerFlights.DisposeAsync();
     }
 
     private static string ResolveTestConnectionString()
