@@ -2,7 +2,7 @@ import { buildMonthGrid, expandWeekdayPattern, presetForWeekdays } from '@turisc
 import { buildCalendarMonth, canGo, firstAvailableDate, navigationBounds, slotsByDate } from '@/features/booking/calendarModel'
 
 describe('buildMonthGrid', () => {
-  it('arranca en lunes y rellena con días de otros meses', () => {
+  it('arranca en lunes y rellena con días de otros meses', async () => {
     const weeks = buildMonthGrid({ year: 2026, month: 8 }) // septiembre 2026: 1 cae martes
 
     expect(weeks[0][0]).toMatchObject({ iso: '2026-08-31', inMonth: false, weekday: 1 })
@@ -11,7 +11,7 @@ describe('buildMonthGrid', () => {
     expect(weeks.flat().filter((cell) => cell.inMonth)).toHaveLength(30)
   })
 
-  it('febrero de 2027 que arranca en lunes ocupa 4 semanas exactas', () => {
+  it('febrero de 2027 que arranca en lunes ocupa 4 semanas exactas', async () => {
     expect(buildMonthGrid({ year: 2027, month: 1 })).toHaveLength(4)
   })
 })
@@ -26,12 +26,12 @@ describe('modelo del calendario de reserva', () => {
   ]
   const byDate = slotsByDate(slots)
 
-  it('agrupa solo lo que tiene cupo y ordena por horario', () => {
+  it('agrupa solo lo que tiene cupo y ordena por horario', async () => {
     expect(byDate.get('2026-09-20')?.map((s) => s.id)).toEqual(['early', 'late'])
     expect(byDate.has('2026-09-21')).toBe(false)
   })
 
-  it('asigna estados por día', () => {
+  it('asigna estados por día', async () => {
     const days = buildCalendarMonth({ year: 2026, month: 8 }, byDate, '2026-09-16', '2026-09-20').flat()
     const state = (iso: string) => days.find((d) => d.iso === iso)?.state
 
@@ -41,7 +41,7 @@ describe('modelo del calendario de reserva', () => {
     expect(state('2026-08-31')).toBe('outside')
   })
 
-  it('primera fecha futura y límites de navegación', () => {
+  it('primera fecha futura y límites de navegación', async () => {
     expect(firstAvailableDate(byDate, '2026-09-16')).toBe('2026-09-20')
     const bounds = navigationBounds(byDate, '2026-09-16')
     expect(bounds).toEqual({ min: { year: 2026, month: 8 }, max: { year: 2026, month: 10 } })
@@ -52,14 +52,14 @@ describe('modelo del calendario de reserva', () => {
 })
 
 describe('patrones del calendario del proveedor', () => {
-  it('expande un rango según los días elegidos', () => {
+  it('expande un rango según los días elegidos', async () => {
     // 2026-10-01 es jueves.
     expect(expandWeekdayPattern('2026-10-01', '2026-10-07', [0, 6])).toEqual(['2026-10-03', '2026-10-04'])
     expect(expandWeekdayPattern('2026-10-07', '2026-10-01', [1])).toEqual([])
     expect(expandWeekdayPattern('2026-10-01', '2026-10-31', [1, 2, 3, 4, 5])).toHaveLength(22)
   })
 
-  it('reconoce el preset que corresponde a una selección', () => {
+  it('reconoce el preset que corresponde a una selección', async () => {
     expect(presetForWeekdays([1, 2, 3, 4, 5])).toBe('WEEKDAYS')
     expect(presetForWeekdays([6, 0])).toBe('WEEKENDS')
     expect(presetForWeekdays([0, 1, 2, 3, 4, 5, 6])).toBe('EVERY_DAY')

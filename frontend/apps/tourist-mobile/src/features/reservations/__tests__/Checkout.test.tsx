@@ -36,9 +36,9 @@ const mockedUseSession = useSession as jest.MockedFunction<typeof useSession>
 
 let client = createTestQueryClient()
 
-function renderCheckout(props: Partial<React.ComponentProps<typeof Checkout>> = {}) {
+async function renderCheckout(props: Partial<React.ComponentProps<typeof Checkout>> = {}) {
   const Wrapper = withClient(client)
-  return render(
+  return await render(
     <Wrapper>
       <Checkout id="r1" {...props} />
     </Wrapper>,
@@ -73,7 +73,7 @@ afterEach(() => {
 
 describe('PENDING_PAYMENT', () => {
   it('muestra cuenta regresiva, ítems con snapshot, totales y el aviso de pago simulado', async () => {
-    renderCheckout()
+    await renderCheckout()
 
     await waitFor(() => expect(screen.getByText(/Tu lugar está reservado · \d\d:\d\d/)).toBeTruthy())
     expect(screen.getByText('Tour Illimani')).toBeTruthy()
@@ -86,16 +86,16 @@ describe('PENDING_PAYMENT', () => {
 
   it('en desarrollo ofrece "Simular rechazo" y manda success: false', async () => {
     mockPost.mockReturnValue(ok(pending({ paymentApproved: false, paymentFailureReason: 'Pago simulado rechazado.' })))
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Simular rechazo')).toBeTruthy())
 
-    fireEvent.press(button('Simular rechazo'))
+    await fireEvent.press(button('Simular rechazo'))
 
     await waitFor(() => expect(mockPost).toHaveBeenCalledWith('/api/reservations/r1/pay', { success: false, acceptPriceChanges: false }))
   })
 
   it('avisa si el snapshot congelado quedó distinto del precio que se vio antes de reservar', async () => {
-    renderCheckout({ quotedPrice: 35, quotedCurrency: 'USD' })
+    await renderCheckout({ quotedPrice: 35, quotedCurrency: 'USD' })
 
     await waitFor(() => expect(screen.getByText(/El precio se actualizó al reservar: ahora es USD 40,00/)).toBeTruthy())
   })
@@ -115,7 +115,7 @@ describe('PENDING_PAYMENT', () => {
         }),
       ),
     )
-    renderCheckout()
+    await renderCheckout()
 
     await waitFor(() => expect(screen.getByLabelText('Total')).toBeTruthy())
     expect(screen.getAllByText(/USD\s+120,00/).length).toBeGreaterThan(0)
@@ -127,16 +127,16 @@ describe('PENDING_PAYMENT', () => {
 describe('pago', () => {
   it('éxito: manda success: true y muestra el importe confirmado por el backend', async () => {
     mockPost.mockReturnValue(ok(confirmed({ totals: [{ currency: 'USD', amount: 80 }] })))
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Pagar')).toBeTruthy())
 
-    fireEvent.press(button('Pagar'))
+    await fireEvent.press(button('Pagar'))
 
     await waitFor(() => expect(screen.getByText('¡Reserva confirmada!')).toBeTruthy())
     expect(mockPost).toHaveBeenCalledWith('/api/reservations/r1/pay', { success: true, acceptPriceChanges: false })
     expect(screen.getByText('Total confirmado')).toBeTruthy()
 
-    fireEvent.press(button('Ver mis viajes'))
+    await fireEvent.press(button('Ver mis viajes'))
     expect(mockRouter.dismissAll).toHaveBeenCalled()
     expect(mockRouter.navigate).toHaveBeenCalledWith('/trips')
   })
@@ -145,15 +145,15 @@ describe('pago', () => {
     mockPost
       .mockReturnValueOnce(ok(pending({ paymentApproved: false, paymentFailureReason: 'Pago simulado rechazado.' })))
       .mockReturnValueOnce(ok(confirmed()))
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Pagar')).toBeTruthy())
 
-    fireEvent.press(button('Pagar'))
+    await fireEvent.press(button('Pagar'))
 
     await waitFor(() => expect(screen.getByText('El pago fue rechazado')).toBeTruthy())
     expect(screen.getByText(/Pago simulado rechazado\. Tu reserva sigue pendiente/)).toBeTruthy()
 
-    fireEvent.press(button('Reintentar pago'))
+    await fireEvent.press(button('Reintentar pago'))
 
     await waitFor(() => expect(screen.getByText('¡Reserva confirmada!')).toBeTruthy())
     expect(mockPost).toHaveBeenCalledTimes(2)
@@ -162,12 +162,12 @@ describe('pago', () => {
   it('doble toque en Pagar → una sola request', async () => {
     const inFlight = deferred<{ data: unknown }>()
     mockPost.mockReturnValue(inFlight.promise)
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Pagar')).toBeTruthy())
 
     const pay = button('Pagar')
-    fireEvent.press(pay)
-    fireEvent.press(pay)
+    await fireEvent.press(pay)
+    await fireEvent.press(pay)
 
     await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(1))
     await act(async () => {})
@@ -178,11 +178,11 @@ describe('pago', () => {
 
   it('una caída de red no reintenta el pago: re-lee el estado real', async () => {
     mockPost.mockRejectedValue(networkError())
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Pagar')).toBeTruthy())
     mockGet.mockClear()
 
-    fireEvent.press(button('Pagar'))
+    await fireEvent.press(button('Pagar'))
 
     await waitFor(() => expect(screen.getByText(/No pudimos confirmar el pago por un problema de conexión/)).toBeTruthy())
     expect(mockPost).toHaveBeenCalledTimes(1)
@@ -202,10 +202,10 @@ describe('cambio de precio', () => {
 
   it('muestra precio original, actual y el nuevo total, sin tratarlo como error', async () => {
     mockPost.mockReturnValue(ok(priceChanged()))
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Pagar')).toBeTruthy())
 
-    fireEvent.press(button('Pagar'))
+    await fireEvent.press(button('Pagar'))
 
     await waitFor(() => expect(screen.getByText('El precio cambió')).toBeTruthy())
     expect(screen.getByText('Antes: USD 40,00 por persona')).toBeTruthy()
@@ -221,12 +221,12 @@ describe('cambio de precio', () => {
       .mockReturnValueOnce(
         ok(confirmed({ items: [itemFixture({ status: 'CONFIRMED', unitPrice: 60, subtotal: 120 })], totals: [{ currency: 'USD', amount: 120 }] })),
       )
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Pagar')).toBeTruthy())
-    fireEvent.press(button('Pagar'))
+    await fireEvent.press(button('Pagar'))
     await waitFor(() => expect(button('Aceptar y pagar')).toBeTruthy())
 
-    fireEvent.press(button('Aceptar y pagar'))
+    await fireEvent.press(button('Aceptar y pagar'))
 
     await waitFor(() => expect(screen.getByText('¡Reserva confirmada!')).toBeTruthy())
     expect(mockPost).toHaveBeenLastCalledWith('/api/reservations/r1/pay', { success: true, acceptPriceChanges: true })
@@ -237,10 +237,10 @@ describe('cambio de precio', () => {
     mockPost.mockReturnValue(
       ok(pending({ requiresPriceAcceptance: true, items: [itemFixture({ unitPrice: 300, currency: 'BOB', priceChanged: true, currentUnitPrice: 45, currentCurrency: 'USD' })] })),
     )
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Pagar')).toBeTruthy())
 
-    fireEvent.press(button('Pagar'))
+    await fireEvent.press(button('Pagar'))
 
     await waitFor(() => expect(screen.getByText('La moneda también cambió.')).toBeTruthy())
     expect(screen.getByText('Antes: Bs 300,00 por persona')).toBeTruthy()
@@ -251,12 +251,12 @@ describe('cambio de precio', () => {
 describe('expiración', () => {
   it('con el tiempo vencido "Pagar" está deshabilitado y no manda nada', async () => {
     mockGet.mockReturnValue(ok(pending({ expiresAt: new Date(Date.now() - 5_000).toISOString() })))
-    renderCheckout()
+    await renderCheckout()
 
     await waitFor(() => expect(screen.getByText('Se venció el tiempo para pagar')).toBeTruthy())
     expect(isDisabled(button('Pagar'))).toBe(true)
 
-    fireEvent.press(button('Pagar'))
+    await fireEvent.press(button('Pagar'))
     await act(async () => {})
     expect(mockPost).not.toHaveBeenCalled()
   })
@@ -264,7 +264,7 @@ describe('expiración', () => {
   it('al llegar a 00:00 deshabilita Pagar y re-lee la reserva, sin cambiar el estado por su cuenta', async () => {
     jest.useFakeTimers({ now: new Date('2026-10-01T12:00:00Z') })
     mockGet.mockReturnValue(ok(pending({ expiresAt: '2026-10-01T12:00:03Z' })))
-    renderCheckout()
+    await renderCheckout()
 
     await waitFor(() => expect(screen.getByText('Tu lugar está reservado · 00:03')).toBeTruthy())
     expect(isDisabled(button('Pagar'))).toBe(false)
@@ -281,10 +281,10 @@ describe('expiración', () => {
 
   it('410 CON errorCode al pagar → pantalla de reserva vencida', async () => {
     mockPost.mockRejectedValue(httpError(410, { detail: 'La reserva expiró y su cupo ya fue liberado.', errorCode: 'RESERVATION_NO_LONGER_PAYABLE' }))
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Pagar')).toBeTruthy())
 
-    fireEvent.press(button('Pagar'))
+    await fireEvent.press(button('Pagar'))
 
     await waitFor(() => expect(screen.getByText(/el cupo retenido se liberó/)).toBeTruthy())
     expect(screen.queryByRole('button', { name: 'Pagar' })).toBeNull()
@@ -292,17 +292,17 @@ describe('expiración', () => {
 
   it('410 SIN errorCode al pagar → misma pantalla de reserva vencida', async () => {
     mockPost.mockRejectedValue(httpError(410, { detail: 'La reserva expiró; el cupo retenido ya no es válido para pagar.' }))
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Pagar')).toBeTruthy())
 
-    fireEvent.press(button('Pagar'))
+    await fireEvent.press(button('Pagar'))
 
     await waitFor(() => expect(screen.getByText(/el cupo retenido se liberó/)).toBeTruthy())
   })
 
   it('una reserva que el backend ya marcó EXPIRED no ofrece pagar', async () => {
     mockGet.mockReturnValue(ok(pending({ status: 'EXPIRED' })))
-    renderCheckout()
+    await renderCheckout()
 
     await waitFor(() => expect(screen.getByText(/el cupo retenido se liberó/)).toBeTruthy())
     expect(screen.queryByRole('button', { name: 'Pagar' })).toBeNull()
@@ -312,11 +312,11 @@ describe('expiración', () => {
 describe('409 al pagar', () => {
   it('re-lee la reserva y, si ya estaba confirmada (ej. doble toque en otro lado), muestra el éxito', async () => {
     mockPost.mockRejectedValue(httpError(409, { detail: 'La reserva está en estado CONFIRMED; no admite pago.' }))
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Pagar')).toBeTruthy())
     mockGet.mockReturnValue(ok(confirmed({ paymentApproved: null })))
 
-    fireEvent.press(button('Pagar'))
+    await fireEvent.press(button('Pagar'))
 
     await waitFor(() => expect(screen.getByText('¡Reserva confirmada!')).toBeTruthy())
   })
@@ -328,10 +328,10 @@ describe('cancelación', () => {
       buttons?.find((b) => b.style === 'destructive')?.onPress?.()
     })
     mockPost.mockReturnValue(ok(pending({ status: 'CANCELLED', cancelledAt: new Date().toISOString(), items: [itemFixture({ status: 'CANCELLED' })] })))
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Cancelar reserva')).toBeTruthy())
 
-    fireEvent.press(button('Cancelar reserva'))
+    await fireEvent.press(button('Cancelar reserva'))
 
     await waitFor(() => expect(screen.getByText('Cancelaste esta reserva')).toBeTruthy())
     expect(Alert.alert).toHaveBeenCalled()
@@ -341,10 +341,10 @@ describe('cancelación', () => {
 
   it('si la persona vuelve atrás en el diálogo no se cancela nada', async () => {
     jest.spyOn(Alert, 'alert').mockImplementation(() => {})
-    renderCheckout()
+    await renderCheckout()
     await waitFor(() => expect(button('Cancelar reserva')).toBeTruthy())
 
-    fireEvent.press(button('Cancelar reserva'))
+    await fireEvent.press(button('Cancelar reserva'))
 
     expect(mockPost).not.toHaveBeenCalled()
   })

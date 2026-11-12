@@ -51,9 +51,9 @@ const withFlight = (flight = {}, overrides = {}) =>
     ...overrides,
   })
 
-function renderCheckout() {
+async function renderCheckout() {
   const Wrapper = withClient(client)
-  return render(
+  return await render(
     <Wrapper>
       <Checkout id="r1" />
     </Wrapper>,
@@ -63,12 +63,12 @@ function renderCheckout() {
 const button = (name: string) => screen.getByRole('button', { name })
 
 /** Completa los datos del único pasajero con valores sintéticos válidos. */
-function fillTraveler(overrides: { givenName?: string } = {}) {
-  fireEvent.changeText(screen.getByLabelText('Nombre'), overrides.givenName ?? 'Ana')
-  fireEvent.changeText(screen.getByLabelText('Apellido'), 'Quiroga')
-  fireEvent.changeText(screen.getByLabelText('Fecha de nacimiento'), '1990-05-14')
-  fireEvent.changeText(screen.getByLabelText('Correo'), 'ana@example.test')
-  fireEvent.changeText(screen.getByLabelText('Teléfono'), '+59170000000')
+async function fillTraveler(overrides: { givenName?: string } = {}) {
+  await fireEvent.changeText(screen.getByLabelText('Nombre'), overrides.givenName ?? 'Ana')
+  await fireEvent.changeText(screen.getByLabelText('Apellido'), 'Quiroga')
+  await fireEvent.changeText(screen.getByLabelText('Fecha de nacimiento'), '1990-05-14')
+  await fireEvent.changeText(screen.getByLabelText('Correo'), 'ana@example.test')
+  await fireEvent.changeText(screen.getByLabelText('Teléfono'), '+59170000000')
 }
 
 beforeEach(() => {
@@ -82,7 +82,7 @@ afterEach(() => client.clear())
 test('muestra el vuelo, su precio aparte y el total sumado cuando la moneda coincide', async () => {
   mockGet.mockResolvedValue(ok(withFlight()))
 
-  renderCheckout()
+  await renderCheckout()
 
   await waitFor(() => expect(screen.getByText('Santa Cruz de la Sierra (VVI) → Uyuni (UYU)')).toBeTruthy())
   // "Vuelo" aparece dos veces a propósito: el bloque del pasaje y su línea en el total.
@@ -95,7 +95,7 @@ test('muestra el vuelo, su precio aparte y el total sumado cuando la moneda coin
 test('con monedas distintas no muestra un total sumado', async () => {
   mockGet.mockResolvedValue(ok(withFlight({ price: { amount: 155, currency: 'EUR' } })))
 
-  renderCheckout()
+  await renderCheckout()
 
   await waitFor(() => expect(screen.getByText(/se cobran en monedas distintas/)).toBeTruthy())
   expect(screen.queryByText(/235/)).toBeNull()
@@ -104,10 +104,10 @@ test('con monedas distintas no muestra un total sumado', async () => {
 test('no envía el pago si faltan los datos del pasajero', async () => {
   mockGet.mockResolvedValue(ok(withFlight()))
 
-  renderCheckout()
+  await renderCheckout()
   await waitFor(() => expect(button('Confirmar y pagar')).toBeTruthy())
 
-  fireEvent.press(button('Confirmar y pagar'))
+  await fireEvent.press(button('Confirmar y pagar'))
 
   await waitFor(() => expect(screen.getByText(/Revisá los datos de los pasajeros/)).toBeTruthy())
   expect(mockPost).not.toHaveBeenCalled()
@@ -116,11 +116,11 @@ test('no envía el pago si faltan los datos del pasajero', async () => {
 test('un nombre con números se corrige antes de cobrar, no después', async () => {
   mockGet.mockResolvedValue(ok(withFlight()))
 
-  renderCheckout()
+  await renderCheckout()
   await waitFor(() => expect(screen.getByLabelText('Nombre')).toBeTruthy())
-  fillTraveler({ givenName: 'Ana2' })
+  await fillTraveler({ givenName: 'Ana2' })
 
-  fireEvent.press(button('Confirmar y pagar'))
+  await fireEvent.press(button('Confirmar y pagar'))
 
   await waitFor(() => expect(screen.getByText(/sin números/)).toBeTruthy())
   expect(mockPost).not.toHaveBeenCalled()
@@ -137,11 +137,11 @@ test('el pago manda los datos del pasajero y confirma la reserva', async () => {
     ),
   )
 
-  renderCheckout()
+  await renderCheckout()
   await waitFor(() => expect(screen.getByLabelText('Nombre')).toBeTruthy())
-  fillTraveler()
+  await fillTraveler()
 
-  fireEvent.press(button('Confirmar y pagar'))
+  await fireEvent.press(button('Confirmar y pagar'))
 
   await waitFor(() => expect(screen.getByText('¡Reserva confirmada!')).toBeTruthy())
 
@@ -168,10 +168,10 @@ test('un cambio de precio del vuelo frena el cobro y exige aceptar el importe vi
     ),
   )
 
-  renderCheckout()
+  await renderCheckout()
   await waitFor(() => expect(screen.getByLabelText('Nombre')).toBeTruthy())
-  fillTraveler()
-  fireEvent.press(button('Confirmar y pagar'))
+  await fillTraveler()
+  await fireEvent.press(button('Confirmar y pagar'))
 
   await waitFor(() => expect(screen.getByText('Cambió el precio del vuelo')).toBeTruthy())
   expect(screen.getByText(/Antes:.*155/)).toBeTruthy()
@@ -182,7 +182,7 @@ test('un cambio de precio del vuelo frena el cobro y exige aceptar el importe vi
   mockPost.mockResolvedValueOnce(
     ok(withFlight({ status: 'CONFIRMED' }, { status: 'CONFIRMED', paymentApproved: true })),
   )
-  fireEvent.press(button('Aceptar el nuevo precio y pagar'))
+  await fireEvent.press(button('Aceptar el nuevo precio y pagar'))
 
   await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(2))
   const [, body] = mockPost.mock.calls[1]
@@ -201,7 +201,7 @@ test('mientras la emisión está sin resolver no se ofrece reintentar ni cancela
     ),
   )
 
-  renderCheckout()
+  await renderCheckout()
 
   await waitFor(() => expect(screen.getByText('Estamos confirmando tu vuelo con la aerolínea.')).toBeTruthy())
   // Reintentar una emisión es exactamente lo que compra dos pasajes.
@@ -216,10 +216,10 @@ test('si la aerolínea rechaza la emisión se explica que no se cobró nada', as
   mockGet.mockResolvedValue(ok(withFlight()))
   mockPost.mockRejectedValue(httpError(409, { errorCode: 'FLIGHT_BOOKING_FAILED' }))
 
-  renderCheckout()
+  await renderCheckout()
   await waitFor(() => expect(screen.getByLabelText('Nombre')).toBeTruthy())
-  fillTraveler()
-  fireEvent.press(button('Confirmar y pagar'))
+  await fillTraveler()
+  await fireEvent.press(button('Confirmar y pagar'))
 
   await waitFor(() => expect(screen.getByText(/No se te cobró nada/)).toBeTruthy())
 })
@@ -228,10 +228,10 @@ test('si no se pudo contactar a la aerolínea se invita a reintentar, no a rearm
   mockGet.mockResolvedValue(ok(withFlight()))
   mockPost.mockRejectedValue(httpError(409, { errorCode: 'FLIGHT_PROVIDER_UNREACHABLE' }))
 
-  renderCheckout()
+  await renderCheckout()
   await waitFor(() => expect(screen.getByLabelText('Nombre')).toBeTruthy())
-  fillTraveler()
-  fireEvent.press(button('Confirmar y pagar'))
+  await fillTraveler()
+  await fireEvent.press(button('Confirmar y pagar'))
 
   await waitFor(() => expect(screen.getByText(/Tu lugar sigue reservado/)).toBeTruthy())
 })
@@ -239,7 +239,7 @@ test('si no se pudo contactar a la aerolínea se invita a reintentar, no a rearm
 test('una reserva sin vuelo no pide datos de pasajeros', async () => {
   mockGet.mockResolvedValue(ok(reservationFixture({ id: 'r1' })))
 
-  renderCheckout()
+  await renderCheckout()
 
   await waitFor(() => expect(button('Pagar')).toBeTruthy())
   expect(screen.queryByLabelText('Nombre')).toBeNull()

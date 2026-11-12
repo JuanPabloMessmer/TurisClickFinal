@@ -42,8 +42,8 @@ describe('queries privadas', () => {
   it('sin sesión no piden nada', async () => {
     mockedUseSession.mockReturnValue(guestSession())
 
-    renderHook(() => useMyReservations(), { wrapper: withClient(client) })
-    renderHook(() => useReservation('r1'), { wrapper: withClient(client) })
+    await renderHook(() => useMyReservations(), { wrapper: withClient(client) })
+    await renderHook(() => useReservation('r1'), { wrapper: withClient(client) })
     await act(async () => {})
 
     expect(mockGet).not.toHaveBeenCalled()
@@ -52,7 +52,7 @@ describe('queries privadas', () => {
   it('las keys llevan el id del usuario', async () => {
     mockGet.mockReturnValue(ok(reservationFixture()))
 
-    const { result } = renderHook(() => useReservation('r1'), { wrapper: withClient(client) })
+    const { result } = await renderHook(() => useReservation('r1'), { wrapper: withClient(client) })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(client.getQueryData(reservationKeys.detail('u1', 'r1'))).toBeTruthy()
@@ -66,7 +66,7 @@ describe('useCreateReservation', () => {
     mockPost.mockReturnValue(ok(created))
     const invalidate = jest.spyOn(client, 'invalidateQueries')
 
-    const { result } = renderHook(() => useCreateReservation(), { wrapper: withClient(client) })
+    const { result } = await renderHook(() => useCreateReservation(), { wrapper: withClient(client) })
     await act(async () => {
       await result.current.mutateAsync({ experienceAvailabilityId: 's1', travelers: 2 })
     })
@@ -79,7 +79,7 @@ describe('useCreateReservation', () => {
   it('NO reintenta el POST aunque el cliente tenga reintentos por defecto', async () => {
     mockPost.mockRejectedValue(networkError())
 
-    const { result } = renderHook(() => useCreateReservation(), { wrapper: withClient(client) })
+    const { result } = await renderHook(() => useCreateReservation(), { wrapper: withClient(client) })
     await act(async () => {
       await result.current.mutateAsync({ experienceAvailabilityId: 's1', travelers: 1 }).catch(() => {})
     })
@@ -97,7 +97,7 @@ describe('usePayReservation', () => {
     mockPost.mockReturnValue(ok(reservationFixture({ id: 'r1', requiresPriceAcceptance: true })))
     const invalidate = jest.spyOn(client, 'invalidateQueries')
 
-    const { result } = renderHook(() => usePayReservation('r1'), { wrapper: withClient(client) })
+    const { result } = await renderHook(() => usePayReservation('r1'), { wrapper: withClient(client) })
     await act(async () => {
       await result.current.mutateAsync({ success: true, acceptPriceChanges: false })
     })
@@ -110,7 +110,7 @@ describe('usePayReservation', () => {
     mockPost.mockReturnValue(ok(reservationFixture({ id: 'r1', status: 'CONFIRMED', paymentApproved: true })))
     const invalidate = jest.spyOn(client, 'invalidateQueries')
 
-    const { result } = renderHook(() => usePayReservation('r1'), { wrapper: withClient(client) })
+    const { result } = await renderHook(() => usePayReservation('r1'), { wrapper: withClient(client) })
     await act(async () => {
       await result.current.mutateAsync({ success: true, acceptPriceChanges: false })
     })
@@ -122,7 +122,7 @@ describe('usePayReservation', () => {
   it('rechazado: queda PENDING_PAYMENT', async () => {
     mockPost.mockReturnValue(ok(reservationFixture({ id: 'r1', paymentApproved: false, paymentFailureReason: 'Pago simulado rechazado.' })))
 
-    const { result } = renderHook(() => usePayReservation('r1'), { wrapper: withClient(client) })
+    const { result } = await renderHook(() => usePayReservation('r1'), { wrapper: withClient(client) })
     await act(async () => {
       await result.current.mutateAsync({ success: false, acceptPriceChanges: false })
     })
@@ -134,7 +134,7 @@ describe('usePayReservation', () => {
     mockPost.mockRejectedValue(httpError(status))
     const invalidate = jest.spyOn(client, 'invalidateQueries')
 
-    const { result } = renderHook(() => usePayReservation('r1'), { wrapper: withClient(client) })
+    const { result } = await renderHook(() => usePayReservation('r1'), { wrapper: withClient(client) })
     await act(async () => {
       await result.current.mutateAsync({ success: true, acceptPriceChanges: false }).catch(() => {})
     })
@@ -155,7 +155,7 @@ describe('useCancelReservation', () => {
     mockPost.mockReturnValue(ok(cancelled))
     const invalidate = jest.spyOn(client, 'invalidateQueries')
 
-    const { result } = renderHook(() => useCancelReservation('r1'), { wrapper: withClient(client) })
+    const { result } = await renderHook(() => useCancelReservation('r1'), { wrapper: withClient(client) })
     await act(async () => {
       await result.current.mutateAsync()
     })

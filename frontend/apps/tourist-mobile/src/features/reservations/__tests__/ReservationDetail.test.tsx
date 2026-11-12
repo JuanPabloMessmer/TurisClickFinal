@@ -24,9 +24,9 @@ jest.mock('@/auth/session', () => ({ useSession: jest.fn() }))
 
 let client = createTestQueryClient()
 
-function renderDetail() {
+async function renderDetail() {
   const Wrapper = withClient(client)
-  return render(
+  return await render(
     <Wrapper>
       <ReservationDetail id="r1" />
     </Wrapper>,
@@ -43,19 +43,19 @@ afterEach(() => client.clear())
 
 it('pendiente: muestra cuenta regresiva y ofrece pagar y cancelar', async () => {
   mockGet.mockReturnValue(ok(reservationFixture({ id: 'r1' })))
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(screen.getByText('Pendiente de pago')).toBeTruthy())
   expect(screen.getByText(/Tu lugar está reservado/)).toBeTruthy()
 
-  fireEvent.press(screen.getByRole('button', { name: 'Pagar' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Pagar' }))
   expect(mockRouter.push).toHaveBeenCalledWith('/checkout/r1')
   expect(screen.getByRole('button', { name: 'Cancelar reserva' })).toBeTruthy()
 })
 
 it('CONFIRMED no expone el CTA de cancelar ni el de pagar', async () => {
   mockGet.mockReturnValue(ok(reservationFixture({ id: 'r1', status: 'CONFIRMED', items: [itemFixture({ status: 'CONFIRMED' })] })))
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(screen.getByText('Confirmada')).toBeTruthy())
   expect(screen.queryByText('Cancelar reserva')).toBeNull()
@@ -72,7 +72,7 @@ it('CONFIRMED con la línea cancelada por el operador: lo dice claramente con el
       }),
     ),
   )
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(screen.getByText('Cancelada por el operador')).toBeTruthy())
   expect(screen.getByText('Cancelado por el operador')).toBeTruthy()
@@ -93,7 +93,7 @@ it('multi-ítem con una línea cancelada por el operador: la reserva sigue confi
       }),
     ),
   )
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(screen.getByText('Confirmada · 1 servicio cancelado por el operador')).toBeTruthy())
   expect(screen.getByText('Motivo del operador: Paro de transporte')).toBeTruthy()
@@ -101,7 +101,7 @@ it('multi-ítem con una línea cancelada por el operador: la reserva sigue confi
 
 it('EXPIRED explica que el cupo se liberó y no ofrece acciones', async () => {
   mockGet.mockReturnValue(ok(reservationFixture({ id: 'r1', status: 'EXPIRED', items: [itemFixture({ status: 'EXPIRED' })] })))
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(screen.getByText('Expirada')).toBeTruthy())
   expect(screen.getByText(/el cupo se liberó/)).toBeTruthy()
@@ -112,10 +112,10 @@ it('cancela con confirmación y refleja el estado que devuelve el backend', asyn
   jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => buttons?.find((b) => b.style === 'destructive')?.onPress?.())
   mockGet.mockReturnValue(ok(reservationFixture({ id: 'r1' })))
   mockPost.mockReturnValue(ok(reservationFixture({ id: 'r1', status: 'CANCELLED', items: [itemFixture({ status: 'CANCELLED' })] })))
-  renderDetail()
+  await renderDetail()
   await waitFor(() => expect(screen.getByRole('button', { name: 'Cancelar reserva' })).toBeTruthy())
 
-  fireEvent.press(screen.getByRole('button', { name: 'Cancelar reserva' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Cancelar reserva' }))
 
   await waitFor(() => expect(screen.getByText('Cancelada')).toBeTruthy())
   // Una reserva sin pagar se cancela sin presupuesto: no hay plata que devolver, así que el id va nulo.
@@ -127,17 +127,17 @@ it('si el backend responde REFUND_POLICY_REQUIRED, lo explica sin mensajes técn
   jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => buttons?.find((b) => b.style === 'destructive')?.onPress?.())
   mockGet.mockReturnValue(ok(reservationFixture({ id: 'r1' })))
   mockPost.mockRejectedValue(httpError(409, { detail: 'Una reserva ya confirmada no se puede cancelar todavía…', errorCode: 'REFUND_POLICY_REQUIRED' }))
-  renderDetail()
+  await renderDetail()
   await waitFor(() => expect(screen.getByRole('button', { name: 'Cancelar reserva' })).toBeTruthy())
 
-  fireEvent.press(screen.getByRole('button', { name: 'Cancelar reserva' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Cancelar reserva' }))
 
   await waitFor(() => expect(screen.getByText('Las reservas confirmadas todavía no se pueden cancelar desde la app.')).toBeTruthy())
 })
 
 it('una reserva ajena (403) se muestra como no encontrada', async () => {
   mockGet.mockRejectedValue(httpError(403, { detail: 'Esta reserva no te pertenece.' }))
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(screen.getByText('No encontramos esta reserva')).toBeTruthy())
   expect(screen.queryByText('Esta reserva no te pertenece.')).toBeNull()

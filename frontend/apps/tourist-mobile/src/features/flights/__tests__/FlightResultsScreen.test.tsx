@@ -107,8 +107,8 @@ const response = (overrides: Partial<flightsApi.SearchFlightsResponse> = {}): fl
   ...overrides,
 })
 
-function renderScreen(req: flightsApi.SearchFlightsRequest | null = request) {
-  render(<FlightResultsScreen request={req} />, { wrapper: withClient(createTestQueryClient()) })
+async function renderScreen(req: flightsApi.SearchFlightsRequest | null = request) {
+  await render(<FlightResultsScreen request={req} />, { wrapper: withClient(createTestQueryClient()) })
 }
 
 const prices = () => screen.getAllByText(/^US\$|^USD/).map((node) => node.props.children as string)
@@ -120,7 +120,7 @@ beforeEach(() => {
 describe('resultados de vuelos', () => {
   it('manda al backend la búsqueda tal cual —pasajeros y cabina incluidos— y nunca un precio', async () => {
     mockPost.mockReturnValue(ok(response()))
-    renderScreen()
+    await renderScreen()
 
     await waitFor(() => expect(mockPost).toHaveBeenCalled())
     const [url, body] = mockPost.mock.calls[0]
@@ -132,7 +132,7 @@ describe('resultados de vuelos', () => {
 
   it('cada oferta muestra aerolínea, horarios, duración, escalas, equipaje y total', async () => {
     mockPost.mockReturnValue(ok(response()))
-    renderScreen()
+    await renderScreen()
 
     expect(await screen.findByText('Madrid (MAD) → Santa Cruz de la Sierra (VVI)')).toBeTruthy()
     expect(screen.getAllByText('Fake Airways').length).toBe(2)
@@ -151,7 +151,7 @@ describe('resultados de vuelos', () => {
 
   it('los vuelos simulados se rotulan DEMO arriba y en cada oferta', async () => {
     mockPost.mockReturnValue(ok(response()))
-    renderScreen()
+    await renderScreen()
 
     const banner = await screen.findByTestId('inventory-banner')
     expect(within(banner).getByText('DEMO · vuelos simulados')).toBeTruthy()
@@ -161,7 +161,7 @@ describe('resultados de vuelos', () => {
 
   it('las ofertas del entorno de prueba de un proveedor real se rotulan como prueba', async () => {
     mockPost.mockReturnValue(ok(response({ inventoryMode: 'SANDBOX' })))
-    renderScreen()
+    await renderScreen()
 
     expect(await screen.findByText('MODO PRUEBA · no se emiten pasajes')).toBeTruthy()
   })
@@ -171,7 +171,7 @@ describe('resultados de vuelos', () => {
     const openURL = jest.spyOn(Linking, 'openURL')
     const demoLink = { available: false, url: null, sellerName: 'Fake Airways', unavailableReason: 'DEMO' }
     mockPost.mockReturnValue(ok(response({ options: [{ ...direct, redirect: demoLink }, { ...withStop, redirect: demoLink }] })))
-    renderScreen()
+    await renderScreen()
 
     await screen.findByTestId('inventory-banner')
     expect(screen.queryByText(/^reservar/i)).toBeNull()
@@ -183,7 +183,7 @@ describe('resultados de vuelos', () => {
   })
 
   it('una oferta real con enlace validado abre el sitio del vendedor', async () => {
-    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true)
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined)
     const url = 'https://www.aerolinea-demo.com/compra?o=1'
     mockPost.mockReturnValue(
       ok(response({
@@ -195,9 +195,9 @@ describe('resultados de vuelos', () => {
         ],
       })),
     )
-    renderScreen()
+    await renderScreen()
 
-    fireEvent.press(await screen.findByText('Ver oferta en Agencia Andina'))
+    await fireEvent.press(await screen.findByText('Ver oferta en Agencia Andina'))
     await waitFor(() => expect(openURL).toHaveBeenCalledWith(url))
     expect(screen.getByText('No disponible para compra desde TurisClick')).toBeTruthy()
     expect(screen.queryByTestId('inventory-banner')).toBeNull()
@@ -212,7 +212,7 @@ describe('resultados de vuelos', () => {
         options: [{ ...direct, redirect: { available: true, url: 'http://www.aerolinea-demo.com/', sellerName: 'X', unavailableReason: null } }],
       })),
     )
-    renderScreen()
+    await renderScreen()
 
     expect(await screen.findByText('No disponible para compra desde TurisClick')).toBeTruthy()
     expect(screen.queryByText(/^ver oferta/i)).toBeNull()
@@ -221,7 +221,7 @@ describe('resultados de vuelos', () => {
 
   it('los paquetes con transporte aéreo se presentan aparte del metabuscador', async () => {
     mockPost.mockReturnValue(ok(response()))
-    renderScreen()
+    await renderScreen()
 
     expect(await screen.findByText('Paquetes con transporte aéreo incluido')).toBeTruthy()
     expect(screen.getByText(/se reservan y pagan en\s+TurisClick/)).toBeTruthy()
@@ -229,33 +229,33 @@ describe('resultados de vuelos', () => {
 
   it('ordena por precio, por duración y por hora de salida', async () => {
     mockPost.mockReturnValue(ok(response()))
-    renderScreen()
+    await renderScreen()
 
     await screen.findByTestId('inventory-banner')
     // Por defecto, el más barato primero.
     expect(prices()[0]).toContain('1.900')
     expect(prices()[1]).toContain('2.400')
 
-    fireEvent.press(screen.getByLabelText('Más rápido'))
+    await fireEvent.press(screen.getByLabelText('Más rápido'))
     expect(prices()[0]).toContain('2.400')
 
-    fireEvent.press(screen.getByLabelText('Sale antes'))
+    await fireEvent.press(screen.getByLabelText('Sale antes'))
     expect(prices()[0]).toContain('2.400')
 
-    fireEvent.press(screen.getByLabelText('Más barato'))
+    await fireEvent.press(screen.getByLabelText('Más barato'))
     expect(prices()[0]).toContain('1.900')
   })
 
   it('filtra sin volver a consultar, y dice cuántos vuelos quedan', async () => {
     mockPost.mockReturnValue(ok(response()))
-    renderScreen()
+    await renderScreen()
 
     await screen.findByTestId('inventory-banner')
     expect(screen.getByText('2 vuelos')).toBeTruthy()
 
-    fireEvent.press(screen.getByLabelText('Filtros'))
-    fireEvent.press(screen.getByRole('tab', { name: 'Directo' }))
-    fireEvent.press(screen.getByLabelText('Ver 1 vuelo'))
+    await fireEvent.press(screen.getByLabelText('Filtros'))
+    await fireEvent.press(screen.getByRole('tab', { name: 'Directo' }))
+    await fireEvent.press(screen.getByLabelText('Ver 1 vuelo'))
 
     expect(screen.getByText('1 de 2 vuelos')).toBeTruthy()
     expect(screen.queryByText('1 escala · LIM')).toBeNull()
@@ -265,29 +265,29 @@ describe('resultados de vuelos', () => {
 
   it('si los filtros vacían la lista, se ofrece quitarlos', async () => {
     mockPost.mockReturnValue(ok(response()))
-    renderScreen()
+    await renderScreen()
 
     await screen.findByTestId('inventory-banner')
-    fireEvent.press(screen.getByLabelText('Filtros'))
-    fireEvent.press(screen.getByLabelText('Madrugada (0–6)'))
-    fireEvent.press(screen.getByLabelText('Ver 0 vuelos'))
+    await fireEvent.press(screen.getByLabelText('Filtros'))
+    await fireEvent.press(screen.getByLabelText('Madrugada (0–6)'))
+    await fireEvent.press(screen.getByLabelText('Ver 0 vuelos'))
 
     expect(screen.getByText('Ningún vuelo cumple los filtros')).toBeTruthy()
-    fireEvent.press(screen.getByLabelText('Quitar filtros'))
+    await fireEvent.press(screen.getByLabelText('Quitar filtros'))
     expect(screen.getByText('2 vuelos')).toBeTruthy()
   })
 
   it('lleva al paquete que cubre la ruta', async () => {
     mockPost.mockReturnValue(ok(response()))
-    renderScreen()
+    await renderScreen()
 
-    fireEvent.press(await screen.findByLabelText('Ver Santa Cruz y las Misiones en 5 días'))
+    await fireEvent.press(await screen.findByLabelText('Ver Santa Cruz y las Misiones en 5 días'))
     expect(mockRouter.push).toHaveBeenCalledWith('/package/pkg-1')
   })
 
   it('cuando no hay vuelos lo explica en vez de quedar en blanco', async () => {
     mockPost.mockReturnValue(ok(response({ options: [], notice: 'No encontramos vuelos para el 02/11.' })))
-    renderScreen()
+    await renderScreen()
 
     expect(await screen.findByText('No encontramos vuelos para el 02/11.')).toBeTruthy()
     // Y aun sin vuelos, se sabe que es una simulación.
@@ -296,7 +296,7 @@ describe('resultados de vuelos', () => {
 
   it('si no hay paquetes en esa ruta lo dice, en vez de insinuar que se puede comprar el vuelo', async () => {
     mockPost.mockReturnValue(ok(response({ packages: [] })))
-    renderScreen()
+    await renderScreen()
 
     expect(await screen.findByText('Todavía no hay paquetes en esta ruta')).toBeTruthy()
   })
@@ -307,15 +307,15 @@ describe('resultados de vuelos', () => {
    */
   it('un error del backend se muestra sin filtrar detalles internos, y se puede reintentar', async () => {
     mockPost.mockReturnValueOnce(Promise.reject(httpError(503, { detail: 'Npgsql.PostgresException' })))
-    renderScreen()
+    await renderScreen()
 
-    fireEvent.press(await screen.findByLabelText('Reintentar'))
+    await fireEvent.press(await screen.findByLabelText('Reintentar'))
     expect(screen.queryByText(/Npgsql/i)).toBeNull()
     await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(2))
   })
 
-  it('una búsqueda incompleta no consulta al backend', () => {
-    renderScreen(null)
+  it('una búsqueda incompleta no consulta al backend', async () => {
+    await renderScreen(null)
 
     expect(screen.getByText('Búsqueda incompleta')).toBeTruthy()
     expect(mockPost).not.toHaveBeenCalled()
@@ -323,9 +323,9 @@ describe('resultados de vuelos', () => {
 
   it('"Editar" vuelve al buscador', async () => {
     mockPost.mockReturnValue(ok(response()))
-    renderScreen()
+    await renderScreen()
 
-    fireEvent.press(await screen.findByLabelText('Editar búsqueda'))
+    await fireEvent.press(await screen.findByLabelText('Editar búsqueda'))
     expect(mockRouter.back).toHaveBeenCalled()
   })
 })

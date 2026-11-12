@@ -13,7 +13,7 @@ import {
  */
 
 describe('today', () => {
-  it('devuelve la fecha local en formato DateOnly, no el instante UTC', () => {
+  it('devuelve la fecha local en formato DateOnly, no el instante UTC', async () => {
     // 21:30 del 12 en una zona con -04: en UTC ya sería el 13, pero el backend espera el día local.
     const date = new Date('2026-10-13T01:30:00.000Z')
     const spy = jest.spyOn(date, 'getTimezoneOffset').mockReturnValue(240)
@@ -25,7 +25,7 @@ describe('today', () => {
 })
 
 describe('toExperienceParams', () => {
-  it('no manda ningún filtro cuando no hay ninguno puesto', () => {
+  it('no manda ningún filtro cuando no hay ninguno puesto', async () => {
     const params = toExperienceParams(EMPTY_FILTERS)
 
     expect(params.destinationId).toBeUndefined()
@@ -34,13 +34,13 @@ describe('toExperienceParams', () => {
     expect(params.availableFrom).toBeUndefined()
   })
 
-  it('traduce disponibilidad a una fecha, que es lo que el backend entiende', () => {
+  it('traduce disponibilidad a una fecha, que es lo que el backend entiende', async () => {
     const params = toExperienceParams({ ...EMPTY_FILTERS, onlyWithAvailability: true })
 
     expect(params.availableFrom).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
-  it('pasa destino, categoría y precio tal cual', () => {
+  it('pasa destino, categoría y precio tal cual', async () => {
     const params = toExperienceParams({
       destinationId: 'd1',
       categoryId: 'c1',
@@ -51,33 +51,33 @@ describe('toExperienceParams', () => {
     expect(params).toMatchObject({ destinationId: 'd1', categoryId: 'c1', priceMax: 300 })
   })
 
-  it('ignora la duración, que solo existe para paquetes', () => {
+  it('ignora la duración, que solo existe para paquetes', async () => {
     const params = toExperienceParams({ ...EMPTY_FILTERS, durationDays: { min: 1, max: 3 } })
 
     expect(Object.keys(params)).not.toContain('durationDaysMin')
     expect(Object.keys(params)).not.toContain('durationDaysMax')
   })
 
-  it('siempre pide un pageSize, para que el scroll infinito tenga páginas', () => {
+  it('siempre pide un pageSize, para que el scroll infinito tenga páginas', async () => {
     expect(toExperienceParams(EMPTY_FILTERS).pageSize).toBeGreaterThan(0)
   })
 })
 
 describe('toPackageParams', () => {
-  it('usa departureFrom y no availableFrom', () => {
+  it('usa departureFrom y no availableFrom', async () => {
     const params = toPackageParams({ ...EMPTY_FILTERS, onlyWithAvailability: true })
 
     expect(params.departureFrom).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(Object.keys(params)).not.toContain('availableFrom')
   })
 
-  it('desarma la duración en sus dos parámetros', () => {
+  it('desarma la duración en sus dos parámetros', async () => {
     const params = toPackageParams({ ...EMPTY_FILTERS, durationDays: { min: 4, max: 7 } })
 
     expect(params).toMatchObject({ durationDaysMin: 4, durationDaysMax: 7 })
   })
 
-  it('deja el máximo abierto en el tramo "8 días o más"', () => {
+  it('deja el máximo abierto en el tramo "8 días o más"', async () => {
     const params = toPackageParams({ ...EMPTY_FILTERS, durationDays: { min: 8, max: undefined } })
 
     expect(params.durationDaysMin).toBe(8)
@@ -94,20 +94,20 @@ describe('countActiveFilters', () => {
     durationDays: { min: 1, max: 3 },
   }
 
-  it('no cuenta nada sin filtros', () => {
+  it('no cuenta nada sin filtros', async () => {
     expect(countActiveFilters(EMPTY_FILTERS, 'experiences')).toBe(0)
   })
 
-  it('cuenta la duración solo en paquetes', () => {
+  it('cuenta la duración solo en paquetes', async () => {
     expect(countActiveFilters(full, 'packages')).toBe(5)
     expect(countActiveFilters(full, 'experiences')).toBe(4)
   })
 
-  it('no cuenta la disponibilidad cuando está apagada', () => {
+  it('no cuenta la disponibilidad cuando está apagada', async () => {
     expect(countActiveFilters({ ...EMPTY_FILTERS, onlyWithAvailability: false }, 'experiences')).toBe(0)
   })
 
-  it('cuenta un precio de 0 como filtro puesto', () => {
+  it('cuenta un precio de 0 como filtro puesto', async () => {
     expect(countActiveFilters({ ...EMPTY_FILTERS, priceMax: 0 }, 'experiences')).toBe(1)
   })
 })

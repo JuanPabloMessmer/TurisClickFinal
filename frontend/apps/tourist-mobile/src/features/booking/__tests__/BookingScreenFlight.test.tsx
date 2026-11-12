@@ -89,9 +89,9 @@ const query = { isPending: false, isError: false, error: null, refetch: jest.fn(
 
 let client = createTestQueryClient()
 
-function renderBooking() {
+async function renderBooking() {
   const Wrapper = withClient(client)
-  return render(
+  return await render(
     <Wrapper>
       <BookingScreen
         productType="PACKAGE"
@@ -120,13 +120,13 @@ beforeEach(() => {
 afterEach(() => client.clear())
 
 /** Elige la salida del 20/11, que es la única con cupo del fixture. */
-function pickDeparture() {
-  fireEvent.press(screen.getByLabelText(/20 de noviembre/))
+async function pickDeparture() {
+  await fireEvent.press(screen.getByLabelText(/20 de noviembre/))
 }
 
 test('no se puede continuar sin elegir el vuelo', async () => {
-  renderBooking()
-  pickDeparture()
+  await renderBooking()
+  await pickDeparture()
 
   await waitFor(() => expect(isDisabled(button('Continuar'))).toBe(true))
   expect(screen.getByText('Elegí un vuelo para continuar.')).toBeTruthy()
@@ -136,11 +136,11 @@ test('no se puede continuar sin elegir el vuelo', async () => {
 test('buscar vuelos cotiza con la salida y los viajeros elegidos', async () => {
   mockPost.mockResolvedValue(ok(quoteResponse))
 
-  renderBooking()
-  pickDeparture()
-  fireEvent.press(screen.getByLabelText('Agregar un viajero'))
-  fireEvent.press(screen.getByText('Santa Cruz de la Sierra (VVI)'))
-  fireEvent.press(button('Buscar vuelos'))
+  await renderBooking()
+  await pickDeparture()
+  await fireEvent.press(screen.getByLabelText('Agregar un viajero'))
+  await fireEvent.press(screen.getByText('Santa Cruz de la Sierra (VVI)'))
+  await fireEvent.press(button('Buscar vuelos'))
 
   await waitFor(() => expect(mockPost).toHaveBeenCalled())
   const [url, body] = mockPost.mock.calls[0]
@@ -151,10 +151,10 @@ test('buscar vuelos cotiza con la salida y los viajeros elegidos', async () => {
 test('al elegir un vuelo la reserva se crea con esa cotización', async () => {
   mockPost.mockResolvedValueOnce(ok(quoteResponse))
 
-  renderBooking()
-  pickDeparture()
-  fireEvent.press(screen.getByText('Santa Cruz de la Sierra (VVI)'))
-  fireEvent.press(button('Buscar vuelos'))
+  await renderBooking()
+  await pickDeparture()
+  await fireEvent.press(screen.getByText('Santa Cruz de la Sierra (VVI)'))
+  await fireEvent.press(button('Buscar vuelos'))
 
   // La primera opción queda elegida sola: es la más barata y evita un paso vacío.
   await waitFor(() => expect(isDisabled(button('Continuar'))).toBe(false))
@@ -162,7 +162,7 @@ test('al elegir un vuelo la reserva se crea con esa cotización', async () => {
   expect(screen.getAllByText(/635/)).toHaveLength(2)
 
   mockPost.mockResolvedValueOnce(ok({ id: 'r1' }))
-  fireEvent.press(button('Continuar'))
+  await fireEvent.press(button('Continuar'))
 
   await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(2))
   const [url, body] = mockPost.mock.calls[1]
@@ -173,14 +173,14 @@ test('al elegir un vuelo la reserva se crea con esa cotización', async () => {
 test('cambiar la cantidad de viajeros invalida la cotización elegida', async () => {
   mockPost.mockResolvedValue(ok(quoteResponse))
 
-  renderBooking()
-  pickDeparture()
-  fireEvent.press(screen.getByText('Santa Cruz de la Sierra (VVI)'))
-  fireEvent.press(button('Buscar vuelos'))
+  await renderBooking()
+  await pickDeparture()
+  await fireEvent.press(screen.getByText('Santa Cruz de la Sierra (VVI)'))
+  await fireEvent.press(button('Buscar vuelos'))
   await waitFor(() => expect(isDisabled(button('Continuar'))).toBe(false))
 
   // El precio del pasaje depende de cuántos viajan: la cotización anterior ya no sirve.
-  fireEvent.press(screen.getByLabelText('Agregar un viajero'))
+  await fireEvent.press(screen.getByLabelText('Agregar un viajero'))
 
   await waitFor(() => expect(isDisabled(button('Continuar'))).toBe(true))
   expect(button('Buscar vuelos')).toBeTruthy()
@@ -189,10 +189,10 @@ test('cambiar la cantidad de viajeros invalida la cotización elegida', async ()
 test('si el proveedor no devuelve vuelos se explica qué hacer', async () => {
   mockPost.mockResolvedValue(ok({ ...quoteResponse, options: [], notice: 'No encontramos vuelos para 20/11.' }))
 
-  renderBooking()
-  pickDeparture()
-  fireEvent.press(screen.getByText('Santa Cruz de la Sierra (VVI)'))
-  fireEvent.press(button('Buscar vuelos'))
+  await renderBooking()
+  await pickDeparture()
+  await fireEvent.press(screen.getByText('Santa Cruz de la Sierra (VVI)'))
+  await fireEvent.press(button('Buscar vuelos'))
 
   await waitFor(() => expect(screen.getByText('No encontramos vuelos para 20/11.')).toBeTruthy())
   expect(screen.getByText(/Probá con otra salida/)).toBeTruthy()

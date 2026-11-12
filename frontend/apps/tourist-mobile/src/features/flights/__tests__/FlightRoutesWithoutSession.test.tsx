@@ -29,8 +29,8 @@ beforeEach(() => {
 })
 
 describe('vuelos sin sesión', () => {
-  it('la pestaña Vuelos muestra el buscador sin pedir que inicies sesión', () => {
-    render(<FlightsTab />, { wrapper: withClient(createTestQueryClient()) })
+  it('la pestaña Vuelos muestra el buscador sin pedir que inicies sesión', async () => {
+    await render(<FlightsTab />, { wrapper: withClient(createTestQueryClient()) })
 
     expect(screen.getByLabelText('Buscar vuelos')).toBeTruthy()
     expect(screen.queryByText(/iniciá sesión/i)).toBeNull()
@@ -58,7 +58,7 @@ describe('vuelos sin sesión', () => {
       }),
     )
 
-    render(<FlightResultsRoute />, { wrapper: withClient(createTestQueryClient()) })
+    await render(<FlightResultsRoute />, { wrapper: withClient(createTestQueryClient()) })
 
     await waitFor(() => expect(mockPost).toHaveBeenCalledWith('/api/flights/search', expect.objectContaining({ originIata: 'MAD' })))
     expect(await screen.findByTestId('inventory-banner')).toBeTruthy()

@@ -1,5 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native'
-import { FlatList } from 'react-native'
+import { act, fireEvent, render, screen, userEvent, waitFor } from '@testing-library/react-native'
 import TripsScreen from '@/../app/(tabs)/trips'
 import { useSession } from '@/auth/session'
 import {
@@ -23,9 +22,9 @@ jest.mock('@/auth/session', () => ({ useSession: jest.fn() }))
 const mockedUseSession = useSession as jest.MockedFunction<typeof useSession>
 let client = createTestQueryClient()
 
-function renderTrips() {
+async function renderTrips() {
   const Wrapper = withClient(client)
-  return render(
+  return await render(
     <Wrapper>
       <TripsScreen />
     </Wrapper>,
@@ -40,9 +39,9 @@ beforeEach(() => {
 
 afterEach(() => client.clear())
 
-it('invitado: invitación amigable a iniciar sesión, sin pedir datos privados', () => {
+it('invitado: invitación amigable a iniciar sesión, sin pedir datos privados', async () => {
   mockedUseSession.mockReturnValue(guestSession())
-  renderTrips()
+  await renderTrips()
 
   expect(screen.getByText('Iniciá sesión para ver tus viajes')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Iniciar sesión' })).toBeTruthy()
@@ -52,14 +51,14 @@ it('invitado: invitación amigable a iniciar sesión, sin pedir datos privados',
 
 it('sin reservas: estado vacío explícito', async () => {
   mockGet.mockReturnValue(ok(pagedFixture([])))
-  renderTrips()
+  await renderTrips()
 
   await waitFor(() => expect(screen.getByText('Todavía no tenés viajes')).toBeTruthy())
 })
 
 it('pide la lista real con paginación y muestra los datos de cada reserva', async () => {
   mockGet.mockReturnValue(ok(pagedFixture([reservationFixture({ id: 'r1' })])))
-  renderTrips()
+  await renderTrips()
 
   await waitFor(() => expect(screen.getByText('Tour Illimani')).toBeTruthy())
   expect(mockGet).toHaveBeenCalledWith('/api/reservations/me', { params: { page: 1, pageSize: 20 } })
@@ -74,13 +73,21 @@ it('scroll infinito: al llegar al final pide la página siguiente y acumula', as
   mockGet
     .mockReturnValueOnce(ok(pagedFixture([reservationFixture({ id: 'r1', items: [itemFixture({ experienceTitle: 'Viaje uno' })] })], 1, 2)))
     .mockReturnValueOnce(ok(pagedFixture([reservationFixture({ id: 'r2', items: [itemFixture({ experienceTitle: 'Viaje dos' })] })], 2, 2)))
-  renderTrips()
+  await renderTrips()
   await waitFor(() => expect(screen.getByText('Viaje uno')).toBeTruthy())
 
+  // onEndReached es una prop de FlatList, no del elemento host, asi que con RNTL 14 ya no se puede
+  // invocar directamente. userEvent.scrollTo simula el gesto real: acepta la FlatList (se renderiza
+  // como un ScrollView host) y con contentSize/layoutMeasurement le da a VirtualizedList las medidas
+  // que necesita para saber que se llego al final.
+  const user = userEvent.setup()
   await act(async () => {
-    fireEvent(screen.UNSAFE_getByType(FlatList), 'onEndReached')
+    await user.scrollTo(screen.getByTestId('catalog-list'), {
+      y: 1000,
+      contentSize: { width: 100, height: 1000 },
+      layoutMeasurement: { width: 100, height: 100 },
+    })
   })
-
   await waitFor(() => expect(screen.getByText('Viaje dos')).toBeTruthy())
   expect(mockGet).toHaveBeenLastCalledWith('/api/reservations/me', { params: { page: 2, pageSize: 20 } })
   expect(screen.getByText('Viaje uno')).toBeTruthy()
@@ -101,7 +108,7 @@ it('multi-ítem: primer producto, "+N más" y cantidad de servicios', async () =
       ]),
     ),
   )
-  renderTrips()
+  await renderTrips()
 
   await waitFor(() => expect(screen.getByText(/Tour Illimani/)).toBeTruthy())
   expect(screen.getByText(/\+1 más/)).toBeTruthy()
@@ -124,7 +131,7 @@ it('multi-moneda: una fila por moneda en la tarjeta, sin sumarlas', async () => 
       ]),
     ),
   )
-  renderTrips()
+  await renderTrips()
 
   await waitFor(() => expect(screen.getByText(/USD\s+120,00/)).toBeTruthy())
   expect(screen.getByText(/Bs\s+350,00/)).toBeTruthy()
@@ -143,7 +150,7 @@ it('badges para cada estado, incluido el fallback neutral de PAYMENT_FAILED', as
       ]),
     ),
   )
-  renderTrips()
+  await renderTrips()
 
   await waitFor(() => expect(screen.getByText('Confirmada')).toBeTruthy())
   expect(screen.getByText('Expirada')).toBeTruthy()
@@ -154,12 +161,12 @@ it('badges para cada estado, incluido el fallback neutral de PAYMENT_FAILED', as
 
 it('tarjeta pendiente: "Pagar" lleva al checkout y la tarjeta al detalle', async () => {
   mockGet.mockReturnValue(ok(pagedFixture([reservationFixture({ id: 'r9' })])))
-  renderTrips()
+  await renderTrips()
   await waitFor(() => expect(screen.getByRole('button', { name: 'Pagar' })).toBeTruthy())
 
-  fireEvent.press(screen.getByRole('button', { name: 'Pagar' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Pagar' }))
   expect(mockRouter.push).toHaveBeenCalledWith('/checkout/r9')
 
-  fireEvent.press(screen.getByLabelText(/Tour Illimani\. Pendiente de pago/))
+  await fireEvent.press(screen.getByLabelText(/Tour Illimani\. Pendiente de pago/))
   expect(mockRouter.push).toHaveBeenCalledWith('/reservation/r9')
 })

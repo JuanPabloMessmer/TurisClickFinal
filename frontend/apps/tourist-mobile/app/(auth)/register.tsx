@@ -115,14 +115,14 @@ export default function RegisterScreen() {
             value={field.value}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
-            onSubmitEditing={onSubmit}
+            onSubmitEditing={() => void onSubmit()}
             returnKeyType="go"
             error={fieldState.error?.message}
           />
         )}
       />
 
-      <Button label="Crear cuenta" loading={formState.isSubmitting} onPress={onSubmit} />
+      <Button label="Crear cuenta" loading={formState.isSubmitting} onPress={() => void onSubmit()} />
     </AuthScreenShell>
   )
 }

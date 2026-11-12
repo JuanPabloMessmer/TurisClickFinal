@@ -54,6 +54,7 @@ export function CatalogList<TItem extends { id?: string }>({
 
   return (
     <FlatList
+      testID="catalog-list"
       data={items}
       keyExtractor={(item) => String(item.id)}
       contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, gap: 16 }}

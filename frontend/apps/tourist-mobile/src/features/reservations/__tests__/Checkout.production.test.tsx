@@ -20,7 +20,7 @@ it('en producción "Simular rechazo" no existe: solo "Pagar"', async () => {
   const client = createTestQueryClient()
   const Wrapper = withClient(client)
 
-  render(
+  await render(
     <Wrapper>
       <Checkout id="r1" />
     </Wrapper>,

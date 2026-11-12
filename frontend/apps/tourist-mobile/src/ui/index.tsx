@@ -218,8 +218,9 @@ export function CatalogImage({
   // de 0×0 —cargaba bien, así que tampoco caía al fallback— y en su lugar quedaba un hueco. En la web sí se
   // veía, por eso no apareció hasta probar en un teléfono.
   return (
-    <View className={`overflow-hidden ${className}`}>
+    <View testID="catalog-image-container" className={`overflow-hidden ${className}`}>
       <Image
+        testID="catalog-image"
         source={{ uri }}
         style={StyleSheet.absoluteFill}
         contentFit="cover"

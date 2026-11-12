@@ -28,8 +28,8 @@ function queryStub(
   } as unknown as UseInfiniteQueryResult<{ pages: PagedResponse<Item>[] }, Error>
 }
 
-const renderList = (query: UseInfiniteQueryResult<{ pages: PagedResponse<Item>[] }, Error>) =>
-  render(
+const renderList = async (query: UseInfiniteQueryResult<{ pages: PagedResponse<Item>[] }, Error>) =>
+  await render(
     <CatalogList
       query={query}
       emptyTitle="Sin experiencias"
@@ -38,38 +38,38 @@ const renderList = (query: UseInfiniteQueryResult<{ pages: PagedResponse<Item>[]
     />,
   )
 
-it('mientras carga muestra skeletons y ningún mensaje', () => {
-  renderList(queryStub({ isPending: true }))
+it('mientras carga muestra skeletons y ningún mensaje', async () => {
+  await renderList(queryStub({ isPending: true }))
 
   expect(screen.queryByText('Sin experiencias')).toBeNull()
   expect(screen.queryByText('No pudimos cargar esto')).toBeNull()
 })
 
-it('sin conexión explica qué pasó en vez de quedarse cargando', () => {
-  renderList(queryStub({ isError: true, error: new AxiosError('Network Error', 'ERR_NETWORK') }))
+it('sin conexión explica qué pasó en vez de quedarse cargando', async () => {
+  await renderList(queryStub({ isError: true, error: new AxiosError('Network Error', 'ERR_NETWORK') }))
 
   expect(screen.getByText('No pudimos cargar esto')).toBeTruthy()
   expect(screen.getByText(/Revisá tu conexión/)).toBeTruthy()
 })
 
-it('el reintento vuelve a pedir los datos', () => {
+it('el reintento vuelve a pedir los datos', async () => {
   const refetch = jest.fn()
-  renderList(queryStub({ isError: true, error: new Error('boom'), refetch }))
+  await renderList(queryStub({ isError: true, error: new Error('boom'), refetch }))
 
-  fireEvent.press(screen.getByText('Reintentar'))
+  await fireEvent.press(screen.getByText('Reintentar'))
 
   expect(refetch).toHaveBeenCalled()
 })
 
-it('sin resultados dice por qué y no muestra una lista vacía', () => {
-  renderList(queryStub({ data: { pages: [{ items: [], totalPages: 0 }] } }))
+it('sin resultados dice por qué y no muestra una lista vacía', async () => {
+  await renderList(queryStub({ data: { pages: [{ items: [], totalPages: 0 }] } }))
 
   expect(screen.getByText('Sin experiencias')).toBeTruthy()
   expect(screen.getByText('Probá con otro destino.')).toBeTruthy()
 })
 
-it('aplana las páginas en una sola lista', () => {
-  renderList(
+it('aplana las páginas en una sola lista', async () => {
+  await renderList(
     queryStub({
       data: {
         pages: [
@@ -84,8 +84,8 @@ it('aplana las páginas en una sola lista', () => {
   expect(screen.getByText('Dos')).toBeTruthy()
 })
 
-it('el error gana sobre cualquier dato viejo en cache', () => {
-  renderList(
+it('el error gana sobre cualquier dato viejo en cache', async () => {
+  await renderList(
     queryStub({ isError: true, error: new Error('boom'), data: { pages: [{ items: [{ id: 'a', title: 'Viejo' }] }] } }),
   )
 

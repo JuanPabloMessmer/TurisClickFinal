@@ -21,13 +21,13 @@ describe('redirección de ofertas', () => {
     '//www.aerolinea-demo.com/',
   ])('rechaza %s', (url) => expect(isSafeOfferUrl(url)).toBe(false))
 
-  it('una oferta DEMO nunca se abre, aunque traiga un enlace', () => {
+  it('una oferta DEMO nunca se abre, aunque traiga un enlace', async () => {
     const option = { redirect: { available: true, url: 'https://www.aerolinea-demo.com/', sellerName: 'X', unavailableReason: null } }
     expect(offerActionOf(option, true)).toEqual({ kind: 'demo' })
     expect(offerActionOf({ redirect: { ...option.redirect, available: false, unavailableReason: 'DEMO' } }, false)).toEqual({ kind: 'demo' })
   })
 
-  it('sin redirect del backend no hay compra', () => {
+  it('sin redirect del backend no hay compra', async () => {
     expect(offerActionOf({ carrierName: 'Fake Airways' }, false)).toEqual({ kind: 'unavailable' })
   })
 })

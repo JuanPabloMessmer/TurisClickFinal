@@ -11,7 +11,7 @@ import {
 } from '@/features/preferences/model'
 
 describe('borrador de preferencias', () => {
-  it('intereses: agrega, quita y respeta el máximo', () => {
+  it('intereses: agrega, quita y respeta el máximo', async () => {
     let draft = toggleInterest(EMPTY_DRAFT, 'a')
     draft = toggleInterest(draft, 'b')
     expect(draft.categoryIds).toEqual(['a', 'b'])
@@ -21,14 +21,14 @@ describe('borrador de preferencias', () => {
     expect(toggleInterest(full, 'extra')).toBe(full)
   })
 
-  it('opciones únicas: tocar la elegida la deselecciona', () => {
+  it('opciones únicas: tocar la elegida la deselecciona', async () => {
     const relaxed = toggleSingle(EMPTY_DRAFT, 'travelPace', 'RELAXED')
     expect(relaxed.travelPace).toBe('RELAXED')
     expect(toggleSingle(relaxed, 'travelPace', 'INTENSE').travelPace).toBe('INTENSE')
     expect(toggleSingle(relaxed, 'travelPace', 'RELAXED').travelPace).toBeNull()
   })
 
-  it('arma el request tal como lo espera el backend', () => {
+  it('arma el request tal como lo espera el backend', async () => {
     const draft = { categoryIds: ['c1'], travelPace: 'BALANCED' as const, travelParty: null, budgetLevel: 'ECONOMY' as const }
     expect(toRequest(draft, true)).toEqual({
       categoryIds: ['c1'],
@@ -39,7 +39,7 @@ describe('borrador de preferencias', () => {
     })
   })
 
-  it('parte de lo guardado y descarta valores desconocidos', () => {
+  it('parte de lo guardado y descarta valores desconocidos', async () => {
     expect(
       draftFrom({ categories: [{ id: 'c1', name: 'Cultura' }, { name: 'sin id' }], travelPace: 'SLOW', travelParty: 'FAMILY', budgetLevel: 'PREMIUM' }),
     ).toEqual({ categoryIds: ['c1'], travelPace: null, travelParty: 'FAMILY', budgetLevel: 'PREMIUM' })
@@ -48,14 +48,14 @@ describe('borrador de preferencias', () => {
 })
 
 describe('resumen', () => {
-  it('traduce los valores a textos y detecta el perfil vacío', () => {
+  it('traduce los valores a textos y detecta el perfil vacío', async () => {
     const prefs = { categories: [{ id: '1', name: 'Aventura' }], travelPace: 'INTENSE', travelParty: 'SOLO', budgetLevel: null }
     expect(preferenceSummary(prefs)).toEqual({ interests: ['Aventura'], pace: 'Intenso', party: 'Solo/a', budget: null })
     expect(isEmptyProfile(prefs)).toBe(false)
     expect(isEmptyProfile({ categories: [], onboardingCompleted: true })).toBe(true)
   })
 
-  it('emoji por categoría sin depender de tildes, con uno genérico de reserva', () => {
+  it('emoji por categoría sin depender de tildes, con uno genérico de reserva', async () => {
     expect(categoryEmoji('Gastronomía')).toBe('🍲')
     expect(categoryEmoji('gastronomia')).toBe('🍲')
     expect(categoryEmoji('Buceo')).toBe('✨')

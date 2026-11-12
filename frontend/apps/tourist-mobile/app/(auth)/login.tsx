@@ -85,14 +85,14 @@ export default function LoginScreen() {
             value={field.value}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
-            onSubmitEditing={onSubmit}
+            onSubmitEditing={() => void onSubmit()}
             returnKeyType="go"
             error={fieldState.error?.message}
           />
         )}
       />
 
-      <Button label="Entrar" loading={formState.isSubmitting} onPress={onSubmit} />
+      <Button label="Entrar" loading={formState.isSubmitting} onPress={() => void onSubmit()} />
     </AuthScreenShell>
   )
 }

@@ -48,9 +48,9 @@ jest.mock('@/auth/session', () => ({ useSession: jest.fn() }))
 const mockedUseSession = useSession as jest.MockedFunction<typeof useSession>
 let client = createTestQueryClient()
 
-function renderWithClient(ui: React.ReactElement) {
+async function renderWithClient(ui: React.ReactElement) {
   const Wrapper = withClient(client)
-  return render(<Wrapper>{ui}</Wrapper>)
+  return await render(<Wrapper>{ui}</Wrapper>)
 }
 
 beforeEach(() => {
@@ -65,7 +65,7 @@ describe('checkout: el pago simulado de siempre', () => {
   it('muestra el vuelo con DEMO, no pide datos de pasajeros de nuevo y paga con el gateway simulado', async () => {
     mockGet.mockReturnValue(ok(flightReservation('PENDING_PAYMENT', 'NOT_REQUIRED', { roundTrip: true })))
     mockPost.mockReturnValue(ok(flightReservation('CONFIRMED', 'PENDING', { roundTrip: true })))
-    renderWithClient(<Checkout id="r1" />)
+    await renderWithClient(<Checkout id="r1" />)
 
     const cards = await screen.findAllByTestId('provider-flight-item')
     expect(cards).toHaveLength(2)
@@ -78,7 +78,7 @@ describe('checkout: el pago simulado de siempre', () => {
     // Los pasajeros se cargaron al reservar: el checkout no pide el formulario de pasajeros de aerolínea.
     expect(screen.queryByLabelText('Correo')).toBeNull()
 
-    fireEvent.press(screen.getByRole('button', { name: 'Pagar' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Pagar' }))
 
     await waitFor(() => expect(mockPost).toHaveBeenCalledWith('/api/reservations/r1/pay', { success: true, acceptPriceChanges: false }))
     expect(await screen.findByText('¡Pago confirmado!')).toBeTruthy()
@@ -99,9 +99,9 @@ describe('checkout: el pago simulado de siempre', () => {
         }),
       ),
     )
-    renderWithClient(<Checkout id="r1" />)
+    await renderWithClient(<Checkout id="r1" />)
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Pagar' }))
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pagar' }))
 
     expect(await screen.findByText('Esta reserva ya no se puede pagar')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Pagar' })).toBeNull()
@@ -112,7 +112,7 @@ describe('checkout: el pago simulado de siempre', () => {
 describe('detalle de la reserva: estado del pasaje', () => {
   it('pagada sin emitir: "Emisión pendiente", nunca "Pasaje emitido"', async () => {
     mockGet.mockReturnValue(ok(flightReservation('CONFIRMED', 'PENDING')))
-    renderWithClient(<ReservationDetail id="r1" />)
+    await renderWithClient(<ReservationDetail id="r1" />)
 
     expect(await screen.findByText('Pagada · emisión pendiente')).toBeTruthy()
     const status = screen.getByTestId('issuance-status')
@@ -126,7 +126,7 @@ describe('detalle de la reserva: estado del pasaje', () => {
     mockGet.mockReturnValue(
       ok(flightReservation('CONFIRMED', 'ISSUED', { ticketNumbers: ['9301234567890', '9301234567891'], bookingReference: 'QX7P2L' })),
     )
-    renderWithClient(<ReservationDetail id="r1" />)
+    await renderWithClient(<ReservationDetail id="r1" />)
 
     const status = await screen.findByTestId('issuance-status')
     expect(within(status).getByText('Pasaje emitido')).toBeTruthy()
@@ -139,7 +139,7 @@ describe('detalle de la reserva: estado del pasaje', () => {
 
   it('emisión fallida: lo dice con el reembolso total (simulado)', async () => {
     mockGet.mockReturnValue(ok(flightReservation('CONFIRMED', 'FAILED')))
-    renderWithClient(<ReservationDetail id="r1" />)
+    await renderWithClient(<ReservationDetail id="r1" />)
 
     const status = await screen.findByTestId('issuance-status')
     expect(within(status).getByText('Emisión fallida · reembolso total')).toBeTruthy()
@@ -154,7 +154,7 @@ describe('Mis viajes', () => {
     mockGet.mockReturnValue(
       ok(pagedFixture([flightReservation('CONFIRMED', 'ISSUED', { roundTrip: true }, { id: 'r-flight' })])),
     )
-    renderWithClient(<TripsScreen />)
+    await renderWithClient(<TripsScreen />)
 
     expect(await screen.findByText('Vuelo VVI → UYU · ida y vuelta')).toBeTruthy()
     expect(screen.queryByText(/\+1 más/)).toBeNull()
@@ -185,7 +185,7 @@ describe('Mis viajes', () => {
         ]),
       ),
     )
-    renderWithClient(<TripsScreen />)
+    await renderWithClient(<TripsScreen />)
 
     expect(await screen.findByText('Salar en 3 días')).toBeTruthy()
     expect(screen.getByText('Vuelo VVI–UYU')).toBeTruthy()
@@ -195,7 +195,7 @@ describe('Mis viajes', () => {
 })
 
 describe('errores con código', () => {
-  it('un 501 FEATURE_NOT_AVAILABLE conserva su mensaje; cualquier otro 5xx sigue siendo genérico', () => {
+  it('un 501 FEATURE_NOT_AVAILABLE conserva su mensaje; cualquier otro 5xx sigue siendo genérico', async () => {
     const notAvailable = toApiError(httpError(501, { detail: 'Todavía no.', errorCode: 'FEATURE_NOT_AVAILABLE' }))
     expect(notAvailable).toMatchObject({ status: 501, code: 'FEATURE_NOT_AVAILABLE', message: 'Todavía no.' })
 
@@ -204,7 +204,7 @@ describe('errores con código', () => {
     expect(other501.code).toBeUndefined()
   })
 
-  it('RESERVATION_NO_LONGER_PAYABLE como 410 sigue siendo "expiró"; como 409, "ya no se puede pagar"', () => {
+  it('RESERVATION_NO_LONGER_PAYABLE como 410 sigue siendo "expiró"; como 409, "ya no se puede pagar"', async () => {
     expect(describePayFailure(httpError(410, { errorCode: 'RESERVATION_NO_LONGER_PAYABLE' })).kind).toBe('EXPIRED')
     expect(describePayFailure(httpError(409, { errorCode: 'RESERVATION_NO_LONGER_PAYABLE' })).kind).toBe('NO_LONGER_PAYABLE')
     expect(describePayFailure(httpError(409, {})).kind).toBe('STALE')

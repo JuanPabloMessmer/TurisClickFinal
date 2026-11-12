@@ -43,7 +43,7 @@ function stripComments(source: string): string {
 describe('la app no muestra identificadores internos', () => {
   const files = ROOTS.flatMap(collectSourceFiles)
 
-  it('encuentra archivos para revisar', () => {
+  it('encuentra archivos para revisar', async () => {
     // Si el recorrido se rompe, el test pasaría vacío y no protegería nada.
     expect(files.length).toBeGreaterThan(30)
   })

@@ -57,5 +57,13 @@ module.exports = {
     '/node_modules/react-native-reanimated/plugin/',
     '/node_modules/@react-native/babel-preset/',
   ],
+  /**
+   * RNTL 14 adopto el modelo de renderizado asincrono de React 19: render, fireEvent, renderHook y act
+   * devuelven Promise y cada uno vacia la cola de actualizaciones pendientes antes de seguir. Eso hace
+   * que las pruebas de pantalla completa -- las del chat del asistente, el buscador de vuelos, el
+   * onboarding -- tarden bastante mas que con la v13, y el default de 5 s de Jest las cortaba a mitad de
+   * camino. No es lentitud de la app: es el costo de esperar de verdad a que React termine.
+   */
+  testTimeout: 30000,
   collectCoverageFrom: ['src/**/*.{ts,tsx}', 'app/**/*.tsx'],
 }

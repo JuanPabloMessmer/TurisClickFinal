@@ -22,42 +22,42 @@ const guarded = () => (
 
 beforeEach(() => jest.clearAllMocks())
 
-it('con un turista autenticado muestra el contenido', () => {
+it('con un turista autenticado muestra el contenido', async () => {
   mockedUseSession.mockReturnValue(touristSession())
-  render(guarded())
+  await render(guarded())
 
   expect(screen.getByText('Contenido privado')).toBeTruthy()
 })
 
-it('sin sesión NO muestra el contenido: invita a entrar sin redirigir', () => {
+it('sin sesión NO muestra el contenido: invita a entrar sin redirigir', async () => {
   mockedUseSession.mockReturnValue(guestSession())
-  render(guarded())
+  await render(guarded())
 
   expect(screen.queryByText('Contenido privado')).toBeNull()
   expect(screen.getByText('Iniciá sesión para ver tus viajes')).toBeTruthy()
 
-  fireEvent.press(screen.getByRole('button', { name: 'Iniciar sesión' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Iniciar sesión' }))
   expect(mockPush).toHaveBeenCalledWith('/(auth)/login')
 
-  fireEvent.press(screen.getByRole('button', { name: 'Crear cuenta' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Crear cuenta' }))
   expect(mockPush).toHaveBeenCalledWith('/(auth)/register')
 })
 
-it('mientras se restaura la sesión no muestra ni el contenido ni la invitación', () => {
+it('mientras se restaura la sesión no muestra ni el contenido ni la invitación', async () => {
   mockedUseSession.mockReturnValue(sessionValue({ status: 'idle' }))
-  render(guarded())
+  await render(guarded())
 
   expect(screen.queryByText('Contenido privado')).toBeNull()
   expect(screen.queryByText('Iniciá sesión para ver tus viajes')).toBeNull()
 })
 
-it('si la sesión se pierde con la pantalla abierta (logout o refresh fallido) avisa que expiró', () => {
+it('si la sesión se pierde con la pantalla abierta (logout o refresh fallido) avisa que expiró', async () => {
   mockedUseSession.mockReturnValue(touristSession())
-  const { rerender } = render(guarded())
+  const { rerender } = await render(guarded())
   expect(screen.getByText('Contenido privado')).toBeTruthy()
 
   mockedUseSession.mockReturnValue(guestSession())
-  rerender(guarded())
+  await rerender(guarded())
 
   expect(screen.queryByText('Contenido privado')).toBeNull()
   expect(screen.getByText('Tu sesión expiró')).toBeTruthy()

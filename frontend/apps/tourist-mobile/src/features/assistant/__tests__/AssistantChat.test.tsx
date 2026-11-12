@@ -69,9 +69,9 @@ function backend(overrides: Record<string, unknown> = {}) {
   })
 }
 
-function renderChat() {
+async function renderChat() {
   const Wrapper = withClient(createTestQueryClient())
-  return render(
+  return await render(
     <Wrapper>
       <AssistantChatScreen />
     </Wrapper>,
@@ -86,7 +86,7 @@ beforeEach(() => {
 describe('chat del asistente', () => {
   it('muestra la conversación y el itinerario por días con productos, precios y disponibilidad reales', async () => {
     backend()
-    renderChat()
+    await renderChat()
 
     expect(await screen.findByText('Armé un itinerario combinando experiencias reales.')).toBeTruthy()
     expect(await screen.findByText('Tu viaje a La Paz')).toBeTruthy()
@@ -120,10 +120,10 @@ describe('chat del asistente', () => {
       sent = true
       return ok({ assistantMessage: 'Actualicé tu itinerario.', clarificationNeeded: false, itinerary: v2, warnings: [], profileHints: ['Tus intereses: Naturaleza', 'Viajás solo/a'] })
     })
-    renderChat()
+    await renderChat()
     await screen.findByText('Tu viaje a La Paz')
 
-    fireEvent.press(screen.getByLabelText('Quiero algo más barato'))
+    await fireEvent.press(screen.getByLabelText('Quiero algo más barato'))
 
     await waitFor(() => expect(mockPost).toHaveBeenCalledWith('/api/ai/conversations/conv-1/messages', { content: 'Quiero algo más barato' }))
     expect(await screen.findByText('Actualicé tu itinerario.')).toBeTruthy()
@@ -135,21 +135,21 @@ describe('chat del asistente', () => {
   it('cuando falta información ofrece respuestas rápidas en vez de un formulario', async () => {
     backend({ '/api/ai/conversations/conv-1/itinerary': Promise.reject(httpError(404, { detail: 'Todavía no' })) })
     mockPost.mockReturnValue(ok({ assistantMessage: 'Necesito: destino', clarificationNeeded: true, missingInformation: ['destino'], warnings: [], profileHints: [] }))
-    renderChat()
+    await renderChat()
     await screen.findByText('Armé un itinerario combinando experiencias reales.')
 
-    fireEvent.changeText(screen.getByLabelText('Mensaje para el asistente'), 'Quiero viajar')
-    fireEvent.press(screen.getByLabelText('Enviar mensaje'))
+    await fireEvent.changeText(screen.getByLabelText('Mensaje para el asistente'), 'Quiero viajar')
+    await fireEvent.press(screen.getByLabelText('Enviar mensaje'))
 
     expect(await screen.findByLabelText('Quiero ir a La Paz')).toBeTruthy()
   })
 
   it('"¿Por qué?" abre la explicación con los hechos verificados', async () => {
     backend()
-    renderChat()
+    await renderChat()
     await screen.findByText('Tu viaje a La Paz')
 
-    fireEvent.press(screen.getByLabelText('¿Por qué Tiwanaku y la Puerta del Sol?'))
+    await fireEvent.press(screen.getByLabelText('¿Por qué Tiwanaku y la Puerta del Sol?'))
 
     expect(await screen.findByText('Te propuse Tiwanaku porque encaja con tus fechas.')).toBeTruthy()
     expect(screen.getByText('✓ Cupos disponibles: 16.')).toBeTruthy()
@@ -158,10 +158,10 @@ describe('chat del asistente', () => {
   it('guardar llama al backend y lo muestra guardado', async () => {
     backend()
     mockPost.mockReturnValue(ok({ ...itinerary, status: 'SAVED' }))
-    renderChat()
+    await renderChat()
     await screen.findByText('Tu viaje a La Paz')
 
-    fireEvent.press(screen.getByText('Guardar para después'))
+    await fireEvent.press(screen.getByText('Guardar para después'))
 
     await waitFor(() => expect(mockPost).toHaveBeenCalledWith('/api/ai/itineraries/it-1/save'))
     expect(await screen.findByText('✓ Guardado en tus itinerarios')).toBeTruthy()
@@ -177,17 +177,17 @@ describe('chat del asistente', () => {
         }),
       )
       .mockReturnValueOnce(ok({ requiresPriceAcceptance: false, reservation: { id: 'res-9', status: 'PENDING_PAYMENT' } }))
-    renderChat()
+    await renderChat()
     await screen.findByText('Tu viaje a La Paz')
 
-    fireEvent.press(screen.getByText('Reservar itinerario'))
+    await fireEvent.press(screen.getByText('Reservar itinerario'))
 
     expect(await screen.findByText('Cambiaron algunos precios')).toBeTruthy()
     expect(screen.getByText('Tiwanaku: Bs 380,00 → Bs 400,00')).toBeTruthy()
     expect(mockRouter.push).not.toHaveBeenCalled()
     expect(mockPost).toHaveBeenLastCalledWith('/api/ai/itineraries/it-1/book', { acceptPriceChanges: false })
 
-    fireEvent.press(screen.getByText('Aceptar precios y reservar'))
+    await fireEvent.press(screen.getByText('Aceptar precios y reservar'))
 
     await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/checkout/[id]', params: { id: 'res-9' } }))
     expect(mockPost).toHaveBeenLastCalledWith('/api/ai/itineraries/it-1/book', { acceptPriceChanges: true })
@@ -196,10 +196,10 @@ describe('chat del asistente', () => {
   it('si el booking falla por cupo lo explica y no navega', async () => {
     backend()
     mockPost.mockRejectedValue(httpError(409, { errorCode: 'INSUFFICIENT_CAPACITY', detail: 'x' }))
-    renderChat()
+    await renderChat()
     await screen.findByText('Tu viaje a La Paz')
 
-    await act(async () => fireEvent.press(screen.getByText('Reservar itinerario')))
+    await act(async () => await fireEvent.press(screen.getByText('Reservar itinerario')))
 
     expect(await screen.findByText(/no se reservó nada/)).toBeTruthy()
     expect(mockRouter.push).not.toHaveBeenCalled()
@@ -207,19 +207,19 @@ describe('chat del asistente', () => {
 })
 
 describe('pantalla Asistente', () => {
-  function renderHome() {
+  async function renderHome() {
     const Wrapper = withClient(createTestQueryClient())
-    return render(
+    return await render(
       <Wrapper>
         <AssistantScreen />
       </Wrapper>,
     )
   }
 
-  it('sin sesión invita a iniciar sesión (AI Agent no es un rol de login)', () => {
+  it('sin sesión invita a iniciar sesión (AI Agent no es un rol de login)', async () => {
     ;(useSession as jest.Mock).mockReturnValue(guestSession())
     backend()
-    renderHome()
+    await renderHome()
 
     expect(screen.getByText('Tu asistente de viaje')).toBeTruthy()
     expect(mockGet).not.toHaveBeenCalledWith('/api/ai/conversations/me', expect.anything())
@@ -232,10 +232,10 @@ describe('pantalla Asistente', () => {
         ? ok({ id: 'conv-new', status: 'ACTIVE', messages: [] })
         : ok({ assistantMessage: 'Listo', clarificationNeeded: false, itinerary, warnings: [], profileHints: [] }),
     )
-    renderHome()
+    await renderHome()
 
     expect(await screen.findByText('Parto de tu perfil')).toBeTruthy()
-    fireEvent.press(screen.getByText('Voy 4 días a La Paz. Me gusta la naturaleza y la gastronomía.'))
+    await fireEvent.press(screen.getByText('Voy 4 días a La Paz. Me gusta la naturaleza y la gastronomía.'))
 
     await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/assistant/[id]', params: { id: 'conv-new' } }))
     expect(mockPost).toHaveBeenCalledWith('/api/ai/conversations/conv-new/messages', {

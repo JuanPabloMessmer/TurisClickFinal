@@ -14,7 +14,7 @@ const mockGet = jest.fn()
 jest.mock('@/lib/httpClient', () => ({ httpClient: { get: (...args: unknown[]) => mockGet(...args) } }))
 
 /** Perfil consulta las preferencias del turista: cada render lleva su propio QueryClient. */
-const render = (ui: React.ReactElement) => {
+const render = async (ui: React.ReactElement) => {
   const Wrapper = withClient(createTestQueryClient())
   return rtlRender(<Wrapper>{ui}</Wrapper>)
 }
@@ -43,31 +43,31 @@ beforeEach(() => {
 describe('invitado', () => {
   beforeEach(() => givenSession({ status: 'unauthenticated' }))
 
-  it('ofrece entrar y crear cuenta en vez de bloquear la pantalla', () => {
-    render(<ProfileScreen />)
+  it('ofrece entrar y crear cuenta en vez de bloquear la pantalla', async () => {
+    await render(<ProfileScreen />)
 
     expect(screen.getByText('Iniciar sesión')).toBeTruthy()
     expect(screen.getByText('Crear cuenta')).toBeTruthy()
   })
 
-  it('aclara que se puede seguir explorando sin cuenta', () => {
-    render(<ProfileScreen />)
+  it('aclara que se puede seguir explorando sin cuenta', async () => {
+    await render(<ProfileScreen />)
 
     expect(screen.getByText(/seguir explorando/i)).toBeTruthy()
   })
 
-  it('lleva a login y a registro', () => {
-    render(<ProfileScreen />)
+  it('lleva a login y a registro', async () => {
+    await render(<ProfileScreen />)
 
-    fireEvent.press(screen.getByText('Iniciar sesión'))
+    await fireEvent.press(screen.getByText('Iniciar sesión'))
     expect(mockPush).toHaveBeenCalledWith('/(auth)/login')
 
-    fireEvent.press(screen.getByText('Crear cuenta'))
+    await fireEvent.press(screen.getByText('Crear cuenta'))
     expect(mockPush).toHaveBeenCalledWith('/(auth)/register')
   })
 
-  it('no muestra cerrar sesión', () => {
-    render(<ProfileScreen />)
+  it('no muestra cerrar sesión', async () => {
+    await render(<ProfileScreen />)
 
     expect(screen.queryByText('Cerrar sesión')).toBeNull()
   })
@@ -82,39 +82,39 @@ describe('turista autenticado', () => {
     }),
   )
 
-  it('muestra los datos que el backend devuelve del usuario', () => {
-    render(<ProfileScreen />)
+  it('muestra los datos que el backend devuelve del usuario', async () => {
+    await render(<ProfileScreen />)
 
     expect(screen.getByText('Ana Quispe')).toBeTruthy()
     expect(screen.getByText('ana@example.com')).toBeTruthy()
   })
 
-  it('ofrece cerrar sesión y no los CTA de invitado', () => {
-    render(<ProfileScreen />)
+  it('ofrece cerrar sesión y no los CTA de invitado', async () => {
+    await render(<ProfileScreen />)
 
     expect(screen.getByText('Cerrar sesión')).toBeTruthy()
     expect(screen.queryByText('Iniciar sesión')).toBeNull()
     expect(screen.queryByText('Crear cuenta')).toBeNull()
   })
 
-  it('cierra sesión al presionar', () => {
-    render(<ProfileScreen />)
+  it('cierra sesión al presionar', async () => {
+    await render(<ProfileScreen />)
 
-    fireEvent.press(screen.getByText('Cerrar sesión'))
+    await fireEvent.press(screen.getByText('Cerrar sesión'))
 
     expect(mockLogout).toHaveBeenCalled()
   })
 
-  it('no ofrece editar los datos de la cuenta, porque no existe endpoint para eso', () => {
-    render(<ProfileScreen />)
+  it('no ofrece editar los datos de la cuenta, porque no existe endpoint para eso', async () => {
+    await render(<ProfileScreen />)
 
     expect(screen.queryByText(/editar/i)).toBeNull()
   })
 
   it('sin preferencias invita a completarlas y lleva al onboarding en modo edición', async () => {
-    render(<ProfileScreen />)
+    await render(<ProfileScreen />)
 
-    fireEvent.press(await screen.findByText('Completar mis preferencias'))
+    await fireEvent.press(await screen.findByText('Completar mis preferencias'))
 
     expect(mockGet).toHaveBeenCalledWith('/api/tourists/me/preferences')
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/onboarding', params: { mode: 'edit' } })
@@ -130,7 +130,7 @@ describe('turista autenticado', () => {
         onboardingCompleted: true,
       }),
     )
-    render(<ProfileScreen />)
+    await render(<ProfileScreen />)
 
     await waitFor(() => expect(screen.getByText('Naturaleza')).toBeTruthy())
     expect(screen.getByText('Gastronomía')).toBeTruthy()
@@ -140,10 +140,10 @@ describe('turista autenticado', () => {
 })
 
 describe('mientras se restaura la sesión', () => {
-  it('no muestra ni los CTA de invitado ni los datos, para no parpadear', () => {
+  it('no muestra ni los CTA de invitado ni los datos, para no parpadear', async () => {
     givenSession({ status: 'idle' })
 
-    render(<ProfileScreen />)
+    await render(<ProfileScreen />)
 
     expect(screen.queryByText('Iniciar sesión')).toBeNull()
     expect(screen.queryByText('Cerrar sesión')).toBeNull()

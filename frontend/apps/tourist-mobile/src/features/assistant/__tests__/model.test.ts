@@ -10,7 +10,7 @@ import {
 } from '@/features/assistant/model'
 
 describe('groupByDay', () => {
-  it('agrupa por día y ordena días e ítems', () => {
+  it('agrupa por día y ordena días e ítems', async () => {
     const days = groupByDay([
       { id: 'c', dayNumber: 2, sortOrder: 0 },
       { id: 'b', dayNumber: 1, sortOrder: 1 },
@@ -23,13 +23,13 @@ describe('groupByDay', () => {
 })
 
 describe('availabilityBadge', () => {
-  it('traduce el estado real del backend', () => {
+  it('traduce el estado real del backend', async () => {
     expect(availabilityBadge({ availabilityState: 'AVAILABLE', currentAvailableSlots: 3 })).toEqual({ label: 'Disponible · 3 lugares', tone: 'success' })
     expect(availabilityBadge({ availabilityState: 'SOLD_OUT' }).tone).toBe('danger')
     expect(availabilityBadge({ availabilityState: 'UNPUBLISHED' }).label).toBe('Ya no disponible')
   })
 
-  it('una fecha vencida se explica como tal, no como "cerrada"', () => {
+  it('una fecha vencida se explica como tal, no como "cerrada"', async () => {
     expect(availabilityBadge({ availabilityState: 'SLOT_CLOSED', date: '2026-09-20' }, '2026-09-27')).toEqual({
       label: 'La fecha ya pasó',
       tone: 'danger',
@@ -40,7 +40,7 @@ describe('availabilityBadge', () => {
 })
 
 describe('quickRepliesFor', () => {
-  it('ofrece respuestas para cada dato que falta, con destinos reales', () => {
+  it('ofrece respuestas para cada dato que falta, con destinos reales', async () => {
     const replies = quickRepliesFor(['destino', 'cantidad de viajeros'], ['La Paz', 'Sucre'])
     expect(replies.map((r) => r.message)).toEqual(['Quiero ir a La Paz', 'Quiero ir a Sucre', 'Viajo solo', 'Somos 2 personas', 'Somos 4 personas'])
     expect(quickRepliesFor([], ['La Paz'])).toEqual([])
@@ -50,7 +50,7 @@ describe('quickRepliesFor', () => {
 describe('acciones sobre el itinerario', () => {
   const base = { id: 'it', items: [{ id: 'x' }], isStillBookable: true }
 
-  it('guardar solo en borrador; reservar si sigue siendo reservable', () => {
+  it('guardar solo en borrador; reservar si sigue siendo reservable', async () => {
     expect(canSave({ ...base, status: 'DRAFT' })).toBe(true)
     expect(canSave({ ...base, status: 'SAVED' })).toBe(false)
     expect(canBook({ ...base, status: 'SAVED' })).toBe(true)
@@ -59,14 +59,14 @@ describe('acciones sobre el itinerario', () => {
     expect(canBook({ ...base, status: 'DRAFT', items: [] })).toBe(false)
   })
 
-  it('explica los errores reales del booking', () => {
+  it('explica los errores reales del booking', async () => {
     expect(describeBookingFailure(httpError(409, { errorCode: 'INSUFFICIENT_CAPACITY', detail: 'x' })).message).toMatch(/no se reservó nada/)
     expect(describeBookingFailure(httpError(409, { errorCode: 'ITINERARY_ALREADY_BOOKED', detail: 'x' })).checkTrips).toBe(true)
     expect(describeBookingFailure(networkError())).toMatchObject({ checkTrips: true })
   })
 })
 
-it('lastAssistantIndex encuentra la última respuesta del asistente', () => {
+it('lastAssistantIndex encuentra la última respuesta del asistente', async () => {
   expect(lastAssistantIndex([{ sender: 'TOURIST' }, { sender: 'AI' }, { sender: 'TOURIST' }])).toBe(1)
   expect(lastAssistantIndex([{ sender: 'TOURIST' }])).toBe(-1)
 })

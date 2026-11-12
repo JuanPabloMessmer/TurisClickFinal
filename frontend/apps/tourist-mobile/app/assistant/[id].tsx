@@ -1,6 +1,9 @@
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
+// RN 0.88 convirtio ScrollView en componente funcional: el ref ya no se tipa con el componente
+// sino con su tipo de instancia, que es el que expone scrollToEnd.
+import type { ScrollViewInstance } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { RequireTourist } from '@/auth/RequireTourist'
 import type { ItineraryResponse } from '@turisclick/api-client'
@@ -78,7 +81,7 @@ function Chat({ conversationId }: { conversationId: string }) {
   const send = useSendMessage(conversationId)
   const cities = useCities()
   const [draft, setDraft] = useState('')
-  const scrollRef = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollViewInstance>(null)
 
   const messages = conversation.data?.messages ?? []
   const anchor = lastAssistantIndex(messages)

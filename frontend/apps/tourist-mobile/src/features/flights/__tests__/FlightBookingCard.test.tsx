@@ -12,8 +12,8 @@ const confirmed = (inventoryMode?: string) =>
   flightFixture({ status: 'CONFIRMED', bookingReference: 'FAKE0UYU', inventoryMode, statusMessage: 'x' })
 
 describe('tarjeta del vuelo de una reserva', () => {
-  it('una reserva simulada se llama así, con un aviso de que no hay pasaje real', () => {
-    render(<FlightBookingCard flight={confirmed('SIMULATED')} />)
+  it('una reserva simulada se llama así, con un aviso de que no hay pasaje real', async () => {
+    await render(<FlightBookingCard flight={confirmed('SIMULATED')} />)
 
     expect(screen.getByText('Reserva simulada')).toBeTruthy()
     expect(screen.getByTestId('flight-demo-notice')).toBeTruthy()
@@ -21,21 +21,21 @@ describe('tarjeta del vuelo de una reserva', () => {
     expect(screen.queryByText(/pasaje emitido/i)).toBeNull()
   })
 
-  it('una reserva del entorno de prueba del proveedor se rotula como prueba', () => {
-    render(<FlightBookingCard flight={confirmed('SANDBOX')} />)
+  it('una reserva del entorno de prueba del proveedor se rotula como prueba', async () => {
+    await render(<FlightBookingCard flight={confirmed('SANDBOX')} />)
 
     expect(screen.getByText('Reserva de prueba')).toBeTruthy()
     expect(screen.getByText(/entorno de prueba del proveedor/)).toBeTruthy()
   })
 
-  it('sin el dato (backend anterior) se asume lo prudente: simulada', () => {
-    render(<FlightBookingCard flight={confirmed(undefined)} />)
+  it('sin el dato (backend anterior) se asume lo prudente: simulada', async () => {
+    await render(<FlightBookingCard flight={confirmed(undefined)} />)
 
     expect(screen.getByText('Reserva simulada')).toBeTruthy()
   })
 
-  it('aun en inventario real, confirmar la orden no es "pasaje emitido"', () => {
-    render(<FlightBookingCard flight={confirmed('LIVE')} />)
+  it('aun en inventario real, confirmar la orden no es "pasaje emitido"', async () => {
+    await render(<FlightBookingCard flight={confirmed('LIVE')} />)
 
     expect(screen.getByText('Reserva confirmada')).toBeTruthy()
     expect(screen.queryByTestId('flight-demo-notice')).toBeNull()

@@ -80,9 +80,9 @@ function backend({
   })
 }
 
-function renderChat() {
+async function renderChat() {
   const Wrapper = withClient(createTestQueryClient())
-  return render(
+  return await render(
     <Wrapper>
       <AssistantChatScreen />
     </Wrapper>,
@@ -122,7 +122,7 @@ beforeEach(() => {
 describe('historial del asistente', () => {
   it('al recargar la conversación cada respuesta conserva sus propias recomendaciones, en orden', async () => {
     backend({ messages: () => [...FIRST_TURN, ...SECOND_TURN], latest: () => CALMER })
-    renderChat()
+    await renderChat()
 
     expect(await screen.findByText('Rafting en el río Coroico', {}, WAIT)).toBeTruthy()
     expect(await screen.findByText('Museo de Etnografía y Folklore', {}, WAIT)).toBeTruthy()
@@ -149,11 +149,11 @@ describe('historial del asistente', () => {
       sent = true
       return ok({ assistantMessage: 'Bajé la intensidad de la propuesta.', clarificationNeeded: false, itinerary: CALMER, warnings: [], profileHints: [] })
     })
-    renderChat()
+    await renderChat()
     expect(await screen.findByText('Rafting en el río Coroico', {}, WAIT)).toBeTruthy()
 
-    fireEvent.changeText(screen.getByLabelText('Mensaje para el asistente'), 'Menos aventura.')
-    fireEvent.press(screen.getByLabelText('Enviar mensaje'))
+    await fireEvent.changeText(screen.getByLabelText('Mensaje para el asistente'), 'Menos aventura.')
+    await fireEvent.press(screen.getByLabelText('Enviar mensaje'))
 
     await waitFor(() => expect(mockPost).toHaveBeenCalledWith('/api/ai/conversations/conv-1/messages', { content: 'Menos aventura.' }), WAIT)
     expect(await screen.findByText('Museo de Etnografía y Folklore', {}, WAIT)).toBeTruthy()
@@ -181,16 +181,16 @@ describe('historial del asistente', () => {
     mockPost.mockImplementation((url: string) =>
       url === '/api/ai/itineraries/it-1/save' ? ok({ ...ADVENTURE, status: 'SAVED' }) : Promise.reject(httpError(404, {})),
     )
-    renderChat()
+    await renderChat()
     await screen.findByText('Rafting en el río Coroico', {}, WAIT)
 
     // "¿Por qué?" del primer turno pide la explicación de SU ítem, no del vigente.
-    fireEvent.press(screen.getByLabelText('¿Por qué Rafting en el río Coroico?'))
+    await fireEvent.press(screen.getByLabelText('¿Por qué Rafting en el río Coroico?'))
     expect(await screen.findByText('Te propuse el rafting porque pediste aventura.', {}, WAIT)).toBeTruthy()
     expect(mockGet).toHaveBeenCalledWith('/api/ai/itineraries/it-1/items/it-1-item/explanation')
 
     // Y "Guardar" de la primera tarjeta (la primera en pantalla) guarda la primera propuesta.
-    fireEvent.press(screen.getAllByText('Guardar para después')[0])
+    await fireEvent.press(screen.getAllByText('Guardar para después')[0])
     await waitFor(() => expect(mockPost).toHaveBeenCalledWith('/api/ai/itineraries/it-1/save'), WAIT)
     expect(mockPost).not.toHaveBeenCalledWith('/api/ai/itineraries/it-2/save')
   })
@@ -198,17 +198,17 @@ describe('historial del asistente', () => {
   it('al salir y volver a entrar a la conversación el historial completo sigue ahí', async () => {
     backend({ messages: () => [...FIRST_TURN, ...SECOND_TURN], latest: () => CALMER })
     const Wrapper = withClient(createTestQueryClient())
-    const first = render(
+    const first = await render(
       <Wrapper>
         <AssistantChatScreen />
       </Wrapper>,
     )
     await screen.findByText('Rafting en el río Coroico', {}, WAIT)
     await screen.findByText('Museo de Etnografía y Folklore', {}, WAIT)
-    first.unmount()
+    await first.unmount()
 
     // Volver a la pantalla con la misma caché, como al navegar atrás y adelante: se ve todo de entrada.
-    render(
+    await render(
       <Wrapper>
         <AssistantChatScreen />
       </Wrapper>,
@@ -229,7 +229,7 @@ describe('historial del asistente', () => {
       latest: () => third,
       overrides: { '/api/ai/itineraries/it-3': () => ok(third) },
     })
-    renderChat()
+    await renderChat()
 
     expect(await screen.findByText('Recorrido por la Casa de la Moneda', {}, WAIT)).toBeTruthy()
     expect(await screen.findByText('Rafting en el río Coroico', {}, WAIT)).toBeTruthy()
@@ -249,7 +249,7 @@ describe('historial del asistente', () => {
       latest: () => CALMER,
       overrides: { '/api/ai/itineraries/it-1': () => Promise.reject(httpError(500, {})) },
     })
-    renderChat()
+    await renderChat()
 
     expect(await screen.findByText('No pudimos cargar esta propuesta.', {}, WAIT)).toBeTruthy()
     expect(screen.getByText('Museo de Etnografía y Folklore')).toBeTruthy()
@@ -260,11 +260,11 @@ describe('historial del asistente', () => {
   it('si el envío falla, lo que ya estaba en la conversación sigue a la vista', async () => {
     backend({ messages: () => FIRST_TURN, latest: () => ADVENTURE })
     mockPost.mockImplementation(() => Promise.reject(httpError(503, { detail: 'El asistente no está disponible.' })))
-    renderChat()
+    await renderChat()
     expect(await screen.findByText('Rafting en el río Coroico', {}, WAIT)).toBeTruthy()
 
-    fireEvent.changeText(screen.getByLabelText('Mensaje para el asistente'), 'Menos aventura.')
-    fireEvent.press(screen.getByLabelText('Enviar mensaje'))
+    await fireEvent.changeText(screen.getByLabelText('Mensaje para el asistente'), 'Menos aventura.')
+    await fireEvent.press(screen.getByLabelText('Enviar mensaje'))
 
     // Un 5xx nunca muestra el detalle del servidor (src/lib/errors.ts): se ve el mensaje genérico.
     expect(await screen.findByText('Tuvimos un problema de nuestro lado. Intentá de nuevo en un momento.', {}, WAIT)).toBeTruthy()
@@ -275,7 +275,7 @@ describe('historial del asistente', () => {
   it('con un backend anterior (sin itineraryId) muestra la propuesta vigente bajo la última respuesta, como antes', async () => {
     const legacy = [...FIRST_TURN, ...SECOND_TURN].map(({ itineraryId: _ignored, ...message }) => message)
     backend({ messages: () => legacy, latest: () => CALMER })
-    renderChat()
+    await renderChat()
 
     expect(await screen.findByText('Museo de Etnografía y Folklore', {}, WAIT)).toBeTruthy()
     expect(screen.queryByText('Rafting en el río Coroico')).toBeNull()

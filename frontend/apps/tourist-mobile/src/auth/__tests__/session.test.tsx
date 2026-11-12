@@ -44,8 +44,8 @@ function Probe() {
   return <Text>{value.status}</Text>
 }
 
-const renderSession = () =>
-  render(
+const renderSession = async () =>
+  await render(
     <SessionProvider>
       <Probe />
     </SessionProvider>,
@@ -59,7 +59,7 @@ beforeEach(async () => {
 describe('login', () => {
   it('deja la sesión iniciada para un TOURIST', async () => {
     mockLogin.mockResolvedValue(sessionFor('TOURIST'))
-    renderSession()
+    await renderSession()
     await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy())
 
     await act(async () => {
@@ -73,7 +73,7 @@ describe('login', () => {
 
   it.each(['PROVIDER', 'ADMIN'])('rechaza una cuenta %s con credenciales válidas', async (role) => {
     mockLogin.mockResolvedValue(sessionFor(role))
-    renderSession()
+    await renderSession()
     await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy())
 
     await act(async () => {
@@ -88,7 +88,7 @@ describe('login', () => {
 
   it('borra el refresh token del almacenamiento seguro al rechazar por rol', async () => {
     mockLogin.mockResolvedValue(sessionFor('PROVIDER'))
-    renderSession()
+    await renderSession()
     await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy())
 
     await act(async () => {
@@ -102,7 +102,7 @@ describe('login', () => {
 
   it('propaga el error del backend tal cual cuando las credenciales son inválidas', async () => {
     mockLogin.mockRejectedValue(new Error('401'))
-    renderSession()
+    await renderSession()
     await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy())
 
     await act(async () => {
@@ -118,7 +118,7 @@ describe('login', () => {
 describe('register', () => {
   it('deja la sesión iniciada sin pedir un login extra', async () => {
     mockRegisterTourist.mockResolvedValue(sessionFor('TOURIST'))
-    renderSession()
+    await renderSession()
     await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy())
 
     await act(async () => {
@@ -141,7 +141,7 @@ describe('bootstrap', () => {
     let resolveRefresh: (value: unknown) => void = () => {}
     mockRefresh.mockReturnValue(new Promise((resolve) => (resolveRefresh = resolve)))
 
-    renderSession()
+    await renderSession()
 
     expect(screen.getByText('idle')).toBeTruthy()
 
@@ -155,7 +155,7 @@ describe('bootstrap', () => {
     await SecureStore.setItemAsync('turisclick.refreshToken', 'guardado-de-un-provider')
     mockRefresh.mockResolvedValue(sessionFor('PROVIDER'))
 
-    renderSession()
+    await renderSession()
 
     await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy())
     expect(session.isAuthenticated).toBe(false)
@@ -163,7 +163,7 @@ describe('bootstrap', () => {
   })
 
   it('sin token guardado queda desautenticado sin llamar al backend', async () => {
-    renderSession()
+    await renderSession()
 
     await waitFor(() => expect(screen.getByText('unauthenticated')).toBeTruthy())
     expect(mockRefresh).not.toHaveBeenCalled()

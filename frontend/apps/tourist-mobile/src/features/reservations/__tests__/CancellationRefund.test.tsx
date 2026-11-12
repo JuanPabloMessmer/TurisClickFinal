@@ -87,9 +87,9 @@ const quote = (overrides = {}) => ({
   ...overrides,
 })
 
-function renderDetail() {
+async function renderDetail() {
   const Wrapper = withClient(client)
-  return render(
+  return await render(
     <Wrapper>
       <ReservationDetail id="r1" />
     </Wrapper>,
@@ -109,7 +109,7 @@ afterEach(() => client.clear())
 test('una reserva confirmada con política ofrece cancelar', async () => {
   mockGet.mockResolvedValue(ok(confirmed()))
 
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(button('Cancelar reserva')).toBeTruthy())
 })
@@ -118,7 +118,7 @@ test('sin política del operador no se ofrece cancelar', async () => {
   // Ofrecer el botón sería prometer algo que el backend va a rechazar.
   mockGet.mockResolvedValue(ok(confirmed({ items: [itemFixture({ status: 'CONFIRMED', cancellationPolicy: [] })] })))
 
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(screen.getByText('Confirmada')).toBeTruthy())
   expect(screen.queryByRole('button', { name: 'Cancelar reserva' })).toBeNull()
@@ -128,9 +128,9 @@ test('cancelar muestra el desglose antes de ejecutar nada', async () => {
   mockGet.mockResolvedValue(ok(confirmed()))
   mockPost.mockResolvedValueOnce(ok(quote()))
 
-  renderDetail()
+  await renderDetail()
   await waitFor(() => expect(button('Cancelar reserva')).toBeTruthy())
-  fireEvent.press(button('Cancelar reserva'))
+  await fireEvent.press(button('Cancelar reserva'))
 
   await waitFor(() => expect(screen.getByText('Esto es lo que pasa si cancelás')).toBeTruthy())
 
@@ -146,9 +146,9 @@ test('confirmar manda el id del presupuesto y ningún importe', async () => {
   mockGet.mockResolvedValue(ok(confirmed()))
   mockPost.mockResolvedValueOnce(ok(quote()))
 
-  renderDetail()
+  await renderDetail()
   await waitFor(() => expect(button('Cancelar reserva')).toBeTruthy())
-  fireEvent.press(button('Cancelar reserva'))
+  await fireEvent.press(button('Cancelar reserva'))
   await waitFor(() => expect(button('Sí, cancelar la reserva')).toBeTruthy())
 
   mockPost.mockResolvedValueOnce(
@@ -159,7 +159,7 @@ test('confirmar manda el id del presupuesto y ningún importe', async () => {
       }),
     ),
   )
-  fireEvent.press(button('Sí, cancelar la reserva'))
+  await fireEvent.press(button('Sí, cancelar la reserva'))
 
   await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(2))
 
@@ -198,9 +198,9 @@ test('con monedas distintas se muestran dos reembolsos y no una suma', async () 
     ),
   )
 
-  renderDetail()
+  await renderDetail()
   await waitFor(() => expect(button('Cancelar reserva')).toBeTruthy())
-  fireEvent.press(button('Cancelar reserva'))
+  await fireEvent.press(button('Cancelar reserva'))
 
   await waitFor(() => expect(screen.getByText(/Son dos monedas distintas/)).toBeTruthy())
   expect(screen.getByText(/cargo de cancelación/)).toBeTruthy()
@@ -232,9 +232,9 @@ test('un pasaje sin reembolso confirmado se muestra como sin confirmar', async (
     ),
   )
 
-  renderDetail()
+  await renderDetail()
   await waitFor(() => expect(button('Cancelar reserva')).toBeTruthy())
-  fireEvent.press(button('Cancelar reserva'))
+  await fireEvent.press(button('Cancelar reserva'))
 
   await waitFor(() => expect(screen.getByText('Sin confirmar')).toBeTruthy())
   // "No informado" no se muestra como cero.
@@ -252,7 +252,7 @@ test('un reembolso pendiente no se anuncia como completado', async () => {
     ),
   )
 
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(screen.getByText('Reembolso en proceso')).toBeTruthy())
   expect(screen.queryByText('Cancelación completada')).toBeNull()
@@ -267,7 +267,7 @@ test('una cancelación fallida dice que la reserva sigue vigente', async () => {
     ),
   )
 
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(screen.getByText('No se pudo cancelar')).toBeTruthy())
   expect(screen.getByText(/tu reserva sigue vigente/)).toBeTruthy()
@@ -276,7 +276,7 @@ test('una cancelación fallida dice que la reserva sigue vigente', async () => {
 test('mientras la cancelación está en curso no se ofrece cancelar de nuevo', async () => {
   mockGet.mockResolvedValue(ok(confirmed({ status: 'CANCELLING' })))
 
-  renderDetail()
+  await renderDetail()
 
   await waitFor(() => expect(screen.getByText('Cancelación en proceso')).toBeTruthy())
   expect(screen.queryByRole('button', { name: 'Cancelar reserva' })).toBeNull()
@@ -286,13 +286,13 @@ test('un presupuesto vencido se explica y no cancela nada', async () => {
   mockGet.mockResolvedValue(ok(confirmed()))
   mockPost.mockResolvedValueOnce(ok(quote()))
 
-  renderDetail()
+  await renderDetail()
   await waitFor(() => expect(button('Cancelar reserva')).toBeTruthy())
-  fireEvent.press(button('Cancelar reserva'))
+  await fireEvent.press(button('Cancelar reserva'))
   await waitFor(() => expect(button('Sí, cancelar la reserva')).toBeTruthy())
 
   mockPost.mockRejectedValueOnce(httpError(409, { errorCode: 'CANCELLATION_QUOTE_EXPIRED' }))
-  fireEvent.press(button('Sí, cancelar la reserva'))
+  await fireEvent.press(button('Sí, cancelar la reserva'))
 
   // El mensaje aparece en el panel y en el aviso del pie: lo que importa es que se explique y que no se
   // haya cancelado nada.
@@ -304,9 +304,9 @@ test('si el operador no publicó política el backend lo explica', async () => {
   mockGet.mockResolvedValue(ok(confirmed()))
   mockPost.mockRejectedValueOnce(httpError(409, { errorCode: 'CANCELLATION_POLICY_MISSING' }))
 
-  renderDetail()
+  await renderDetail()
   await waitFor(() => expect(button('Cancelar reserva')).toBeTruthy())
-  fireEvent.press(button('Cancelar reserva'))
+  await fireEvent.press(button('Cancelar reserva'))
 
   await waitFor(() => expect(screen.getByText(/no publicó una política de cancelación/)).toBeTruthy())
 })

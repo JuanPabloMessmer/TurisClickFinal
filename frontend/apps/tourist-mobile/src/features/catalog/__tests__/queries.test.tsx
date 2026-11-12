@@ -50,7 +50,7 @@ describe('endpoints públicos del catálogo', () => {
   it('useCategories pega al endpoint público nuevo', async () => {
     mockGet.mockResolvedValue({ data: [{ id: 'c1', name: 'Aventura' }] })
 
-    const { result } = renderHook(() => useCategories(), { wrapper: createWrapper() })
+    const { result } = await renderHook(() => useCategories(), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/api/categories')
@@ -58,7 +58,7 @@ describe('endpoints públicos del catálogo', () => {
   })
 
   it('useCities pide solo destinos de tipo CITY, que es a lo que cuelgan los productos', async () => {
-    const { result } = renderHook(() => useCities(), { wrapper: createWrapper() })
+    const { result } = await renderHook(() => useCities(), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/api/destinations', { params: { type: 'CITY' } })
@@ -67,7 +67,7 @@ describe('endpoints públicos del catálogo', () => {
   it('useExperiences manda los filtros como query params', async () => {
     mockGet.mockResolvedValue({ data: { items: [], page: 1, pageSize: 20, totalCount: 0 } })
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useExperiences({ destinationId: 'd1', categoryId: 'c1', pageSize: 20 }),
       { wrapper: createWrapper() },
     )
@@ -81,7 +81,7 @@ describe('endpoints públicos del catálogo', () => {
   it('usePackages usa su propio endpoint, no el de experiencias', async () => {
     mockGet.mockResolvedValue({ data: { items: [] } })
 
-    const { result } = renderHook(() => usePackages({ destinationId: 'd1' }), { wrapper: createWrapper() })
+    const { result } = await renderHook(() => usePackages({ destinationId: 'd1' }), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/api/packages', { params: { destinationId: 'd1' } })
@@ -90,8 +90,8 @@ describe('endpoints públicos del catálogo', () => {
   it('useExperience y su disponibilidad son dos requests distintas', async () => {
     mockGet.mockResolvedValue({ data: {} })
 
-    const detail = renderHook(() => useExperience('e1'), { wrapper: createWrapper() })
-    const availability = renderHook(() => useExperienceAvailability('e1'), { wrapper: createWrapper() })
+    const detail = await renderHook(() => useExperience('e1'), { wrapper: createWrapper() })
+    const availability = await renderHook(() => useExperienceAvailability('e1'), { wrapper: createWrapper() })
 
     await waitFor(() => expect(detail.result.current.isSuccess).toBe(true))
     await waitFor(() => expect(availability.result.current.isSuccess).toBe(true))
@@ -101,7 +101,7 @@ describe('endpoints públicos del catálogo', () => {
   })
 
   it('no dispara la request si todavía no hay id en la ruta', async () => {
-    const { result } = renderHook(() => usePackage(''), { wrapper: createWrapper() })
+    const { result } = await renderHook(() => usePackage(''), { wrapper: createWrapper() })
 
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockGet).not.toHaveBeenCalled()
@@ -110,7 +110,7 @@ describe('endpoints públicos del catálogo', () => {
   it('deja el error disponible para que la pantalla lo muestre', async () => {
     mockGet.mockRejectedValue(new Error('500'))
 
-    const { result } = renderHook(() => useExperiences({}), { wrapper: createWrapper() })
+    const { result } = await renderHook(() => useExperiences({}), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.error).toBeInstanceOf(Error)
@@ -125,7 +125,7 @@ describe('scroll infinito', () => {
   it('pide la página siguiente y acumula los resultados', async () => {
     mockGet.mockResolvedValueOnce(page(1, 3)).mockResolvedValueOnce(page(2, 3))
 
-    const { result, rerender } = renderHook(() => useInfiniteExperiences({ pageSize: 10 }), {
+    const { result, rerender } = await renderHook(() => useInfiniteExperiences({ pageSize: 10 }), {
       wrapper: createWrapper(),
     })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -135,7 +135,7 @@ describe('scroll infinito', () => {
       await result.current.fetchNextPage()
     })
     // Sin un render nuevo, `result.current` sigue siendo el snapshot previo a la segunda página.
-    rerender(undefined)
+    await rerender(undefined)
 
     expect(mockGet).toHaveBeenLastCalledWith('/api/experiences', { params: { pageSize: 10, page: 2 } })
     expect(result.current.data?.pages.flatMap((p) => p.items ?? [])).toHaveLength(2)
@@ -144,7 +144,7 @@ describe('scroll infinito', () => {
   it('sabe que no hay más cuando la página actual es la última', async () => {
     mockGet.mockResolvedValue(page(1, 1))
 
-    const { result } = renderHook(() => useInfiniteExperiences({ pageSize: 10 }), { wrapper: createWrapper() })
+    const { result } = await renderHook(() => useInfiniteExperiences({ pageSize: 10 }), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.hasNextPage).toBe(false)
@@ -153,7 +153,7 @@ describe('scroll infinito', () => {
   it('no pagina cuando no hay ningún resultado', async () => {
     mockGet.mockResolvedValue({ data: { items: [], page: 1, pageSize: 10, totalCount: 0, totalPages: 0 } })
 
-    const { result } = renderHook(() => useInfinitePackages({ pageSize: 10 }), { wrapper: createWrapper() })
+    const { result } = await renderHook(() => useInfinitePackages({ pageSize: 10 }), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.hasNextPage).toBe(false)
@@ -162,7 +162,7 @@ describe('scroll infinito', () => {
   it('los paquetes paginan contra su propio endpoint', async () => {
     mockGet.mockResolvedValue(page(1, 2))
 
-    const { result } = renderHook(() => useInfinitePackages({ destinationId: 'd1', pageSize: 10 }), { wrapper: createWrapper() })
+    const { result } = await renderHook(() => useInfinitePackages({ destinationId: 'd1', pageSize: 10 }), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/api/packages', {

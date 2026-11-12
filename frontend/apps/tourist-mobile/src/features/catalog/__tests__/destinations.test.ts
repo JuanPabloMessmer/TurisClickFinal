@@ -11,7 +11,7 @@ import {
  */
 
 describe('byPublishedContent', () => {
-  it('pone primero los destinos con más experiencias publicadas', () => {
+  it('pone primero los destinos con más experiencias publicadas', async () => {
     const sorted = byPublishedContent([
       { id: '1', name: 'Bermejo', publishedExperienceCount: 0 },
       { id: '2', name: 'La Paz', publishedExperienceCount: 12 },
@@ -21,7 +21,7 @@ describe('byPublishedContent', () => {
     expect(sorted.map((d) => d.name)).toEqual(['La Paz', 'Uyuni', 'Bermejo'])
   })
 
-  it('desempata alfabéticamente', () => {
+  it('desempata alfabéticamente', async () => {
     const sorted = byPublishedContent([
       { id: '1', name: 'Sucre', publishedExperienceCount: 2 },
       { id: '2', name: 'Oruro', publishedExperienceCount: 2 },
@@ -30,7 +30,7 @@ describe('byPublishedContent', () => {
     expect(sorted.map((d) => d.name)).toEqual(['Oruro', 'Sucre'])
   })
 
-  it('no esconde los destinos sin experiencias: podrían tener paquetes', () => {
+  it('no esconde los destinos sin experiencias: podrían tener paquetes', async () => {
     const sorted = byPublishedContent([
       { id: '1', name: 'Bermejo', publishedExperienceCount: 0 },
       { id: '2', name: 'La Paz', publishedExperienceCount: 5 },
@@ -39,13 +39,13 @@ describe('byPublishedContent', () => {
     expect(sorted).toHaveLength(2)
   })
 
-  it('trata el contador ausente como cero en vez de romperse', () => {
+  it('trata el contador ausente como cero en vez de romperse', async () => {
     const sorted = byPublishedContent([{ id: '1', name: 'Sin dato' }, { id: '2', name: 'Con dato', publishedExperienceCount: 1 }])
 
     expect(sorted[0].name).toBe('Con dato')
   })
 
-  it('no muta el array recibido', () => {
+  it('no muta el array recibido', async () => {
     const cities = [
       { id: '1', name: 'Bermejo', publishedExperienceCount: 0 },
       { id: '2', name: 'La Paz', publishedExperienceCount: 12 },
@@ -56,19 +56,19 @@ describe('byPublishedContent', () => {
     expect(cities[0].name).toBe('Bermejo')
   })
 
-  it('tolera que no haya datos todavía', () => {
+  it('tolera que no haya datos todavía', async () => {
     expect(byPublishedContent(undefined)).toEqual([])
     expect(byPublishedContent(null)).toEqual([])
   })
 })
 
 describe('experienceCountLabel', () => {
-  it('no dice "0 experiencias"', () => {
+  it('no dice "0 experiencias"', async () => {
     expect(experienceCountLabel(0)).toBeNull()
     expect(experienceCountLabel(undefined)).toBeNull()
   })
 
-  it('singulariza el 1', () => {
+  it('singulariza el 1', async () => {
     expect(experienceCountLabel(1)).toBe('1 experiencia')
     expect(experienceCountLabel(7)).toBe('7 experiencias')
   })
@@ -83,28 +83,28 @@ describe('contentCountLabel', () => {
     publishedPackageCount,
   })
 
-  it('nombra las dos cosas cuando hay de las dos', () => {
+  it('nombra las dos cosas cuando hay de las dos', async () => {
     expect(contentCountLabel(city(8, 2))).toBe('8 experiencias · 2 paquetes')
   })
 
-  it('nombra sólo lo que existe', () => {
+  it('nombra sólo lo que existe', async () => {
     expect(contentCountLabel(city(1, 0))).toBe('1 experiencia')
     expect(contentCountLabel(city(0, 1))).toBe('1 paquete')
   })
 
-  it('no dice nada cuando no hay nada publicado', () => {
+  it('no dice nada cuando no hay nada publicado', async () => {
     // Una ciudad vacía no muestra "0 experiencias": muestra sólo su nombre.
     expect(contentCountLabel(city(0, 0))).toBeNull()
   })
 })
 
 describe('hasPublishedContent', () => {
-  it('una ciudad que sólo vende paquetes cuenta como ciudad con contenido', () => {
+  it('una ciudad que sólo vende paquetes cuenta como ciudad con contenido', async () => {
     // El contador de experiencias es 0 y aun así hay algo que reservar: antes quedaba fuera del carrusel.
     expect(hasPublishedContent({ id: 'c1', name: 'Bermejo', type: 'CITY', publishedExperienceCount: 0, publishedPackageCount: 3 })).toBe(true)
   })
 
-  it('una ciudad sin nada publicado no se ofrece como destino a descubrir', () => {
+  it('una ciudad sin nada publicado no se ofrece como destino a descubrir', async () => {
     expect(hasPublishedContent({ id: 'c2', name: 'Cabezas', type: 'CITY', publishedExperienceCount: 0, publishedPackageCount: 0 })).toBe(false)
   })
 })

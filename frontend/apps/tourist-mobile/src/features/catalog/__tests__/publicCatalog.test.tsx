@@ -22,9 +22,9 @@ jest.mock('expo-router', () => ({
 
 let client = createTestQueryClient()
 
-function renderScreen(Screen: React.ComponentType) {
+async function renderScreen(Screen: React.ComponentType) {
   const Wrapper = withClient(client)
-  return render(
+  return await render(
     <Wrapper>
       <Screen />
     </Wrapper>,
@@ -45,13 +45,13 @@ it('detalle de experiencia: se ve sin sesión y "Elegir fecha" va a reservar sin
       ? ok([{ id: 's1', date: '2026-10-10', startTime: '09:00:00', availableSlots: 4 }])
       : ok({ id: 'e1', title: 'Tour Illimani', companyName: 'Andes Tours', price: 40, currency: 'USD', images: [] }),
   )
-  renderScreen(ExperienceDetailScreen)
+  await renderScreen(ExperienceDetailScreen)
 
   await waitFor(() => expect(screen.getByText('Tour Illimani')).toBeTruthy())
   await waitFor(() => expect(screen.getByRole('button', { name: 'Elegir fecha' }).props.accessibilityState).toMatchObject({ disabled: false }))
   expect(screen.queryByText('Reservas disponibles próximamente')).toBeNull()
 
-  fireEvent.press(screen.getByRole('button', { name: 'Elegir fecha' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Elegir fecha' }))
 
   expect(mockRouter.push).toHaveBeenCalledWith('/book/experience/e1')
   expect(mockRouter.push).not.toHaveBeenCalledWith('/(auth)/login')
@@ -62,7 +62,7 @@ it('detalle de paquete sin salidas: el CTA se deshabilita y lo dice', async () =
   mockGet.mockImplementation((url: string) =>
     url.endsWith('/availability') ? ok([]) : ok({ id: 'p1', title: 'Uyuni 3 días', durationDays: 3, price: 480, currency: 'USD', images: [], items: [] }),
   )
-  renderScreen(PackageDetailScreen)
+  await renderScreen(PackageDetailScreen)
 
   await waitFor(() => expect(screen.getByRole('button', { name: 'Sin salidas disponibles' })).toBeTruthy())
   expect(screen.getByRole('button', { name: 'Sin salidas disponibles' }).props.accessibilityState).toMatchObject({ disabled: true })

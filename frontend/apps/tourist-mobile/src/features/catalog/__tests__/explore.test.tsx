@@ -59,12 +59,12 @@ const app = () => (
 )
 
 async function applyFilters(labels: string[]) {
-  fireEvent.press(screen.getByLabelText(/^Filtros/))
+  await fireEvent.press(screen.getByLabelText(/^Filtros/))
   for (const label of labels) {
     await waitFor(() => expect(screen.getByText(label)).toBeTruthy())
-    fireEvent.press(screen.getByText(label))
+    await fireEvent.press(screen.getByText(label))
   }
-  fireEvent.press(screen.getByText('Ver resultados'))
+  await fireEvent.press(screen.getByText('Ver resultados'))
 }
 
 beforeEach(() => {
@@ -80,21 +80,21 @@ afterEach(() => client.clear())
 describe('filtros y cambios de sesión', () => {
   it('Tourist A aplica filtros → logout → Tourist B: Explorar arranca sin los filtros de A', async () => {
     mockedUseSession.mockReturnValue(touristSession('user-a'))
-    const { rerender } = render(app())
+    const { rerender } = await render(app())
 
-    fireEvent.press(screen.getByText('Paquetes'))
+    await fireEvent.press(screen.getByText('Paquetes'))
     await applyFilters(['La Paz', 'Naturaleza', 'Hasta 300'])
     await waitFor(() => expect(screen.getByLabelText('Filtros, 3 aplicados')).toBeTruthy())
     expect(lastSearch('/api/packages')).toMatchObject({ destinationId: 'city-lpz', categoryId: 'cat-nat', priceMax: 300 })
 
     // Logout
     mockedUseSession.mockReturnValue(guestSession())
-    rerender(app())
+    await rerender(app())
     await waitFor(() => expect(screen.getByLabelText('Filtros')).toBeTruthy())
 
     // Tourist B
     mockedUseSession.mockReturnValue(touristSession('user-b', 'Bruno Mamani'))
-    rerender(app())
+    await rerender(app())
 
     await waitFor(() => expect(screen.getByLabelText('Filtros')).toBeTruthy())
     expect(screen.queryByLabelText(/aplicados/)).toBeNull()
@@ -110,14 +110,14 @@ describe('filtros y cambios de sesión', () => {
 
   it('mientras la sesión no cambia, los filtros se conservan (ej. ir a un detalle y volver)', async () => {
     mockedUseSession.mockReturnValue(touristSession('user-a'))
-    const { rerender } = render(app())
+    const { rerender } = await render(app())
     await applyFilters(['Santa Cruz', 'Gastronomía'])
     await waitFor(() => expect(screen.getByLabelText('Filtros, 2 aplicados')).toBeTruthy())
 
     // La tab queda montada al abrir un detalle; al volver solo hay re-renders con la misma sesión.
     mockedUseSession.mockReturnValue(touristSession('user-a'))
-    rerender(app())
-    rerender(app())
+    await rerender(app())
+    await rerender(app())
 
     expect(screen.getByLabelText('Filtros, 2 aplicados')).toBeTruthy()
     // El badge refleja el estado de inmediato; la búsqueda la dispara TanStack después: se espera.
@@ -128,12 +128,12 @@ describe('filtros y cambios de sesión', () => {
 
   it('un invitado que filtra y después inicia sesión conserva sus filtros (no hay otra persona involucrada)', async () => {
     mockedUseSession.mockReturnValue(guestSession())
-    const { rerender } = render(app())
+    const { rerender } = await render(app())
     await applyFilters(['La Paz'])
     await waitFor(() => expect(screen.getByLabelText('Filtros, 1 aplicados')).toBeTruthy())
 
     mockedUseSession.mockReturnValue(touristSession('user-a'))
-    rerender(app())
+    await rerender(app())
 
     await waitFor(() => expect(screen.getByLabelText('Filtros, 1 aplicados')).toBeTruthy())
   })
@@ -143,7 +143,7 @@ describe('combinación de filtros (contrato real del backend)', () => {
   beforeEach(() => mockedUseSession.mockReturnValue(guestSession()))
 
   it('experiencias: filtros de dimensiones distintas viajan juntos en una sola búsqueda', async () => {
-    render(app())
+    await render(app())
 
     await applyFilters(['La Paz', 'Naturaleza', 'Hasta 300', 'Con cupo desde hoy'])
 
@@ -157,8 +157,8 @@ describe('combinación de filtros (contrato real del backend)', () => {
   })
 
   it('paquetes: destino + categoría + precio + duración viajan juntos', async () => {
-    render(app())
-    fireEvent.press(screen.getByText('Paquetes'))
+    await render(app())
+    await fireEvent.press(screen.getByText('Paquetes'))
 
     await applyFilters(['Santa Cruz', 'Gastronomía', 'Hasta 600', '4 a 7 días'])
 
@@ -173,7 +173,7 @@ describe('combinación de filtros (contrato real del backend)', () => {
   })
 
   it('dentro de una MISMA dimensión la selección es única: elegir otro destino reemplaza al anterior', async () => {
-    render(app())
+    await render(app())
     await applyFilters(['La Paz'])
     await waitFor(() => expect(lastSearch('/api/experiences')).toMatchObject({ destinationId: 'city-lpz' }))
 
@@ -198,11 +198,11 @@ describe('acceso rápido a destinos desde Inicio', () => {
         <HomeScreen />
       </Wrapper>
     )
-    render(<Home />)
+    await render(<Home />)
     await waitFor(() => expect(screen.getByLabelText('Explorar La Paz, 12 experiencias · 2 paquetes')).toBeTruthy())
 
-    fireEvent.press(screen.getByLabelText('Explorar La Paz, 12 experiencias · 2 paquetes'))
-    fireEvent.press(screen.getByLabelText('Explorar La Paz, 12 experiencias · 2 paquetes'))
+    await fireEvent.press(screen.getByLabelText('Explorar La Paz, 12 experiencias · 2 paquetes'))
+    await fireEvent.press(screen.getByLabelText('Explorar La Paz, 12 experiencias · 2 paquetes'))
 
     expect(mockPush).toHaveBeenCalledTimes(2)
     const [first, second] = mockPush.mock.calls.map(([href]) => href as { pathname: string; params: Record<string, string> })
@@ -213,12 +213,12 @@ describe('acceso rápido a destinos desde Inicio', () => {
 
   it('destino A y luego destino B con Explorar ya montada: reemplaza por B, sin acumular', async () => {
     mockParams = { destinationId: 'city-lpz', shortcutAt: 't1' }
-    const { rerender } = render(app())
+    const { rerender } = await render(app())
     await waitFor(() => expect(lastSearch('/api/experiences')).toMatchObject({ destinationId: 'city-lpz' }))
     expect(screen.getByLabelText('Filtros, 1 aplicados')).toBeTruthy()
 
     mockParams = { destinationId: 'city-scz', shortcutAt: 't2' }
-    rerender(app())
+    await rerender(app())
 
     await waitFor(() => expect(lastSearch('/api/experiences')).toMatchObject({ destinationId: 'city-scz' }))
     expect(screen.getByLabelText('Filtros, 1 aplicados')).toBeTruthy()
@@ -227,12 +227,12 @@ describe('acceso rápido a destinos desde Inicio', () => {
 
   it('el acceso rápido es una búsqueda nueva: descarta los demás filtros para no mezclar búsquedas', async () => {
     mockParams = { destinationId: 'city-lpz', shortcutAt: 't1' }
-    const { rerender } = render(app())
+    const { rerender } = await render(app())
     await applyFilters(['Naturaleza', 'Hasta 300', 'Con cupo desde hoy'])
     await waitFor(() => expect(screen.getByLabelText('Filtros, 4 aplicados')).toBeTruthy())
 
     mockParams = { destinationId: 'city-scz', shortcutAt: 't2' }
-    rerender(app())
+    await rerender(app())
 
     await waitFor(() => expect(screen.getByLabelText('Filtros, 1 aplicados')).toBeTruthy())
     await waitFor(() =>
@@ -247,25 +247,25 @@ describe('acceso rápido a destinos desde Inicio', () => {
 
   it('tocar OTRA VEZ el mismo destino lo reaplica aunque se hubiera cambiado desde el panel', async () => {
     mockParams = { destinationId: 'city-lpz', shortcutAt: 't1' }
-    const { rerender } = render(app())
+    const { rerender } = await render(app())
     await applyFilters(['Santa Cruz'])
     await waitFor(() => expect(lastSearch('/api/experiences')).toMatchObject({ destinationId: 'city-scz' }))
 
     mockParams = { destinationId: 'city-lpz', shortcutAt: 't2' }
-    rerender(app())
+    await rerender(app())
 
     await waitFor(() => expect(lastSearch('/api/experiences')).toMatchObject({ destinationId: 'city-lpz' }))
   })
 
   it('sin un toque nuevo, los re-renders conservan lo que se eligió dentro de Explorar', async () => {
     mockParams = { destinationId: 'city-lpz', shortcutAt: 't1' }
-    const { rerender } = render(app())
+    const { rerender } = await render(app())
     await applyFilters(['Naturaleza'])
     await waitFor(() => expect(screen.getByLabelText('Filtros, 2 aplicados')).toBeTruthy())
 
     // Mismos params (ej. volver de un detalle): no es un toque nuevo.
-    rerender(app())
-    rerender(app())
+    await rerender(app())
+    await rerender(app())
 
     expect(screen.getByLabelText('Filtros, 2 aplicados')).toBeTruthy()
     await waitFor(() => expect(lastSearch('/api/experiences')).toMatchObject({ destinationId: 'city-lpz', categoryId: 'cat-nat' }))
@@ -274,16 +274,16 @@ describe('acceso rápido a destinos desde Inicio', () => {
   it('el reset por cambio de usuario sigue funcionando y no reaplica un destino viejo', async () => {
     mockedUseSession.mockReturnValue(touristSession('user-a'))
     mockParams = { destinationId: 'city-lpz', shortcutAt: 't1' }
-    const { rerender } = render(app())
+    const { rerender } = await render(app())
     await waitFor(() => expect(screen.getByLabelText('Filtros, 1 aplicados')).toBeTruthy())
 
     // Logout: los params de la tab siguen teniendo el acceso rápido viejo, pero no es un toque nuevo.
     mockedUseSession.mockReturnValue(guestSession())
-    rerender(app())
+    await rerender(app())
     await waitFor(() => expect(screen.getByLabelText('Filtros')).toBeTruthy())
 
     mockedUseSession.mockReturnValue(touristSession('user-b', 'Bruno Mamani'))
-    rerender(app())
+    await rerender(app())
 
     await waitFor(() => expect(screen.getByLabelText('Filtros')).toBeTruthy())
     await waitFor(() => expect(lastSearch('/api/experiences')).toMatchObject({ destinationId: undefined }))
