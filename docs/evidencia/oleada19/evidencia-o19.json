@@ -1,0 +1,1960 @@
+{
+ "generado": "2026-11-09 22:04:00",
+ "api": "http://localhost:5299",
+ "paquete": "683510e6-a238-45ed-86a1-c49292af8bf3",
+ "reserva": "ceed5932-012f-42c1-a177-201b00b8d61b",
+ "empresa": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1",
+ "resultados": [
+  {
+   "id": "T-01",
+   "prueba": "Cotizar el vuelo del paquete desde VVI (UC-T-23)",
+   "resultado": "APROBADA",
+   "detalle": "HTTP 200 · 3 ofertas"
+  },
+  {
+   "id": "T-02",
+   "prueba": "Un origen NO permitido se rechaza (UC-P-15)",
+   "resultado": "APROBADA",
+   "detalle": "HTTP 400"
+  },
+  {
+   "id": "T-03",
+   "prueba": "Revalidar la cotización (UC-T-20)",
+   "resultado": "APROBADA",
+   "detalle": "HTTP 200 · outcome=UNCHANGED"
+  },
+  {
+   "id": "T-04",
+   "prueba": "Reservar paquete + vuelo en una operación (UC-T-21)",
+   "resultado": "APROBADA",
+   "detalle": "HTTP 201 · vuelo=PENDING"
+  },
+  {
+   "id": "T-05",
+   "prueba": "La misma cotización no crea una segunda reserva",
+   "resultado": "APROBADA",
+   "detalle": "devuelve la misma"
+  },
+  {
+   "id": "T-06",
+   "prueba": "REGRESION BUG-10: el paquete con vuelo SI se cobra",
+   "resultado": "APROBADA",
+   "detalle": "HTTP 200 · paymentApproved=True"
+  },
+  {
+   "id": "T-07",
+   "prueba": "La reserva queda CONFIRMED (UC-SYS-07)",
+   "resultado": "APROBADA",
+   "detalle": "status=CONFIRMED · vuelo=CONFIRMED"
+  },
+  {
+   "id": "T-08",
+   "prueba": "La búsqueda devuelve el paquete que cubre VVI -> LPB",
+   "resultado": "APROBADA",
+   "detalle": "2 paquete(s) en la ruta"
+  },
+  {
+   "id": "T-09",
+   "prueba": "Presupuesto de cancelación por componente (UC-T-22)",
+   "resultado": "APROBADA",
+   "detalle": "componentes=['FLIGHT', 'PACKAGE']"
+  },
+  {
+   "id": "T-10",
+   "prueba": "Cancelación ejecutada (UC-T-11)",
+   "resultado": "APROBADA",
+   "detalle": "HTTP 200 · estado=COMPLETED"
+  },
+  {
+   "id": "T-11",
+   "prueba": "Libro de pagos del administrador (UC-A-10)",
+   "resultado": "APROBADA",
+   "detalle": "HTTP 200"
+  },
+  {
+   "id": "T-12",
+   "prueba": "B-04: vuelos de operador responden 501 FEATURE_NOT_AVAILABLE",
+   "resultado": "APROBADA",
+   "detalle": "operador=501 · admin=501"
+  },
+  {
+   "id": "T-13",
+   "prueba": "Empresa suspendida: reservar con un id conocido da 404 (UC-A-08)",
+   "resultado": "APROBADA",
+   "detalle": "suspend=200 · reserva=404"
+  }
+ ],
+ "evidencia": [
+  {
+   "ts": "2026-11-09 22:03:07",
+   "metodo": "POST",
+   "path": "/api/auth/login",
+   "status": 200,
+   "respuesta": {
+    "accessToken": "<JWT redactado>",
+    "refreshToken": "<token de refresco redactado>",
+    "expiresAtUtc": "2026-11-10T02:18:07.6569922Z",
+    "user": {
+     "id": "3f219c0b-37ba-4c95-8d8a-bcf892c5dfb2",
+     "firstName": "Admin",
+     "lastName": "TurisClick",
+     "fullName": "Admin TurisClick",
+     "email": "admin@turisclick.dev",
+     "role": "ADMIN",
+     "mustChangePassword": false,
+     "companyId": null
+    }
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:09",
+   "metodo": "GET",
+   "path": "/api/destinations?type=CITY",
+   "status": 200,
+   "respuesta": [
+    {
+     "id": "dee71310-736b-478a-b815-f99a5096ccd4",
+     "name": "Bermejo",
+     "type": "CITY",
+     "parentId": "d8a8dddc-8984-4467-b9de-29c89ebbfca3",
+     "parentName": "Tarija",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "9b4a8e21-1b53-4d79-bd64-87404a5a532a",
+     "name": "Cabezas",
+     "type": "CITY",
+     "parentId": "406eccdf-b944-489c-9354-caa498631aba",
+     "parentName": "Santa Cruz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "0b1654b1-bb0b-4db8-86c5-084d382f624a",
+     "name": "Camiri",
+     "type": "CITY",
+     "parentId": "406eccdf-b944-489c-9354-caa498631aba",
+     "parentName": "Santa Cruz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "7be77e91-cd0d-44f3-9aff-21c93dfe35c0",
+     "name": "Caranavi",
+     "type": "CITY",
+     "parentId": "5a76c43a-d71f-4c05-9486-268c5af8bc7e",
+     "parentName": "La Paz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "14519850-816a-462b-928b-1b0e14a012a0",
+     "name": "Cobija",
+     "type": "CITY",
+     "parentId": "c0ba7e93-81cc-4193-9efa-4484154c566d",
+     "parentName": "Pando",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "db6e13a7-0abb-4516-8f2b-a4f5c2694081",
+     "name": "Cochabamba",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "6013d676-845d-4ddc-95ff-bfdc0aeb4a57",
+     "name": "Colcapirhua",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "7a05b964-363f-4811-beb6-f5ac646b537f",
+     "name": "Cotoca",
+     "type": "CITY",
+     "parentId": "406eccdf-b944-489c-9354-caa498631aba",
+     "parentName": "Santa Cruz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "31d244f8-71f9-49a1-924d-9080241c247a",
+     "name": "El Alto",
+     "type": "CITY",
+     "parentId": "5a76c43a-d71f-4c05-9486-268c5af8bc7e",
+     "parentName": "La Paz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "8acd8775-6217-46de-8523-e22ca3e27d9d",
+     "name": "Guayaramerín",
+     "type": "CITY",
+     "parentId": "15bd3c6e-07af-4e77-87df-b85270e73052",
+     "parentName": "El Beni",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "3fc6ba5d-3a10-4fec-a135-f63cd456cb1a",
+     "name": "Ivirgarzama",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "2f8a5681-bd66-4dfc-b7b2-ee6558ef9b6a",
+     "name": "La Paz",
+     "type": "CITY",
+     "parentId": "5a76c43a-d71f-4c05-9486-268c5af8bc7e",
+     "parentName": "La Paz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 1
+    },
+    {
+     "id": "24ec9594-ee06-4456-9818-11dd57f2b3e5",
+     "name": "Mizque",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "9a6e0b9f-201f-443d-b90a-a21a3db994d8",
+     "name": "Montero",
+     "type": "CITY",
+     "parentId": "406eccdf-b944-489c-9354-caa498631aba",
+     "parentName": "Santa Cruz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "4c4d5b71-8b56-4493-a72e-f6dd53f417e0",
+     "name": "Oruro",
+     "type": "CITY",
+     "parentId": "04639dc0-95d9-4e01-a545-6345aaff8eee",
+     "parentName": "Oruro",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "fc343fd9-77b4-4807-9595-d605c34d879b",
+     "name": "Pocoata",
+     "type": "CITY",
+     "parentId": "8bb4b6c2-5087-45c3-a3e4-dab0e46ccdf8",
+     "parentName": "Potosí",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "3d5c1537-d6d9-43a9-8354-469114a224a6",
+     "name": "Potosí",
+     "type": "CITY",
+     "parentId": "8bb4b6c2-5087-45c3-a3e4-dab0e46ccdf8",
+     "parentName": "Potosí",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "b24d05ba-ee8e-4cd7-b7c2-58ee1118cb38",
+     "name": "Puerto Villarroel",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "014e9512-dfd6-4577-9cee-6ddac19c827d",
+     "name": "Quillacollo",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "35032634-eb0c-4877-83b5-119535a34d4b",
+     "name": "Riberalta",
+     "type": "CITY",
+     "parentId": "15bd3c6e-07af-4e77-87df-b85270e73052",
+     "parentName": "El Beni",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "242d509e-d069-4aac-9e79-912ed852bd02",
+     "name": "Sacaba",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "de8f5516-054f-4358-aa0f-f986bedb6256",
+     "name": "San Ignacio de Velasco",
+     "type": "CITY",
+     "parentId": "406eccdf-b944-489c-9354-caa498631aba",
+     "parentName": "Santa Cruz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "e15c15c6-47a9-4673-8afe-7afcbd6bc897",
+     "name": "San Joaquín",
+     "type": "CITY",
+     "parentId": "15bd3c6e-07af-4e77-87df-b85270e73052",
+     "parentName": "El Beni",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "ba63a527-841c-4dd8-9716-e10ef2d4ae41",
+     "name": "San Lucas",
+     "type": "CITY",
+     "parentId": "aa394191-0257-42f4-9910-ec69c19d9092",
+     "parentName": "Chuquisaca",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "892b010f-1551-4074-8d06-4c646032d2e4",
+     "name": "Santa Cruz de la Sierra",
+     "type": "CITY",
+     "parentId": "406eccdf-b944-489c-9354-caa498631aba",
+     "parentName": "Santa Cruz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "ae00e3bd-b9e4-43bd-aafa-035071e58c9b",
+     "name": "Santiago del Torno",
+     "type": "CITY",
+     "parentId": "406eccdf-b944-489c-9354-caa498631aba",
+     "parentName": "Santa Cruz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "358f3f5b-da2b-489a-9300-2c99906b3319",
+     "name": "Sipe Sipe",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "a60d3a2b-7663-4f12-9612-2d9629517495",
+     "name": "Sucre",
+     "type": "CITY",
+     "parentId": "aa394191-0257-42f4-9910-ec69c19d9092",
+     "parentName": "Chuquisaca",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "d6077dcd-5393-44d5-a287-1db17d69b17f",
+     "name": "Tarija",
+     "type": "CITY",
+     "parentId": "d8a8dddc-8984-4467-b9de-29c89ebbfca3",
+     "parentName": "Tarija",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "73d91628-8948-4d60-9dc5-444e727a67ae",
+     "name": "Tiquipaya",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "b25e6ed7-aef9-41bb-9d1d-a860ae252dfb",
+     "name": "Trinidad",
+     "type": "CITY",
+     "parentId": "15bd3c6e-07af-4e77-87df-b85270e73052",
+     "parentName": "El Beni",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "275bb5c8-bd8a-473e-927e-5521cc38caa8",
+     "name": "Tupiza",
+     "type": "CITY",
+     "parentId": "8bb4b6c2-5087-45c3-a3e4-dab0e46ccdf8",
+     "parentName": "Potosí",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "25237c18-8b4e-435f-b6cd-d6806629b16e",
+     "name": "Uyuni",
+     "type": "CITY",
+     "parentId": "8bb4b6c2-5087-45c3-a3e4-dab0e46ccdf8",
+     "parentName": "Potosí",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "79c90790-a0af-45a6-a169-d94cc7b78f5b",
+     "name": "Viacha",
+     "type": "CITY",
+     "parentId": "5a76c43a-d71f-4c05-9486-268c5af8bc7e",
+     "parentName": "La Paz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "6cbd4cd9-8d2c-4fdd-ab1f-116f76ab5251",
+     "name": "Villa Tunari",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "fc7101fc-7091-481a-9667-89e24f920ce5",
+     "name": "Villa Yapacaní",
+     "type": "CITY",
+     "parentId": "406eccdf-b944-489c-9354-caa498631aba",
+     "parentName": "Santa Cruz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "3a03f591-81c0-483c-906a-fd345809c2e1",
+     "name": "Villamontes",
+     "type": "CITY",
+     "parentId": "d8a8dddc-8984-4467-b9de-29c89ebbfca3",
+     "parentName": "Tarija",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "6accbef3-7281-4cdc-babb-e4ef49ced9ce",
+     "name": "Villazón",
+     "type": "CITY",
+     "parentId": "8bb4b6c2-5087-45c3-a3e4-dab0e46ccdf8",
+     "parentName": "Potosí",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "c547f527-b47a-4601-b3f9-93ec6797a701",
+     "name": "Vinto",
+     "type": "CITY",
+     "parentId": "3167afe5-8fcc-4bcb-aacd-0591102a13aa",
+     "parentName": "Cochabamba",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "1c7da314-635e-405c-86b1-53d6399e94d6",
+     "name": "Warnes",
+     "type": "CITY",
+     "parentId": "406eccdf-b944-489c-9354-caa498631aba",
+     "parentName": "Santa Cruz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "2d60435a-ab00-49cd-af27-05ea6141b1fe",
+     "name": "Yacuiba",
+     "type": "CITY",
+     "parentId": "d8a8dddc-8984-4467-b9de-29c89ebbfca3",
+     "parentName": "Tarija",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    },
+    {
+     "id": "fcd39a56-b5a2-45e5-bf85-b4dcfab431cb",
+     "name": "Yapacani",
+     "type": "CITY",
+     "parentId": "406eccdf-b944-489c-9354-caa498631aba",
+     "parentName": "Santa Cruz",
+     "imageUrl": null,
+     "publishedExperienceCount": 0,
+     "publishedPackageCount": 0
+    }
+   ]
+  },
+  {
+   "ts": "2026-11-09 22:03:11",
+   "metodo": "POST",
+   "path": "/api/admin/provider-accounts",
+   "status": 201,
+   "respuesta": {
+    "company": {
+     "id": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1",
+     "name": "TurisClick QA — PRUEBA TECNICA 276185",
+     "status": "APPROVED"
+    },
+    "userId": "26b4573d-1355-4497-bd57-1b076f3181b6",
+    "email": "qa.operador.276185@turisclick.dev",
+    "fullName": "Operador QA",
+    "temporaryPassword": "<contrasena generada, redactada>",
+    "mustChangePassword": true
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:13",
+   "metodo": "POST",
+   "path": "/api/auth/login",
+   "status": 200,
+   "respuesta": {
+    "accessToken": "<JWT redactado>",
+    "refreshToken": "<token de refresco redactado>",
+    "expiresAtUtc": "2026-11-10T02:18:13.948351Z",
+    "user": {
+     "id": "26b4573d-1355-4497-bd57-1b076f3181b6",
+     "firstName": "Operador",
+     "lastName": "QA",
+     "fullName": "Operador QA",
+     "email": "qa.operador.276185@turisclick.dev",
+     "role": "PROVIDER",
+     "mustChangePassword": true,
+     "companyId": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1"
+    }
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:16",
+   "metodo": "POST",
+   "path": "/api/auth/change-password",
+   "status": 200,
+   "respuesta": {
+    "accessToken": "<JWT redactado>",
+    "refreshToken": "<token de refresco redactado>",
+    "expiresAtUtc": "2026-11-10T02:18:16.1402004Z",
+    "user": {
+     "id": "26b4573d-1355-4497-bd57-1b076f3181b6",
+     "firstName": "Operador",
+     "lastName": "QA",
+     "fullName": "Operador QA",
+     "email": "qa.operador.276185@turisclick.dev",
+     "role": "PROVIDER",
+     "mustChangePassword": false,
+     "companyId": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1"
+    }
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:18",
+   "metodo": "POST",
+   "path": "/api/packages",
+   "status": 201,
+   "respuesta": {
+    "id": "683510e6-a238-45ed-86a1-c49292af8bf3",
+    "companyId": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1",
+    "companyName": "TurisClick QA — PRUEBA TECNICA 276185",
+    "destinationId": "2f8a5681-bd66-4dfc-b7b2-ee6558ef9b6a",
+    "destinationName": "La Paz",
+    "title": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+    "description": "Paquete de prueba para validar la Oleada 19. No es oferta real.",
+    "conditionsText": null,
+    "durationDays": 3,
+    "price": 480.0,
+    "currency": "USD",
+    "status": "DRAFT",
+    "includesFlight": false,
+    "flightDestinationIata": null,
+    "flightDestinationLabel": null,
+    "flightOrigins": [],
+    "cancellationPolicy": [
+     {
+      "minDaysBefore": 30,
+      "refundPercentage": 100
+     },
+     {
+      "minDaysBefore": 15,
+      "refundPercentage": 50
+     },
+     {
+      "minDaysBefore": 0,
+      "refundPercentage": 0
+     }
+    ],
+    "flightRoundTrip": null,
+    "categories": [],
+    "images": [],
+    "items": [
+     {
+      "id": "67d4e306-5aaa-4b55-93c9-21810016b7c1",
+      "dayNumber": 1,
+      "sortOrder": 1,
+      "kind": "DESCRIPTIVE",
+      "experienceId": null,
+      "title": "Llegada",
+      "description": null
+     }
+    ],
+    "createdAt": "2026-11-10T02:03:18.202791+00:00",
+    "updatedAt": "2026-11-10T02:03:18.202791+00:00"
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:20",
+   "metodo": "POST",
+   "path": "/api/packages/683510e6-a238-45ed-86a1-c49292af8bf3/availability",
+   "status": 201,
+   "respuesta": {
+    "id": "d421919f-dd7a-48b4-9f4c-a413341dd1f7",
+    "packageId": "683510e6-a238-45ed-86a1-c49292af8bf3",
+    "departureDate": "2026-12-24",
+    "totalSlots": 1,
+    "reservedSlots": 0,
+    "availableSlots": 1,
+    "status": "OPEN"
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:22",
+   "metodo": "POST",
+   "path": "/api/packages/683510e6-a238-45ed-86a1-c49292af8bf3/publish",
+   "status": 200,
+   "respuesta": {
+    "id": "683510e6-a238-45ed-86a1-c49292af8bf3",
+    "companyId": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1",
+    "companyName": "TurisClick QA — PRUEBA TECNICA 276185",
+    "destinationId": "2f8a5681-bd66-4dfc-b7b2-ee6558ef9b6a",
+    "destinationName": "La Paz",
+    "title": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+    "description": "Paquete de prueba para validar la Oleada 19. No es oferta real.",
+    "conditionsText": null,
+    "durationDays": 3,
+    "price": 480.0,
+    "currency": "USD",
+    "status": "PUBLISHED",
+    "includesFlight": false,
+    "flightDestinationIata": null,
+    "flightDestinationLabel": null,
+    "flightOrigins": [],
+    "cancellationPolicy": [
+     {
+      "minDaysBefore": 30,
+      "refundPercentage": 100
+     },
+     {
+      "minDaysBefore": 15,
+      "refundPercentage": 50
+     },
+     {
+      "minDaysBefore": 0,
+      "refundPercentage": 0
+     }
+    ],
+    "flightRoundTrip": null,
+    "categories": [],
+    "images": [],
+    "items": [
+     {
+      "id": "67d4e306-5aaa-4b55-93c9-21810016b7c1",
+      "dayNumber": 1,
+      "sortOrder": 1,
+      "kind": "DESCRIPTIVE",
+      "experienceId": null,
+      "title": "Llegada",
+      "description": null
+     }
+    ],
+    "createdAt": "2026-11-10T02:03:18.202791+00:00",
+    "updatedAt": "2026-11-10T02:03:22.297307+00:00"
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:24",
+   "metodo": "PUT",
+   "path": "/api/packages/683510e6-a238-45ed-86a1-c49292af8bf3/flight-rule",
+   "status": 200,
+   "respuesta": {
+    "packageId": "683510e6-a238-45ed-86a1-c49292af8bf3",
+    "destinationIata": "LPB",
+    "destinationLabel": "La Paz (LPB)",
+    "allowedOrigins": [
+     {
+      "iata": "VVI",
+      "label": "Santa Cruz de la Sierra (VVI)"
+     }
+    ],
+    "cabinClass": "ECONOMY",
+    "outboundOffsetDays": 0,
+    "inboundOffsetDays": 0,
+    "roundTrip": true
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:26",
+   "metodo": "POST",
+   "path": "/api/auth/register",
+   "status": 201,
+   "respuesta": {
+    "accessToken": "<JWT redactado>",
+    "refreshToken": "<token de refresco redactado>",
+    "expiresAtUtc": "2026-11-10T02:18:26.4541747Z",
+    "user": {
+     "id": "3a5df1e4-d517-4892-8a94-dd44a05c1aef",
+     "firstName": "Turista",
+     "lastName": "QA",
+     "fullName": "Turista QA",
+     "email": "qa.turista.276185@turisclick.dev",
+     "role": "TOURIST",
+     "mustChangePassword": false,
+     "companyId": null
+    }
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:28",
+   "metodo": "POST",
+   "path": "/api/packages/683510e6-a238-45ed-86a1-c49292af8bf3/flight-quotes",
+   "status": 200,
+   "respuesta": {
+    "packageId": "683510e6-a238-45ed-86a1-c49292af8bf3",
+    "packageTitle": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+    "travelers": 1,
+    "packagePrice": {
+     "amount": 480.0,
+     "currency": "USD"
+    },
+    "originIata": "VVI",
+    "originLabel": "Santa Cruz de la Sierra (VVI)",
+    "destinationIata": "LPB",
+    "destinationLabel": "La Paz (LPB)",
+    "outboundDate": "2026-12-24",
+    "inboundDate": "2026-12-26",
+    "cabinClass": "ECONOMY",
+    "options": [
+     {
+      "quoteId": "59bdc3f6-579c-4678-b073-063209213b3c",
+      "flightPrice": {
+       "amount": 216.0,
+       "currency": "USD"
+      },
+      "combinedTotal": {
+       "amount": 696.0,
+       "currency": "USD"
+      },
+      "carrierName": "Fake Airways",
+      "carrierIata": "ZZ",
+      "expiresAt": "2026-11-10T02:23:28.5584373+00:00",
+      "slices": [
+       {
+        "originIata": "VVI",
+        "destinationIata": "LPB",
+        "durationMinutes": 75,
+        "stops": 0,
+        "segments": [
+         {
+          "originIata": "VVI",
+          "destinationIata": "LPB",
+          "departingAt": "2026-12-24T08:15:00",
+          "arrivingAt": "2026-12-24T09:30:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "100",
+          "checkedBags": 1
+         }
+        ]
+       },
+       {
+        "originIata": "LPB",
+        "destinationIata": "VVI",
+        "durationMinutes": 75,
+        "stops": 0,
+        "segments": [
+         {
+          "originIata": "LPB",
+          "destinationIata": "VVI",
+          "departingAt": "2026-12-26T08:15:00",
+          "arrivingAt": "2026-12-26T09:30:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "110",
+          "checkedBags": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "quoteId": "9a5d1810-e94e-474b-8ac5-a977eae7bec5",
+      "flightPrice": {
+       "amount": 279.0,
+       "currency": "USD"
+      },
+      "combinedTotal": {
+       "amount": 759.0,
+       "currency": "USD"
+      },
+      "carrierName": "Fake Airways",
+      "carrierIata": "ZZ",
+      "expiresAt": "2026-11-10T02:23:28.5584691+00:00",
+      "slices": [
+       {
+        "originIata": "VVI",
+        "destinationIata": "LPB",
+        "durationMinutes": 75,
+        "stops": 0,
+        "segments": [
+         {
+          "originIata": "VVI",
+          "destinationIata": "LPB",
+          "departingAt": "2026-12-24T12:15:00",
+          "arrivingAt": "2026-12-24T13:30:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "101",
+          "checkedBags": 0
+         }
+        ]
+       },
+       {
+        "originIata": "LPB",
+        "destinationIata": "VVI",
+        "durationMinutes": 75,
+        "stops": 0,
+        "segments": [
+         {
+          "originIata": "LPB",
+          "destinationIata": "VVI",
+          "departingAt": "2026-12-26T12:15:00",
+          "arrivingAt": "2026-12-26T13:30:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "111",
+          "checkedBags": 0
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "quoteId": "7947ea9a-02ca-42ee-92df-c7dffa2a15f5",
+      "flightPrice": {
+       "amount": 307.8,
+       "currency": "USD"
+      },
+      "combinedTotal": {
+       "amount": 787.8,
+       "currency": "USD"
+      },
+      "carrierName": "Fake Airways",
+      "carrierIata": "ZZ",
+      "expiresAt": "2026-11-10T02:23:28.558512+00:00",
+      "slices": [
+       {
+        "originIata": "VVI",
+        "destinationIata": "LPB",
+        "durationMinutes": 210,
+        "stops": 1,
+        "segments": [
+         {
+          "originIata": "VVI",
+          "destinationIata": "CBB",
+          "departingAt": "2026-12-24T16:15:00",
+          "arrivingAt": "2026-12-24T17:15:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "102",
+          "checkedBags": 1
+         },
+         {
+          "originIata": "CBB",
+          "destinationIata": "LPB",
+          "departingAt": "2026-12-24T18:50:00",
+          "arrivingAt": "2026-12-24T19:45:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "602",
+          "checkedBags": 1
+         }
+        ]
+       },
+       {
+        "originIata": "LPB",
+        "destinationIata": "VVI",
+        "durationMinutes": 210,
+        "stops": 1,
+        "segments": [
+         {
+          "originIata": "LPB",
+          "destinationIata": "CBB",
+          "departingAt": "2026-12-26T16:15:00",
+          "arrivingAt": "2026-12-26T17:10:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "112",
+          "checkedBags": 1
+         },
+         {
+          "originIata": "CBB",
+          "destinationIata": "VVI",
+          "departingAt": "2026-12-26T18:45:00",
+          "arrivingAt": "2026-12-26T19:45:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "612",
+          "checkedBags": 1
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "notice": null,
+    "testMode": true
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:30",
+   "metodo": "POST",
+   "path": "/api/packages/683510e6-a238-45ed-86a1-c49292af8bf3/flight-quotes",
+   "status": 400,
+   "respuesta": {
+    "title": "Solicitud inválida",
+    "status": 400,
+    "detail": "El operador no ofrece salida desde Cochabamba (CBB) para este paquete.",
+    "instance": "/api/packages/683510e6-a238-45ed-86a1-c49292af8bf3/flight-quotes",
+    "traceId": "00-08c9939b5781b6d089d44114e2dc7644-8ae321aff52f6fdc-00"
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:32",
+   "metodo": "POST",
+   "path": "/api/flight-quotes/59bdc3f6-579c-4678-b073-063209213b3c/revalidate",
+   "status": 200,
+   "respuesta": {
+    "quoteId": "59bdc3f6-579c-4678-b073-063209213b3c",
+    "outcome": "UNCHANGED",
+    "previousPrice": {
+     "amount": 216.0,
+     "currency": "USD"
+    },
+    "currentPrice": {
+     "amount": 216.0,
+     "currency": "USD"
+    },
+    "combinedTotal": {
+     "amount": 696.0,
+     "currency": "USD"
+    },
+    "expiresAt": "2026-11-10T02:23:32.7575081+00:00",
+    "message": "El precio del vuelo sigue vigente.",
+    "requiresAcceptance": false
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:35",
+   "metodo": "POST",
+   "path": "/api/reservations",
+   "status": 201,
+   "respuesta": {
+    "id": "ceed5932-012f-42c1-a177-201b00b8d61b",
+    "status": "PENDING_PAYMENT",
+    "expiresAt": "2026-11-10T02:33:34.905673+00:00",
+    "createdAt": "2026-11-10T02:03:34.905673+00:00",
+    "confirmedAt": null,
+    "cancelledAt": null,
+    "items": [
+     {
+      "id": "1486e989-1cec-4e81-b868-3abf33c2cb48",
+      "reservationId": "ceed5932-012f-42c1-a177-201b00b8d61b",
+      "reservationStatus": "PENDING_PAYMENT",
+      "productType": "PACKAGE",
+      "experienceId": null,
+      "experienceTitle": null,
+      "packageId": "683510e6-a238-45ed-86a1-c49292af8bf3",
+      "packageTitle": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+      "companyId": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1",
+      "companyName": "TurisClick QA — PRUEBA TECNICA 276185",
+      "touristId": "3a5df1e4-d517-4892-8a94-dd44a05c1aef",
+      "touristName": "",
+      "travelers": 1,
+      "unitPrice": 480.0,
+      "currency": "USD",
+      "subtotal": 480.0,
+      "status": "PENDING_PAYMENT",
+      "cancelledAt": null,
+      "cancellationReason": null,
+      "date": "2026-12-24",
+      "startTime": null,
+      "createdAt": "2026-11-10T02:03:34.905673+00:00",
+      "priceChanged": false,
+      "currentUnitPrice": null,
+      "currentCurrency": null,
+      "cancellationPolicy": [
+       {
+        "minDaysBefore": 30,
+        "refundPercentage": 100
+       },
+       {
+        "minDaysBefore": 15,
+        "refundPercentage": 50
+       },
+       {
+        "minDaysBefore": 0,
+        "refundPercentage": 0
+       }
+      ],
+      "refundedAmount": null,
+      "flight": null
+     }
+    ],
+    "totals": [
+     {
+      "currency": "USD",
+      "amount": 480.0
+     }
+    ],
+    "requiresPriceAcceptance": false,
+    "paymentApproved": null,
+    "paymentFailureReason": null,
+    "flight": {
+     "status": "PENDING",
+     "originIata": "VVI",
+     "originLabel": "Santa Cruz de la Sierra (VVI)",
+     "destinationIata": "LPB",
+     "destinationLabel": "La Paz (LPB)",
+     "outboundDate": "2026-12-24",
+     "inboundDate": "2026-12-26",
+     "travelers": 1,
+     "carrierIata": null,
+     "carrierName": null,
+     "outboundDepartureAt": null,
+     "outboundArrivalAt": null,
+     "outboundFlightNumber": null,
+     "inboundDepartureAt": null,
+     "inboundArrivalAt": null,
+     "inboundFlightNumber": null,
+     "bookingReference": null,
+     "price": {
+      "amount": 216.0,
+      "currency": "USD"
+     },
+     "itinerarySummary": "Fake Airways: VVI→LPB 24/12 08:15 (directo) · LPB→VVI 26/12 08:15 (directo)",
+     "statusMessage": "Falta confirmar el vuelo. Se reserva cuando confirmás y pagás.",
+     "inProgress": false,
+     "inventoryMode": "SIMULATED"
+    },
+    "requiresFlightPriceAcceptance": false,
+    "flightPreviousPrice": null,
+    "flightCurrentPrice": null,
+    "flightMessage": null,
+    "cancellation": null
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:37",
+   "metodo": "POST",
+   "path": "/api/reservations",
+   "status": 201,
+   "respuesta": {
+    "id": "ceed5932-012f-42c1-a177-201b00b8d61b",
+    "status": "PENDING_PAYMENT",
+    "expiresAt": "2026-11-10T02:33:34.905673+00:00",
+    "createdAt": "2026-11-10T02:03:34.905673+00:00",
+    "confirmedAt": null,
+    "cancelledAt": null,
+    "items": [
+     {
+      "id": "1486e989-1cec-4e81-b868-3abf33c2cb48",
+      "reservationId": "ceed5932-012f-42c1-a177-201b00b8d61b",
+      "reservationStatus": "PENDING_PAYMENT",
+      "productType": "PACKAGE",
+      "experienceId": null,
+      "experienceTitle": null,
+      "packageId": "683510e6-a238-45ed-86a1-c49292af8bf3",
+      "packageTitle": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+      "companyId": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1",
+      "companyName": "TurisClick QA — PRUEBA TECNICA 276185",
+      "touristId": "3a5df1e4-d517-4892-8a94-dd44a05c1aef",
+      "touristName": "",
+      "travelers": 1,
+      "unitPrice": 480.0,
+      "currency": "USD",
+      "subtotal": 480.0,
+      "status": "PENDING_PAYMENT",
+      "cancelledAt": null,
+      "cancellationReason": null,
+      "date": "2026-12-24",
+      "startTime": null,
+      "createdAt": "2026-11-10T02:03:34.905673+00:00",
+      "priceChanged": false,
+      "currentUnitPrice": null,
+      "currentCurrency": null,
+      "cancellationPolicy": [
+       {
+        "minDaysBefore": 30,
+        "refundPercentage": 100
+       },
+       {
+        "minDaysBefore": 15,
+        "refundPercentage": 50
+       },
+       {
+        "minDaysBefore": 0,
+        "refundPercentage": 0
+       }
+      ],
+      "refundedAmount": 0,
+      "flight": null
+     }
+    ],
+    "totals": [
+     {
+      "currency": "USD",
+      "amount": 480.0
+     }
+    ],
+    "requiresPriceAcceptance": false,
+    "paymentApproved": null,
+    "paymentFailureReason": null,
+    "flight": {
+     "status": "PENDING",
+     "originIata": "VVI",
+     "originLabel": "Santa Cruz de la Sierra (VVI)",
+     "destinationIata": "LPB",
+     "destinationLabel": "La Paz (LPB)",
+     "outboundDate": "2026-12-24",
+     "inboundDate": "2026-12-26",
+     "travelers": 1,
+     "carrierIata": null,
+     "carrierName": null,
+     "outboundDepartureAt": null,
+     "outboundArrivalAt": null,
+     "outboundFlightNumber": null,
+     "inboundDepartureAt": null,
+     "inboundArrivalAt": null,
+     "inboundFlightNumber": null,
+     "bookingReference": null,
+     "price": {
+      "amount": 216.0,
+      "currency": "USD"
+     },
+     "itinerarySummary": "Fake Airways: VVI→LPB 24/12 08:15 (directo) · LPB→VVI 26/12 08:15 (directo)",
+     "statusMessage": "Falta confirmar el vuelo. Se reserva cuando confirmás y pagás.",
+     "inProgress": false,
+     "inventoryMode": "SIMULATED"
+    },
+    "requiresFlightPriceAcceptance": false,
+    "flightPreviousPrice": null,
+    "flightCurrentPrice": null,
+    "flightMessage": null,
+    "cancellation": null
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:39",
+   "metodo": "POST",
+   "path": "/api/reservations/ceed5932-012f-42c1-a177-201b00b8d61b/pay",
+   "status": 200,
+   "respuesta": {
+    "id": "ceed5932-012f-42c1-a177-201b00b8d61b",
+    "status": "CONFIRMED",
+    "expiresAt": "2026-11-10T02:33:34.905673+00:00",
+    "createdAt": "2026-11-10T02:03:34.905673+00:00",
+    "confirmedAt": "2026-11-10T02:03:39.7596117+00:00",
+    "cancelledAt": null,
+    "items": [
+     {
+      "id": "1486e989-1cec-4e81-b868-3abf33c2cb48",
+      "reservationId": "ceed5932-012f-42c1-a177-201b00b8d61b",
+      "reservationStatus": "CONFIRMED",
+      "productType": "PACKAGE",
+      "experienceId": null,
+      "experienceTitle": null,
+      "packageId": "683510e6-a238-45ed-86a1-c49292af8bf3",
+      "packageTitle": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+      "companyId": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1",
+      "companyName": "TurisClick QA — PRUEBA TECNICA 276185",
+      "touristId": "3a5df1e4-d517-4892-8a94-dd44a05c1aef",
+      "touristName": "",
+      "travelers": 1,
+      "unitPrice": 480.0,
+      "currency": "USD",
+      "subtotal": 480.0,
+      "status": "CONFIRMED",
+      "cancelledAt": null,
+      "cancellationReason": null,
+      "date": "2026-12-24",
+      "startTime": null,
+      "createdAt": "2026-11-10T02:03:34.905673+00:00",
+      "priceChanged": false,
+      "currentUnitPrice": null,
+      "currentCurrency": null,
+      "cancellationPolicy": [
+       {
+        "minDaysBefore": 30,
+        "refundPercentage": 100
+       },
+       {
+        "minDaysBefore": 15,
+        "refundPercentage": 50
+       },
+       {
+        "minDaysBefore": 0,
+        "refundPercentage": 0
+       }
+      ],
+      "refundedAmount": null,
+      "flight": null
+     }
+    ],
+    "totals": [
+     {
+      "currency": "USD",
+      "amount": 480.0
+     }
+    ],
+    "requiresPriceAcceptance": false,
+    "paymentApproved": true,
+    "paymentFailureReason": null,
+    "flight": {
+     "status": "CONFIRMED",
+     "originIata": "VVI",
+     "originLabel": "Santa Cruz de la Sierra (VVI)",
+     "destinationIata": "LPB",
+     "destinationLabel": "La Paz (LPB)",
+     "outboundDate": "2026-12-24",
+     "inboundDate": "2026-12-26",
+     "travelers": 1,
+     "carrierIata": "ZZ",
+     "carrierName": "Fake Airways",
+     "outboundDepartureAt": "2026-12-24T08:15:00",
+     "outboundArrivalAt": "2026-12-24T09:30:00",
+     "outboundFlightNumber": "100",
+     "inboundDepartureAt": "2026-12-26T08:15:00",
+     "inboundArrivalAt": "2026-12-26T09:30:00",
+     "inboundFlightNumber": "110",
+     "bookingReference": "FAKE0LPB",
+     "price": {
+      "amount": 216.0,
+      "currency": "USD"
+     },
+     "itinerarySummary": "Fake Airways: VVI→LPB 24/12 08:15 (directo) · LPB→VVI 26/12 08:15 (directo)",
+     "statusMessage": "Reserva simulada para la demo: no existe un pasaje ni un asiento real.",
+     "inProgress": false,
+     "inventoryMode": "SIMULATED"
+    },
+    "requiresFlightPriceAcceptance": false,
+    "flightPreviousPrice": null,
+    "flightCurrentPrice": null,
+    "flightMessage": null,
+    "cancellation": null
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:41",
+   "metodo": "GET",
+   "path": "/api/reservations/ceed5932-012f-42c1-a177-201b00b8d61b",
+   "status": 200,
+   "respuesta": {
+    "id": "ceed5932-012f-42c1-a177-201b00b8d61b",
+    "status": "CONFIRMED",
+    "expiresAt": "2026-11-10T02:33:34.905673+00:00",
+    "createdAt": "2026-11-10T02:03:34.905673+00:00",
+    "confirmedAt": "2026-11-10T02:03:39.759611+00:00",
+    "cancelledAt": null,
+    "items": [
+     {
+      "id": "1486e989-1cec-4e81-b868-3abf33c2cb48",
+      "reservationId": "ceed5932-012f-42c1-a177-201b00b8d61b",
+      "reservationStatus": "CONFIRMED",
+      "productType": "PACKAGE",
+      "experienceId": null,
+      "experienceTitle": null,
+      "packageId": "683510e6-a238-45ed-86a1-c49292af8bf3",
+      "packageTitle": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+      "companyId": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1",
+      "companyName": "TurisClick QA — PRUEBA TECNICA 276185",
+      "touristId": "3a5df1e4-d517-4892-8a94-dd44a05c1aef",
+      "touristName": "",
+      "travelers": 1,
+      "unitPrice": 480.0,
+      "currency": "USD",
+      "subtotal": 480.0,
+      "status": "CONFIRMED",
+      "cancelledAt": null,
+      "cancellationReason": null,
+      "date": "2026-12-24",
+      "startTime": null,
+      "createdAt": "2026-11-10T02:03:34.905673+00:00",
+      "priceChanged": false,
+      "currentUnitPrice": null,
+      "currentCurrency": null,
+      "cancellationPolicy": [
+       {
+        "minDaysBefore": 30,
+        "refundPercentage": 100
+       },
+       {
+        "minDaysBefore": 15,
+        "refundPercentage": 50
+       },
+       {
+        "minDaysBefore": 0,
+        "refundPercentage": 0
+       }
+      ],
+      "refundedAmount": 0,
+      "flight": null
+     }
+    ],
+    "totals": [
+     {
+      "currency": "USD",
+      "amount": 480.0
+     }
+    ],
+    "requiresPriceAcceptance": false,
+    "paymentApproved": null,
+    "paymentFailureReason": null,
+    "flight": {
+     "status": "CONFIRMED",
+     "originIata": "VVI",
+     "originLabel": "Santa Cruz de la Sierra (VVI)",
+     "destinationIata": "LPB",
+     "destinationLabel": "La Paz (LPB)",
+     "outboundDate": "2026-12-24",
+     "inboundDate": "2026-12-26",
+     "travelers": 1,
+     "carrierIata": "ZZ",
+     "carrierName": "Fake Airways",
+     "outboundDepartureAt": "2026-12-24T08:15:00",
+     "outboundArrivalAt": "2026-12-24T09:30:00",
+     "outboundFlightNumber": "100",
+     "inboundDepartureAt": "2026-12-26T08:15:00",
+     "inboundArrivalAt": "2026-12-26T09:30:00",
+     "inboundFlightNumber": "110",
+     "bookingReference": "FAKE0LPB",
+     "price": {
+      "amount": 216.0,
+      "currency": "USD"
+     },
+     "itinerarySummary": "Fake Airways: VVI→LPB 24/12 08:15 (directo) · LPB→VVI 26/12 08:15 (directo)",
+     "statusMessage": "Reserva simulada para la demo: no existe un pasaje ni un asiento real.",
+     "inProgress": false,
+     "inventoryMode": "SIMULATED"
+    },
+    "requiresFlightPriceAcceptance": false,
+    "flightPreviousPrice": null,
+    "flightCurrentPrice": null,
+    "flightMessage": null,
+    "cancellation": null
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:44",
+   "metodo": "POST",
+   "path": "/api/flights/search",
+   "status": 200,
+   "respuesta": {
+    "originIata": "VVI",
+    "originLabel": "Santa Cruz de la Sierra (VVI)",
+    "destinationIata": "LPB",
+    "destinationLabel": "La Paz (LPB)",
+    "departureDate": "2026-12-24",
+    "returnDate": null,
+    "passengers": 1,
+    "adults": 1,
+    "childrenAges": [],
+    "infants": 0,
+    "cabinClass": "ECONOMY",
+    "options": [
+     {
+      "price": {
+       "amount": 120.0,
+       "currency": "USD"
+      },
+      "carrierName": "Fake Airways",
+      "carrierIata": "ZZ",
+      "slices": [
+       {
+        "originIata": "VVI",
+        "destinationIata": "LPB",
+        "durationMinutes": 75,
+        "stops": 0,
+        "segments": [
+         {
+          "originIata": "VVI",
+          "destinationIata": "LPB",
+          "departingAt": "2026-12-24T08:15:00",
+          "arrivingAt": "2026-12-24T09:30:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "100",
+          "checkedBags": 1
+         }
+        ]
+       }
+      ],
+      "source": "AIRLINE",
+      "bookable": false,
+      "providerFlight": null,
+      "redirect": {
+       "available": false,
+       "url": null,
+       "sellerName": "Fake Airways",
+       "unavailableReason": "DEMO"
+      }
+     },
+     {
+      "price": {
+       "amount": 155.0,
+       "currency": "USD"
+      },
+      "carrierName": "Fake Airways",
+      "carrierIata": "ZZ",
+      "slices": [
+       {
+        "originIata": "VVI",
+        "destinationIata": "LPB",
+        "durationMinutes": 75,
+        "stops": 0,
+        "segments": [
+         {
+          "originIata": "VVI",
+          "destinationIata": "LPB",
+          "departingAt": "2026-12-24T12:15:00",
+          "arrivingAt": "2026-12-24T13:30:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "101",
+          "checkedBags": 0
+         }
+        ]
+       }
+      ],
+      "source": "AIRLINE",
+      "bookable": false,
+      "providerFlight": null,
+      "redirect": {
+       "available": false,
+       "url": null,
+       "sellerName": "Fake Airways",
+       "unavailableReason": "DEMO"
+      }
+     },
+     {
+      "price": {
+       "amount": 171.0,
+       "currency": "USD"
+      },
+      "carrierName": "Fake Airways",
+      "carrierIata": "ZZ",
+      "slices": [
+       {
+        "originIata": "VVI",
+        "destinationIata": "LPB",
+        "durationMinutes": 210,
+        "stops": 1,
+        "segments": [
+         {
+          "originIata": "VVI",
+          "destinationIata": "CBB",
+          "departingAt": "2026-12-24T16:15:00",
+          "arrivingAt": "2026-12-24T17:15:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "102",
+          "checkedBags": 1
+         },
+         {
+          "originIata": "CBB",
+          "destinationIata": "LPB",
+          "departingAt": "2026-12-24T18:50:00",
+          "arrivingAt": "2026-12-24T19:45:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "602",
+          "checkedBags": 1
+         }
+        ]
+       }
+      ],
+      "source": "AIRLINE",
+      "bookable": false,
+      "providerFlight": null,
+      "redirect": {
+       "available": false,
+       "url": null,
+       "sellerName": "Fake Airways",
+       "unavailableReason": "DEMO"
+      }
+     },
+     {
+      "price": {
+       "amount": 225.0,
+       "currency": "USD"
+      },
+      "carrierName": "Fake Airways",
+      "carrierIata": "ZZ",
+      "slices": [
+       {
+        "originIata": "VVI",
+        "destinationIata": "LPB",
+        "durationMinutes": 75,
+        "stops": 0,
+        "segments": [
+         {
+          "originIata": "VVI",
+          "destinationIata": "LPB",
+          "departingAt": "2026-12-24T20:15:00",
+          "arrivingAt": "2026-12-24T21:30:00",
+          "carrierIata": "ZZ",
+          "carrierName": "Fake Airways",
+          "flightNumber": "103",
+          "checkedBags": 0
+         }
+        ]
+       }
+      ],
+      "source": "AIRLINE",
+      "bookable": false,
+      "providerFlight": null,
+      "redirect": {
+       "available": false,
+       "url": null,
+       "sellerName": "Fake Airways",
+       "unavailableReason": "DEMO"
+      }
+     }
+    ],
+    "packages": [
+     {
+      "id": "31dd964e-ed67-4312-ad41-b9c29b59da88",
+      "title": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276153",
+      "destinationName": "La Paz",
+      "durationDays": 3,
+      "price": {
+       "amount": 480.0,
+       "currency": "USD"
+      },
+      "coverImageUrl": null
+     },
+     {
+      "id": "683510e6-a238-45ed-86a1-c49292af8bf3",
+      "title": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+      "destinationName": "La Paz",
+      "durationDays": 3,
+      "price": {
+       "amount": 480.0,
+       "currency": "USD"
+      },
+      "coverImageUrl": null
+     }
+    ],
+    "notice": null,
+    "testMode": true,
+    "inventoryMode": "SIMULATED",
+    "bookable": false
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:46",
+   "metodo": "POST",
+   "path": "/api/reservations/ceed5932-012f-42c1-a177-201b00b8d61b/cancellation-quote",
+   "status": 200,
+   "respuesta": {
+    "quoteId": "9a84b0fe-fb02-4733-a786-4302e69c8acb",
+    "reservationId": "ceed5932-012f-42c1-a177-201b00b8d61b",
+    "expiresAt": "2026-11-10T02:18:46.1332478+00:00",
+    "lines": [
+     {
+      "component": "PACKAGE",
+      "label": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+      "paidAmount": 480.0,
+      "refundAmount": 480.0,
+      "feeAmount": 0.0,
+      "currency": "USD",
+      "refundPercentage": 100,
+      "refundKnown": true,
+      "explanation": "Cancelás con 44 días de anticipación: se devuelve todo."
+     },
+     {
+      "component": "FLIGHT",
+      "label": "Vuelo VVI → LPB",
+      "paidAmount": 216.0,
+      "refundAmount": 100,
+      "feeAmount": 116.0,
+      "currency": "USD",
+      "refundPercentage": null,
+      "refundKnown": true,
+      "explanation": "La aerolínea devuelve 100.00 USD y retiene el resto como cargo de cancelación."
+     }
+    ],
+    "refunds": [
+     {
+      "amount": 580.0,
+      "currency": "USD"
+     }
+    ],
+    "fees": [
+     {
+      "amount": 116.0,
+      "currency": "USD"
+     }
+    ],
+    "hasUnknownRefund": false,
+    "summary": "Reembolso total: USD 580,00."
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:48",
+   "metodo": "POST",
+   "path": "/api/reservations/ceed5932-012f-42c1-a177-201b00b8d61b/cancel",
+   "status": 200,
+   "respuesta": {
+    "id": "ceed5932-012f-42c1-a177-201b00b8d61b",
+    "status": "CANCELLED",
+    "expiresAt": "2026-11-10T02:33:34.905673+00:00",
+    "createdAt": "2026-11-10T02:03:34.905673+00:00",
+    "confirmedAt": "2026-11-10T02:03:39.759611+00:00",
+    "cancelledAt": "2026-11-10T02:03:48.352797+00:00",
+    "items": [
+     {
+      "id": "1486e989-1cec-4e81-b868-3abf33c2cb48",
+      "reservationId": "ceed5932-012f-42c1-a177-201b00b8d61b",
+      "reservationStatus": "CANCELLED",
+      "productType": "PACKAGE",
+      "experienceId": null,
+      "experienceTitle": null,
+      "packageId": "683510e6-a238-45ed-86a1-c49292af8bf3",
+      "packageTitle": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+      "companyId": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1",
+      "companyName": "TurisClick QA — PRUEBA TECNICA 276185",
+      "touristId": "3a5df1e4-d517-4892-8a94-dd44a05c1aef",
+      "touristName": "",
+      "travelers": 1,
+      "unitPrice": 480.0,
+      "currency": "USD",
+      "subtotal": 480.0,
+      "status": "CANCELLED",
+      "cancelledAt": "2026-11-10T02:03:48.352797+00:00",
+      "cancellationReason": null,
+      "date": "2026-12-24",
+      "startTime": null,
+      "createdAt": "2026-11-10T02:03:34.905673+00:00",
+      "priceChanged": false,
+      "currentUnitPrice": null,
+      "currentCurrency": null,
+      "cancellationPolicy": [
+       {
+        "minDaysBefore": 30,
+        "refundPercentage": 100
+       },
+       {
+        "minDaysBefore": 15,
+        "refundPercentage": 50
+       },
+       {
+        "minDaysBefore": 0,
+        "refundPercentage": 0
+       }
+      ],
+      "refundedAmount": 480.0,
+      "flight": null
+     }
+    ],
+    "totals": [
+     {
+      "currency": "USD",
+      "amount": 480.0
+     }
+    ],
+    "requiresPriceAcceptance": false,
+    "paymentApproved": null,
+    "paymentFailureReason": null,
+    "flight": {
+     "status": "CANCELLED",
+     "originIata": "VVI",
+     "originLabel": "Santa Cruz de la Sierra (VVI)",
+     "destinationIata": "LPB",
+     "destinationLabel": "La Paz (LPB)",
+     "outboundDate": "2026-12-24",
+     "inboundDate": "2026-12-26",
+     "travelers": 1,
+     "carrierIata": "ZZ",
+     "carrierName": "Fake Airways",
+     "outboundDepartureAt": "2026-12-24T08:15:00",
+     "outboundArrivalAt": "2026-12-24T09:30:00",
+     "outboundFlightNumber": "100",
+     "inboundDepartureAt": "2026-12-26T08:15:00",
+     "inboundArrivalAt": "2026-12-26T09:30:00",
+     "inboundFlightNumber": "110",
+     "bookingReference": "FAKE0LPB",
+     "price": {
+      "amount": 216.0,
+      "currency": "USD"
+     },
+     "itinerarySummary": "Fake Airways: VVI→LPB 24/12 08:15 (directo) · LPB→VVI 26/12 08:15 (directo)",
+     "statusMessage": "Vuelo cancelado.",
+     "inProgress": false,
+     "inventoryMode": "SIMULATED"
+    },
+    "requiresFlightPriceAcceptance": false,
+    "flightPreviousPrice": null,
+    "flightCurrentPrice": null,
+    "flightMessage": null,
+    "cancellation": {
+     "id": "9a84b0fe-fb02-4733-a786-4302e69c8acb",
+     "reservationId": "ceed5932-012f-42c1-a177-201b00b8d61b",
+     "status": "COMPLETED",
+     "createdAt": "2026-11-10T02:03:46.140607+00:00",
+     "acceptedAt": "2026-11-10T02:03:48.341061+00:00",
+     "completedAt": "2026-11-10T02:03:48.402164+00:00",
+     "flightCancelled": true,
+     "failureReason": null,
+     "resolutionAttempts": 0,
+     "lines": [
+      {
+       "component": "PACKAGE",
+       "label": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+       "paidAmount": 480.0,
+       "refundAmount": 480.0,
+       "feeAmount": 0.0,
+       "currency": "USD",
+       "refundPercentage": 100,
+       "refundKnown": true,
+       "explanation": "Cancelás con 44 días de anticipación: se devuelve todo."
+      },
+      {
+       "component": "FLIGHT",
+       "label": "Vuelo VVI → LPB",
+       "paidAmount": 216.0,
+       "refundAmount": 100.0,
+       "feeAmount": 116.0,
+       "currency": "USD",
+       "refundPercentage": null,
+       "refundKnown": true,
+       "explanation": "La aerolínea devuelve 100.00 USD y retiene el resto como cargo de cancelación."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:50",
+   "metodo": "GET",
+   "path": "/api/admin/reservations/ceed5932-012f-42c1-a177-201b00b8d61b/payments",
+   "status": 200,
+   "respuesta": {
+    "reservationId": "ceed5932-012f-42c1-a177-201b00b8d61b",
+    "reservationStatus": "CANCELLED",
+    "balances": [
+     {
+      "currency": "USD",
+      "charged": 696.0,
+      "refunded": 580.0,
+      "net": 116.0
+     }
+    ],
+    "transactions": [
+     {
+      "id": "e3043dca-9650-405f-932e-f47c0fc6b897",
+      "type": "CHARGE",
+      "status": "SUCCEEDED",
+      "amount": 696.0,
+      "currency": "USD",
+      "component": null,
+      "provider": "Simulated",
+      "failureReason": null,
+      "createdAt": "2026-11-10T02:03:39.805481+00:00"
+     },
+     {
+      "id": "95a0009a-ba52-4116-9776-1e9855c08f41",
+      "type": "REFUND",
+      "status": "SUCCEEDED",
+      "amount": 480.0,
+      "currency": "USD",
+      "component": "PACKAGE",
+      "provider": "Simulated",
+      "failureReason": null,
+      "createdAt": "2026-11-10T02:03:48.396303+00:00"
+     },
+     {
+      "id": "6508cc31-76dd-4632-a730-3653c692cfe0",
+      "type": "REFUND",
+      "status": "SUCCEEDED",
+      "amount": 100.0,
+      "currency": "USD",
+      "component": "FLIGHT",
+      "provider": "Simulated",
+      "failureReason": null,
+      "createdAt": "2026-11-10T02:03:48.401996+00:00"
+     }
+    ],
+    "cancellations": [
+     {
+      "id": "9a84b0fe-fb02-4733-a786-4302e69c8acb",
+      "reservationId": "ceed5932-012f-42c1-a177-201b00b8d61b",
+      "status": "COMPLETED",
+      "createdAt": "2026-11-10T02:03:46.140607+00:00",
+      "acceptedAt": "2026-11-10T02:03:48.341061+00:00",
+      "completedAt": "2026-11-10T02:03:48.402164+00:00",
+      "flightCancelled": true,
+      "failureReason": null,
+      "resolutionAttempts": 0,
+      "lines": [
+       {
+        "component": "PACKAGE",
+        "label": "[PRUEBA TECNICA · NO RESERVAR] Validacion Oleada 19 276185",
+        "paidAmount": 480.0,
+        "refundAmount": 480.0,
+        "feeAmount": 0.0,
+        "currency": "USD",
+        "refundPercentage": 100,
+        "refundKnown": true,
+        "explanation": "Cancelás con 44 días de anticipación: se devuelve todo."
+       },
+       {
+        "component": "FLIGHT",
+        "label": "Vuelo VVI → LPB",
+        "paidAmount": 216.0,
+        "refundAmount": 100.0,
+        "feeAmount": 116.0,
+        "currency": "USD",
+        "refundPercentage": null,
+        "refundKnown": true,
+        "explanation": "La aerolínea devuelve 100.00 USD y retiene el resto como cargo de cancelación."
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:52",
+   "metodo": "GET",
+   "path": "/api/companies/me/flights",
+   "status": 501,
+   "respuesta": {
+    "title": "Todavía no disponible",
+    "status": 501,
+    "detail": "Los vuelos de TurisClick funcionan como buscador: la compra se hace en el sitio del vendedor. La venta de vuelos dentro de TurisClick no está disponible.",
+    "instance": "/api/companies/me/flights",
+    "traceId": "00-3750f78f26574f86a274e1ffb552e5df-34b74a8da02c18d5-00",
+    "errorCode": "FEATURE_NOT_AVAILABLE"
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:54",
+   "metodo": "GET",
+   "path": "/api/admin/flights",
+   "status": 501,
+   "respuesta": {
+    "title": "Todavía no disponible",
+    "status": 501,
+    "detail": "Los vuelos de TurisClick funcionan como buscador: la compra se hace en el sitio del vendedor. La venta de vuelos dentro de TurisClick no está disponible.",
+    "instance": "/api/admin/flights",
+    "traceId": "00-47a9497595c130ccba4d8e72ad39f062-f4a312f5a991faec-00",
+    "errorCode": "FEATURE_NOT_AVAILABLE"
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:56",
+   "metodo": "POST",
+   "path": "/api/packages/683510e6-a238-45ed-86a1-c49292af8bf3/availability",
+   "status": 201,
+   "respuesta": {
+    "id": "42478dca-ceb9-479b-b33b-27443f8b36cf",
+    "packageId": "683510e6-a238-45ed-86a1-c49292af8bf3",
+    "departureDate": "2027-01-08",
+    "totalSlots": 1,
+    "reservedSlots": 0,
+    "availableSlots": 1,
+    "status": "OPEN"
+   }
+  },
+  {
+   "ts": "2026-11-09 22:03:58",
+   "metodo": "POST",
+   "path": "/api/admin/companies/835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1/suspend",
+   "status": 200,
+   "respuesta": {
+    "id": "835b6ced-0c7b-4b37-b9f1-25d48c8b7ed1",
+    "name": "TurisClick QA — PRUEBA TECNICA 276185",
+    "description": null,
+    "legalDocument": "QA-276185",
+    "contactEmail": "qa.operador.276185@turisclick.dev",
+    "contactPhone": null,
+    "status": "SUSPENDED",
+    "approvedAt": "2026-11-10T02:03:11.772755+00:00",
+    "rejectionReason": null,
+    "createdAt": "2026-11-10T02:03:11.772755+00:00",
+    "canSellFlights": false,
+    "flightSellerRegistration": null,
+    "flightSellerAuthorizedAt": null
+   }
+  },
+  {
+   "ts": "2026-11-09 22:04:00",
+   "metodo": "POST",
+   "path": "/api/reservations",
+   "status": 404,
+   "respuesta": {
+    "title": "Recurso no encontrado",
+    "status": 404,
+    "detail": "Paquete no encontrado.",
+    "instance": "/api/reservations",
+    "traceId": "00-74d9bdfac8c5cdad3bb1ff42e4e142dc-9beb2ab29fd32594-00"
+   }
+  }
+ ]
+}
