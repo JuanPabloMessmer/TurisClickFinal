@@ -1,10 +1,15 @@
 # Oleada 19 — Informe de cierre
 
-**Fecha:** 10/11/2026 · **Commit validado:** `2d75b5d` · **Rama de trabajo:** `feat/expo-sdk-58`
+**Fecha:** 11/11/2026 · **Commit validado:** `2d75b5d` · **Integrado en:** `master`
 
 Documento de respaldo: [`oleada19-validacion-funcional.md`](oleada19-validacion-funcional.md),
-que contiene el detalle prueba por prueba. Este informe consolida el resultado y dice qué falta
-para dar la oleada por cerrada formalmente.
+que contiene el detalle prueba por prueba. Este informe consolida el resultado y registra el
+estado final del cierre.
+
+> **Estado al 11/11/2026: la Oleada 19 está FUNCIONALMENTE VALIDADA y se da por cerrada para
+> fines de desarrollo y documentación, con pendientes administrativos y técnicos explícitamente
+> registrados** (§6 y §7). Ninguno de esos pendientes contradice lo validado: son verificaciones
+> cuyo criterio exige un entorno al que se decidió no escribir, y deuda técnica preexistente.
 
 ---
 
@@ -117,20 +122,19 @@ validación se hizo en staging, sin tocar producción.
 
 # 4. ESTADO TÉCNICO DE LA RAMA
 
-## 4.1 `feat/expo-sdk-58`
+## 4.1 `feat/expo-sdk-58` — integrada en `master`
 
 | | |
 |---|---|
-| **Commits propios** | **0** |
-| `HEAD` | `2d75b5d` — el mismo que `master` |
-| **Cambios sin versionar** | **65 entradas** |
-| └ del upgrade a SDK 58 | 53 archivos en `frontend/` |
-| └ de documentación | 12 entradas en `docs/` |
+| **Commits propios** | **5** |
+| Integración | fast-forward a `master` el 11/11/2026, sin commit de merge |
+| `master` = `origin/master` | `376b9b1` |
+| Rama conservada | sí, como trazabilidad |
+| Punto de retorno | tag `pre-merge-oleada19` en `2d75b5d` |
 
-> ⚠️ **Esto es el riesgo más alto del proyecto ahora mismo.** Todo el upgrade al SDK 58 —
-> incluida la migración de 46 archivos de test — existe **únicamente como cambios sin commitear
-> en el árbol de trabajo**. Un `git checkout`, un `git stash` mal usado o un reset lo borra sin
-> recuperación. La rama está creada pero vacía: no protege nada todavía.
+El detalle de los cinco commits está en §6.1. El push **no disparó despliegue**: el workflow
+`backend-v2.yml` filtra por rutas de `src/**` y `tests/**`, y estos commits tocan sólo
+`frontend/` y `docs/`. Verificado: la última corrida del workflow es del 28/10.
 
 El upgrade quedó verificado: **TypeScript 0 errores · ESLint 0 errores** (2 advertencias
 preexistentes) · **527–528 de 528 tests**, según la corrida.
@@ -138,8 +142,8 @@ preexistentes) · **527–528 de 528 tests**, según la corrida.
 > La suite `AssistantChatHistory.test.tsx` es **intermitente** bajo carga de corrida completa: el
 > 09/11 pasó 528/528 y el 10/11 falló 1 test de los 8 de esa suite. **Corrida en aislamiento da
 > 8/8 de forma consistente.** No es una regresión del upgrade —nada de `frontend/` cambió entre
-> ambas corridas—, pero sí significa que el verde de ayer era una corrida y no un resultado
-> determinista. Registrado como deuda técnica en §6.6.
+> ambas corridas—, pero sí significa que aquel verde era una corrida y no un resultado
+> determinista. Registrado como deuda técnica en §6.5 y en `TC-220`.
 
 ## 4.2 Expo Doctor — 18/20 al 11/11 (19/20 al 10/11)
 
@@ -241,223 +245,117 @@ sesión del 09/11.
 
 ---
 
-# 6. QUÉ FALTA PARA CERRAR FORMALMENTE
+# 6. CIERRE: QUÉ SE HIZO Y QUÉ QUEDÓ PENDIENTE
 
-Funcionalmente la oleada está validada. Lo que resta es de versionado y registro.
+## 6.1 Versionado — COMPLETADO
 
-## 6.1 Bloqueante — antes de cualquier otra cosa
+Los cinco commits están integrados en `master` por fast-forward y sincronizados con
+`origin/master`. El push no disparó despliegue: el workflow `backend-v2.yml` filtra por rutas de
+`src/**` y `tests/**`, y los 80 archivos de estos commits son de `frontend/` y `docs/`.
 
-| # | Acción | Por qué |
-|---|---|---|
-| 1 | **Commitear el upgrade al SDK 58** en `feat/expo-sdk-58` | 53 archivos verificados existen sólo en el árbol de trabajo. Es lo único verdaderamente urgente |
-| 2 | **Commitear los documentos de `docs/`** | 12 entradas, incluidos este informe, la validación, el plan de staging y el material de Jira |
+| # | Hash | Asunto | Archivos |
+|---|---|---|---|
+| 1 | `c9c33ae` | `chore(tourist-mobile): upgrade Expo SDK to 58` | 53 |
+| 2 | `5793fcc` | `docs(oleada19): record functional validation and closure evidence` | 9 |
+| 3 | `2d2c20d` | `docs(turisclick): align use cases and UML diagrams` | 8 |
+| 4 | `0834880` | `docs(scrum): preserve sprint and Jira reconstruction` | 10 |
+| 5 | `376b9b1` | `docs(oleada19): clarify Jira references and interview anonymization` | 1 |
 
-Conviene separarlo en dos commits: el upgrade es un cambio técnico y los documentos son registro
-del proyecto. Mezclarlos ensucia la historia que después citás en la tesis.
+El tag `pre-merge-oleada19` marca `2d75b5d`, el punto previo a la integración.
 
-## 6.2 Antes de desarmar staging
+## 6.2 Evidencia — COMPLETADO
 
-| # | Acción |
-|---|---|
-| 3 | Copiar `evidencia-o19.json` y los scripts a `docs/evidencia/oleada19/` |
-| 4 | Borrar `frontend/apps/tourist-mobile/.env.local` |
-| 5 | Recién entonces `DROP DATABASE turisclick_staging_o19` |
+Las copias sanitizadas están en [`evidencia/oleada19/`](evidencia/oleada19/), versionadas. Los
+originales sin redactar se conservan fuera del repositorio, con herencia de permisos removida.
 
-## 6.3 Cierre del registro
+## 6.3 Staging — CONSERVADO a propósito
 
-| # | Acción | Dependencia |
-|---|---|---|
-| 6 | Mover a *Done* en Jira los ítems de la Oleada 19 | Requiere tu autorización: no toqué Jira |
-| 7 | Decidir si el upgrade al SDK 58 se registra como ítem de Sprint | Es trabajo real no planificado, surgido de que Expo Go dejó de soportar el SDK 57 |
-| 8 | Decidir el destino de la rama: merge a `master` o quedarse en la rama | No hice merge ni push |
+No se desmanteló. La base `turisclick_staging_o19`, el archivo `.env.local` y la evidencia
+privada siguen en pie, por decisión del autor: el entorno se mantiene mientras pueda hacer falta.
+El checklist para desarmarlo cuando corresponda está en §5.2, sin ejecutar.
 
-## 6.4 Plan de commits — archivos exactos, pendiente de aprobación
+## 6.4 Pendientes que sólo dependen de datos del autor
 
-Revisado archivo por archivo. **Ningún secreto**: `.env`, `.env.local`, `node_modules/`, `dist/`
-y `.expo/` están en `.gitignore` y no pueden entrar. La evidencia se incorporó redactada (§5.1).
-
-### Commit 1 — `chore(tourist-mobile): upgrade Expo SDK to 58`
-
-**53 archivos**, todos bajo `frontend/`:
-
-| Grupo | Cantidad | Archivos |
-|---|---|---|
-| Dependencias y configuración | 4 | `apps/tourist-mobile/package.json`, `package-lock.json`, `apps/tourist-mobile/app.json`, `apps/tourist-mobile/jest.config.js` |
-| Código de producción | 5 | `app/(auth)/login.tsx`, `app/(auth)/register.tsx`, `app/assistant/[id].tsx`, `src/features/catalog/CatalogList.tsx`, `src/ui/index.tsx` |
-| Tests migrados a RNTL 14 | 44 | todos bajo `src/**/__tests__/` |
-
-Revisión de los diffs de producción: son **exactamente** lo que exige el upgrade, nada más.
-
-- `login.tsx` y `register.tsx` — 2 líneas cada uno: envuelven `onSubmit` porque RN 0.88 ya no
-  acepta el tipo que devuelve `handleSubmit` de react-hook-form
-- `assistant/[id].tsx` — el ref del `ScrollView` pasa a tiparse con `ScrollViewInstance`
-- `CatalogList.tsx` y `ui/index.tsx` — **sólo se agregan `testID`**, porque RNTL 14 eliminó las
-  consultas por tipo de componente. Props aditivas: no cambian comportamiento ni layout
-
-### Commit 2 — `docs(oleada19): record functional validation and closure evidence`
-
-**9 archivos**:
-
-| Archivo | Estado |
-|---|---|
-| `docs/oleada19-validacion-funcional.md` | nuevo |
-| `docs/oleada19-informe-cierre.md` | nuevo |
-| `docs/plan-staging-turisclick.md` | nuevo |
-| `docs/evidencia/oleada19/README.md` | nuevo |
-| `docs/evidencia/oleada19/evidencia-o19.json` | nuevo *(redactado)* |
-| `docs/evidencia/oleada19/bateria_o19.py` | nuevo *(redactado)* |
-| `docs/evidencia/oleada19/run_staging.py` | nuevo *(redactado)* |
-| `docs/evidencia/oleada19/s2_aislamiento.py` | nuevo |
-| `docs/evidencia/oleada19/staging_db.py` | nuevo |
-
-### ⚠️ Lo que NO entra en ninguno de los dos
-
-Hay **tres cuerpos de trabajo distintos** pendientes en `docs/`, y meterlos en un commit
-rotulado `docs(oleada19)` falsearía la historia que después se cita en la tesis:
-
-| Archivos | Qué son | A qué pertenecen |
-|---|---|---|
-| `docs/use-cases.md` *(+138 líneas)* | Renumeración de `UC-T-19`→`UC-T-23` y 22 secciones de casos de uso que faltaban | Catálogo de casos de uso, fase de reconstrucción del backlog |
-| `docs/diagrams/uml/**` *(7 archivos)* | Diagramas regenerados por esa renumeración | Idem |
-| `docs/jira-import/` *(10 archivos)* | Los 217 CSV de importación, que cubren las 19 oleadas | Reconstrucción del Scrum en Jira |
-
-Necesitan **su propio commit** (o dos). No los incluí porque vos pediste explícitamente separar
-lo técnico de lo académico y que el commit 2 fuera *exclusivamente* de la Oleada 19. Decime cómo
-los querés agrupar.
-
-### Comandos, listos para cuando los apruebes
-
-```bash
-git add frontend/apps/tourist-mobile frontend/package-lock.json
-```
-
-```bash
-git commit -m "chore(tourist-mobile): upgrade Expo SDK to 58"
-```
-
-```bash
-git add docs/oleada19-validacion-funcional.md docs/oleada19-informe-cierre.md docs/plan-staging-turisclick.md docs/evidencia/oleada19
-```
-
-```bash
-git commit -m "docs(oleada19): record functional validation and closure evidence"
-```
-
-**Nada está staged todavía.** El índice está limpio: preparé las listas, no toqué el estado del
-repositorio.
-
----
-
-## 6.5 Pendientes que sólo dependen de datos tuyos
-
-Vienen de antes de esta oleada y bloquean la documentación de grado, no el cierre funcional:
+Vienen de antes de esta oleada y afectan a la documentación de grado, no al cierre funcional:
 
 | Dato | Dónde impacta |
 |---|---|
-| Nombre del CEO de TrendyTrips | `TC-165` / `INV-09` |
-| Resultados de las tres entrevistas | `TC-166` / `INV-10` |
+| Nombre del entrevistado E-3 | `TC-165` (`INV-09`) |
+| Resultados de las tres entrevistas | `TC-166` (`INV-10`) |
 | Fechas de entrega y defensa de la tesis | 10 ítems `DOC-` sin sprint |
 | Validación de las fechas estimadas de abril–mayo | Cronología del informe |
 | Host de Azure V1 | Hallazgo H-03 |
 
-## 6.6 Decisiones técnicas que quedan abiertas
+## 6.5 Deuda técnica registrada
 
 | Tema | Estado |
 |---|---|
-| Duplicación de React en el monorepo | Preexistente. Se arregla alineando el Backoffice |
-| `web.output` del SDK 58 | Cambió su valor por omisión a salida de servidor. La app es móvil y no exporta web, así que no la afecta; si alguna vez se exporta, hay que fijar `"static"` |
+| React duplicado en el monorepo | Preexistente al upgrade. Registrado en `TC-220` |
+| Nueve paquetes del SDK un parche atrás | Se conservan las versiones con las que se aprobaron las pruebas manuales. Registrado en `TC-220` |
+| `AssistantChatHistory.test.tsx` intermitente | 527–528 de 528 en corrida completa; 8/8 en aislamiento. Registrado en `TC-220` |
+| `web.output` del SDK 58 | Cambió su valor por omisión a salida de servidor. La app es móvil y no exporta web |
 | EPERM intermitente de la caché de Jest en Windows | Ambiental. Se resuelve con `npx jest --clearCache` |
-| Test intermitente en `AssistantChatHistory.test.tsx` | **Abierto.** Falla ~1 de 8 tests sólo en corrida completa, no en aislamiento. Es la suite más pesada (~93 s). Probable trabajo asíncrono residual entre tests. No bloquea el cierre funcional, pero conviene estabilizarlo antes de apoyarse en la suite como evidencia de regresión |
 
 ---
 
-# 7. PROPUESTA DE ACTUALIZACIÓN DE JIRA — no ejecutada
+# 7. ESTADO FINAL EN JIRA — ejecutado el 11/11/2026
 
-Derivada de `docs/jira-import/00-turisclick-completo.csv`, que es la fuente de lo que se importó.
-Los identificadores de abajo son los `Issue id` del CSV. Su correspondencia con las claves
-`TC-xxx` que Jira asignó en la importación **ya está documentada** en
-[`jira-import/07-sprints-y-claves.md`](jira-import/07-sprints-y-claves.md), así que no hace falta
-resolverla leyendo el proyecto:
+Catorce ítems etiquetados `oleada-19` o `deuda-tecnica`: **8 en `Done`, 6 abiertos**. Las claves
+`TC-xxx` salen de [`jira-import/07-sprints-y-claves.md`](jira-import/07-sprints-y-claves.md).
 
-| ID funcional | `Issue id` | Clave Jira |
+## 7.1 Cerrados — 8
+
+| Clave | Ítem | Qué lo respalda |
 |---|---|---|
-| `UC-T-25` | 2073 | `TC-90` |
-| `UC-T-26` | 2074 | `TC-91` |
-| `BUG-10` | 2094 | `TC-111` |
-| `PEND-01` | 2164 | `TC-181` |
-| `PEND-02` | 2165 | `TC-182` |
-| `PEND-03` | 2166 | `TC-183` |
-| `PEND-04` | 2167 | `TC-184` |
-| `PEND-06` | 2169 | `TC-186` |
-| `PEND-07` | 2170 | `TC-187` |
-| `PEND-09` | 2172 | `TC-189` |
-| `PEND-13` | 2176 | `TC-193` |
+| `TC-90` | `[UC-T-25]` Buscar vuelos entre dos aeropuertos | Implementación, cerrado antes de esta oleada |
+| `TC-91` | `[UC-T-26]` Abrir la oferta en el sitio del vendedor | Ídem |
+| `TC-111` | `[BUG-10]` Se cobraban reservas de vuelo heredadas | Ídem |
+| `TC-181` | `[PEND-01]` Desplegar el backend V2 en Azure | Ambos criterios. Despliegue confirmado por comportamiento (§2.1) y run `workflow_dispatch` del 28/10 02:53 con `headSha 2d75b5d6` |
+| `TC-182` | `[PEND-02]` Verificar que `redirect` aparece | A-01 a A-05 contra Azure, sin sesión |
+| `TC-184` | `[PEND-04]` Backoffice sin la navegación de Vuelos | A-14 y A-15, contra el Backoffice desplegado |
+| `TC-218` | Actualizar Tourist Mobile a Expo SDK 58 | Commit `c9c33ae` en `master`; TypeScript y ESLint en cero; M-01 a M-08 aprobadas |
+| `TC-219` | Registrar la validación funcional de la Oleada 19 | Documentación y evidencia versionadas en `master` |
 
-Hay **11 ítems etiquetados `oleada-19`**: 3 en *Done* y 8 en *To Do*.
+Cada uno lleva en Jira un comentario con la evidencia y el alcance de la verificación.
 
-## 7.1 Ya cerrados — no requieren acción
+## 7.2 ⚠️ Abiertos porque su criterio exige Azure y se validó en staging — 3
 
-| id | Tipo | Resumen | Estado |
-|---|---|---|---|
-| 2073 | Story | `[UC-T-25]` Buscar vuelos entre dos aeropuertos | Done |
-| 2074 | Story | `[UC-T-26]` Abrir la oferta de vuelo en el sitio del vendedor | Done |
-| 2094 | Bug | `[BUG-10]` Se cobraban reservas de vuelo de operador heredadas | Done |
+**Corrección sobre versiones anteriores de este informe:** `TC-187` figuraba aquí como cerrable.
+Era un error. Al leer su criterio de aceptación textual —*"Un paquete con vuelo se reserva y se
+paga normalmente **en Azure**, con los vuelos de operador apagados"*— queda claro que **no se
+cumple**: el flujo se validó en staging local. Es el mismo caso que `TC-183` y `TC-186`.
 
-## 7.2 Propuestos para cerrar — la validación los respalda
-
-| id | Resumen | Qué lo respalda |
+| Clave | Ítem | Qué se verificó, y dónde |
 |---|---|---|
-| 2164 | `[PEND-01]` Desplegar el backend V2 con la Oleada 19 en Azure | §1.1 — despliegue confirmado por comportamiento |
-| 2165 | `[PEND-02]` Verificar que `redirect` aparece tras el despliegue | §1.1 — campo presente el 09/11, ausente el 27/10 |
-| 2167 | `[PEND-04]` Desplegar el Backoffice sin la navegación de Vuelos | §1.3 — A-14 y A-15 aprobadas en Azure |
-| 2170 | `[PEND-07]` Validar que los paquetes con vuelo se siguen pagando | T-06 en staging + M-07/M-08 manuales |
-| 2176 | `[PEND-13]` Verificar el metabuscador DEMO de punta a punta | M-01 a M-06, reportadas por el usuario |
+| `TC-183` | `[PEND-03]` Vuelos de operador responden **501 en Azure** | T-12 comprobó el 501 en las dos rutas con sesión válida, **en staging**. En Azure nunca se hizo una petición autenticada a esas rutas |
+| `TC-186` | `[PEND-06]` **En Azure**, una reserva heredada no se cobra | T-06, la regresión de BUG-10, lo comprobó de punta a punta **en staging**. En Azure no se escribió |
+| `TC-187` | `[PEND-07]` Paquetes con vuelo se siguen pagando **en Azure** | T-06 por API y M-07/M-08 a mano, ambas **en staging**. Además, ninguno de los 13 paquetes publicados en Azure tiene reglas de vuelo configuradas |
 
-## 7.3 ⚠️ NO cerrar — su criterio pide Azure y se validó en staging
+Los tres comparten la misma causa: **el criterio se escribió asumiendo que se podía operar y
+escribir contra producción**, y esa premisa cambió cuando se decidió no tocar datos reales. El
+comportamiento está demostrado; lo que falta es el entorno. Cerrarlos exigiría reescribir el
+criterio, que es una decisión del autor y no se tomó.
 
-| id | Resumen | Situación |
+## 7.3 Abiertos por verificación incompleta o ausente — 2
+
+| Clave | Ítem | Situación |
 |---|---|---|
-| 2166 | `[PEND-03]` Verificar que los vuelos de operador responden **501 en Azure** | El 501 se comprobó en **staging** (T-12). En Azure nunca se hizo una petición autenticada a esas rutas |
-| 2169 | `[PEND-06]` Validar **en Azure** que una reserva heredada de vuelo no se cobra | Validado en **staging** (T-06). En Azure no se escribió, por decisión tuya |
+| `TC-193` | `[PEND-13]` Verificar el metabuscador DEMO de punta a punta | De sus **dos** criterios, el primero está cumplido (A-04, A-05 en Azure y M-02, M-03, M-05 a mano). El segundo —*"desde la ruta se llega a los paquetes publicados que la cubren"*— **no lo cubrió ninguna prueba**: M-06 sólo verificó que metabuscador y paquetes son secciones separadas, que no es lo mismo |
+| `TC-189` | `[PEND-09]` Configurar `Flights:RedirectHosts` | **Sin verificar.** Es configuración de Azure, que no se tocó |
 
-Son el mismo caso: el comportamiento **está demostrado**, pero no en el entorno que pide el
-criterio de aceptación. Hay tres salidas, y es tu decisión:
+## 7.4 Deuda técnica — 1
 
-1. **Reescribir el criterio** para que diga "en un entorno equivalente a producción", y cerrarlos
-   citando T-06 y T-12. Es lo que refleja lo que realmente se decidió.
-2. **Dejarlos abiertos** y reconocer que requieren escribir en Azure, que descartaste.
-3. **Cerrarlos con una nota** que explique la sustitución de entorno.
-
-Recomiendo la 1: el criterio original asumía que se podía escribir en producción, y esa premisa
-cambió.
-
-## 7.4 Sin verificar — quedan abiertos
-
-| id | Resumen | Por qué |
+| Clave | Ítem | Estado |
 |---|---|---|
-| 2172 | `[PEND-09]` Configurar `Flights:RedirectHosts` | No lo verifiqué. Es configuración de Azure, que no toqué |
+| `TC-220` | React duplicado y Expo Doctor 18/20 en Tourist Mobile | Abierto a propósito. Recoge los tres puntos de §6.5 sin corregir ninguno |
 
-## 7.5 Ítems nuevos a crear
+## 7.5 Lo que NO se hizo en Jira
 
-| Tipo | Resumen propuesto | Descripción |
-|---|---|---|
-| Task | Actualizar Tourist Mobile a Expo SDK 58 | Trabajo técnico **no planificado**, forzado por que Expo Go dejó de soportar el SDK 57 y bloqueaba las 8 pruebas manuales. Incluye RN 0.86→0.88, React 19.2→19.3 y la migración de 44 archivos de test a RNTL 14. Verificado: TypeScript y ESLint sin errores, 528/528 tests, Expo Doctor 19/20 |
-| Task | Registrar las pruebas funcionales de la Oleada 19 | 41 pruebas: 15 en Azure V2 (lectura), 25 en staging local, 8 manuales reportadas por el usuario. 40 aprobadas, 0 fallidas, S-5 no ejecutada |
-| Bug *(deuda técnica)* | React duplicado en el monorepo del frontend | La app móvil resuelve React 19.3.0 y `react-native`/`expo-router`/NativeWind resuelven 19.3.1. **Preexistente al upgrade**: el lockfile anterior muestra la misma división con 19.2.3/19.2.8. Único check que falla en Expo Doctor. Se arregla alineando el React del Backoffice |
+No se modificaron criterios de aceptación, ni otros ítems fuera de los nombrados, ni épicas, ni
+sprints. A los tres ítems creados no se les asignó sprint: el trabajo cae en el borde entre el
+Sprint 16 y el 17, y asignarlo sin evidencia falsearía la cronología.
 
-Sobre el ítem del SDK 58: sugiero **no** retrotraerlo a un sprint pasado. Es trabajo del 09–10/11
-y ponerlo antes falsearía la cronología.
-
-## 7.6 Relacionados, sin etiqueta `oleada-19`
-
-| id | Resumen | Nota |
-|---|---|---|
-| 2168 | `[PEND-05]` Ejecutar la suite completa sobre `2d75b5d` en base aislada | **Cumplido de hecho** por la batería en staging. Evaluá si corresponde cerrarlo |
-| 2171 | `[PEND-08]` Verificar la migración 0015 en base local y de tests | Staging tiene las 15 migraciones, con `0015_Oleada18_VuelosDeOperador` como última. Cubre la parte local |
-
----
-
-## 7.7 Seudonimización de los entrevistados
+## 7.6 Seudonimización de los entrevistados
 
 El 11/11/2026, antes de versionar `docs/jira-import/`, los tres entrevistados pasaron a figurar
 por código —**E-1**, **E-2** y **E-3**— con una descripción genérica del tipo de informante, en
@@ -487,15 +385,35 @@ Restricciones respetadas, para que quede constancia:
 
 # 9. CONCLUSIÓN
 
-> **La Oleada 19 cumple lo que se propuso y está lista para cerrarse.** 40 de 41 pruebas
-> aprobadas, ninguna fallida, ningún defecto funcional abierto.
+> **La Oleada 19 queda cerrada para fines de desarrollo y documentación**, funcionalmente
+> validada, con sus pendientes explícitamente registrados. 40 de 41 verificaciones aprobadas,
+> ninguna fallida, ningún defecto funcional abierto.
 
-Las dos afirmaciones que importaban quedaron demostradas con evidencia, y en los dos entornos
+Las dos afirmaciones que importaban quedaron demostradas con evidencia, cada una en el entorno
 que correspondía:
 
-- **En Azure V2**, que lo desplegado es la Oleada 19 y que el metabuscador funciona en producción.
+- **En Azure V2**, que lo desplegado es la Oleada 19 y que el metabuscador funciona en
+  producción. Quince verificaciones de sólo lectura; no se escribió un solo registro.
 - **En staging local**, que apagar la venta de vuelos de operador no rompió los paquetes con
-  vuelo — con reserva, pago simulado y cero emisión de pasajes, verificado en base.
+  vuelo: reserva, pago simulado y cero emisión de pasajes, verificado en base. Veinticinco
+  verificaciones aprobadas, incluidas las ocho manuales reportadas por el autor.
 
-**No declaro la oleada cerrada**, porque el cierre formal depende de dos cosas que son tuyas:
-versionar el trabajo (§6.1) y autorizar el movimiento en Jira (§6.3). Lo primero es urgente.
+El trabajo está versionado en `master` (§6.1), la evidencia preservada y sanitizada (§6.2), y
+Jira refleja el estado real: ocho ítems cerrados y seis abiertos (§7).
+
+## Qué queda abierto, y por qué no impide cerrar
+
+| Pendiente | Naturaleza |
+|---|---|
+| `TC-183`, `TC-186`, `TC-187` | **Administrativo, no funcional.** El comportamiento está demostrado; el criterio exige un entorno al que se decidió no escribir |
+| `TC-193` | Un criterio de dos sin verificar |
+| `TC-189` | Configuración de Azure, no verificada |
+| `TC-220` | Deuda técnica, dos de cuyos tres puntos son preexistentes al upgrade |
+| Datos del autor (§6.4) | Afectan a la documentación de grado, no al software |
+
+Ninguno de estos pendientes contradice lo validado. Los tres primeros son el mismo caso: un
+criterio escrito cuando se daba por hecho que se podía operar contra producción, premisa que
+cambió. Quedan registrados tal como están, sin reescribir el criterio ni dar por cumplido lo que
+no se verificó.
+
+Con esto, la siguiente prioridad del proyecto pasa a ser el documento académico.
