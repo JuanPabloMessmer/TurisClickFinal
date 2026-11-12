@@ -91,6 +91,22 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 | UC-T-11 | Cancelar una reserva | TOURIST | 8 |
 | UC-P-14 | Cancelar/rechazar una reserva (excepcional) | PROVIDER | 8 |
 | UC-SYS-08 | Liberar cupo por expiración/cancelación | Sistema | 8 |
+| UC-T-24 | Registrar mis preferencias de viaje | TOURIST | 9 |
+| UC-P-15 | Configurar las reglas de vuelo de un paquete | PROVIDER | 10 |
+| UC-A-09 | Inspeccionar las reglas de vuelo de cualquier paquete | ADMIN | 10 |
+| UC-T-23 | Cotizar el vuelo de un paquete | TOURIST (público) | 10 |
+| UC-T-20 | Revalidar la cotización antes de comprar | TOURIST (público) | 10 |
+| UC-T-21 | Reservar paquete + vuelo en una sola operación | TOURIST | 11 |
+| UC-P-16 | Configurar la política de cancelación por tramos | PROVIDER | 12 |
+| UC-T-22 | Ver el reembolso por componente, aceptarlo y cancelar | TOURIST | 12 |
+| UC-A-10 | Inspeccionar el libro de pagos de una reserva | ADMIN | 12 |
+| UC-A-11 | Crear la cuenta de un operador | ADMIN | 13 |
+| UC-A-12 | Crear la cuenta de otro administrador | ADMIN | 17 |
+| UC-A-13 | Regenerar la contraseña de otro administrador | ADMIN | 17 |
+| UC-A-14 | Reintentar una cancelación que quedó trabada | ADMIN | 17 |
+| UC-P-17 | Publicar vuelos propios y registrar su emisión | PROVIDER | 18 — **desactivado** |
+| UC-T-25 | Buscar vuelos entre dos aeropuertos | TOURIST (público) | 19 |
+| UC-T-26 | Abrir la oferta de vuelo en el sitio del vendedor | TOURIST (público) | 19 |
 | UC-P-03 | Agregar usuario Provider adicional a la empresa | PROVIDER | Backlog |
 
 ---
@@ -750,9 +766,17 @@ CASO DE USO → diseño funcional → entidades necesarias → DTOs → Reposito
 | 6 | IA — iteración y persistencia | UC-T-15, UC-AI-05, UC-AI-06, UC-T-16, UC-T-17 |
 | 7 | IA — de propuesta a reserva | UC-T-18, UC-SYS-05, UC-SYS-09 |
 | 8 | Moderación, cancelaciones, gestión de usuarios | UC-A-06, UC-A-07, UC-A-08, UC-T-11, UC-P-14, UC-SYS-08 |
-| 10 | Vuelos en paquetes de proveedor | UC-P-15, UC-A-09, UC-T-19, UC-T-20 |
+| 10 | Vuelos en paquetes de proveedor | UC-P-15, UC-A-09, UC-T-23, UC-T-20 |
 | 11 | Reserva coordinada de paquete + vuelo | UC-T-21 |
+| 9 | Calendario, imágenes de destino y preferencias del turista | UC-T-24, + extensiones de UC-A-04, UC-P-10, UC-P-11 |
 | 12 | Libro de pagos y cancelación con reembolso | UC-P-16, UC-T-22, UC-A-10 |
+| 13 | Alta de operadores por el administrador | UC-A-11 |
+| 14 | Preparación de despliegue | *(sin casos de uso: técnica)* |
+| 15 | Diagramas y documentación de tesis | *(sin casos de uso: documentación)* |
+| 16 | Historial de recomendaciones del asistente | *(extensión de UC-AI-06)* |
+| 17 | Administradores, moderación y cancelaciones trabadas | UC-A-12, UC-A-13, UC-A-14, + extensiones de UC-A-04, UC-A-06, UC-A-07, UC-P-04, UC-P-14 |
+| 18 | Vuelos de operador — **implementada y desactivada** | UC-P-17 *(desactivado)* |
+| 19 | Metabuscador de vuelos con redirección | UC-T-25, UC-T-26 |
 | Backlog | Multi-usuario por empresa, reseñas, favoritos, pagos reales, cancelación con reembolso | UC-P-03 y otros |
 
 Cada oleada solo introduce las entidades estrictamente necesarias para los casos de uso que la componen (consistente con "no construir entidades sin un caso de uso que las necesite").
@@ -765,7 +789,7 @@ Cada oleada solo introduce las entidades estrictamente necesarias para los casos
 |---|---|---|---|
 | **UC-P-15** | Configurar las reglas de vuelo de un paquete (destino, orígenes permitidos, cabina, desfases de fecha) | Operador | implementado |
 | **UC-A-09** | Inspeccionar las reglas de vuelo de cualquier paquete de la plataforma | Admin | implementado |
-| **UC-T-19** | Cotizar el vuelo de un paquete desde un origen permitido, con precios reales del proveedor | Turista (público) | implementado |
+| **UC-T-23** | Cotizar el vuelo de un paquete desde un origen permitido, con precios reales del proveedor | Turista (público) | implementado |
 | **UC-T-20** | Revalidar la cotización antes de comprar y ver si sigue igual, cambió, venció o ya no está | Turista (público) | implementado |
 | **UC-T-21** | Reservar paquete + vuelo en una sola operación, con datos de pasajeros y emisión del pasaje | Turista | implementado |
 | **UC-P-16** | Configurar la política de cancelación de un paquete por tramos de anticipación | Operador | implementado |
@@ -775,3 +799,115 @@ Cada oleada solo introduce las entidades estrictamente necesarias para los casos
 La regla que ordena los cuatro: **el operador configura cómo se busca el vuelo, no cuál es el vuelo**.
 El pasaje concreto y su precio salen del proveedor en el momento de cotizar, y no se consideran
 garantizados hasta revalidarlos.
+
+---
+
+# Oleadas 9 y 13–19 — casos de uso incorporados
+
+Esta sección se agregó el **27/10/2026**. El catálogo había dejado de mantenerse en la
+Oleada 12: las Oleadas 9 y 13 a 19 ya estaban implementadas y desplegadas sin casos de uso
+documentados. Lo que sigue describe el **estado funcional vigente**.
+
+## Oleada 9 — calendario, imágenes y preferencias
+
+| Código | Caso | Quién | Estado |
+|---|---|---|---|
+| **UC-T-24** | Registrar mis preferencias de viaje al entrar por primera vez, y editarlas después | Turista | implementado |
+
+**Extensiones de casos de uso existentes** (no son casos nuevos):
+
+- **UC-P-10 / UC-P-11** — la disponibilidad puede definirse con un **calendario programado**,
+  además de por fechas sueltas.
+- **UC-A-04** — un destino tiene **imágenes**, y se pueden **subir desde el Backoffice**
+  (esto último llegó en la Oleada 17).
+- **UC-AI-06** — el asistente **explica** cuando un itinerario guardado tiene fechas vencidas.
+
+## Oleada 13 — alta de operadores por el administrador
+
+| Código | Caso | Quién | Estado |
+|---|---|---|---|
+| **UC-A-11** | Crear la cuenta de un operador y su empresa, sin esperar a que él se registre | Admin | implementado |
+
+## Oleada 16 — historial del asistente
+
+Extensión de **UC-AI-06**: cada respuesta conserva sus recomendaciones en el historial de la
+conversación, de modo que al retomarla se vuelve a ver qué se recomendó y por qué.
+
+## Oleada 17 — administradores, moderación y cancelaciones trabadas
+
+| Código | Caso | Quién | Estado |
+|---|---|---|---|
+| **UC-A-12** | Crear la cuenta de otro administrador | Admin | implementado |
+| **UC-A-13** | Regenerar la contraseña de otro administrador | Admin | implementado |
+| **UC-A-14** | Reintentar una cancelación que quedó trabada a medio camino | Admin | implementado |
+
+**Extensiones**: **UC-A-06** y **UC-A-07** se ampliaron con moderación de contenido y gestión
+de usuarios desde el Backoffice; **UC-P-04** admite categorías en las experiencias;
+**UC-P-14** se puede ejercer desde el Backoffice del operador.
+
+## Oleada 18 — vuelos de operador: implementada y después desactivada
+
+| Código | Caso | Quién | Estado |
+|---|---|---|---|
+| **UC-P-17** | Publicar vuelos propios, venderlos dentro de TurisClick y registrar la emisión de cada pasaje | Operador | **implementado y desactivado** |
+
+> **No es una capacidad vigente para los usuarios.**
+>
+> Se construyó de punta a punta —contratos, backend, migración `0015`, Backoffice, app,
+> emisión por pasajero— y en la Oleada 19 se **apagó por configuración**
+> (`Flights:ProviderFlights:Enabled = false`). El código y las tablas se conservan; los
+> endpoints de operador y de administrador responden **501 `FEATURE_NOT_AVAILABLE`**, y una
+> reserva heredada con un vuelo de operador pendiente **no se cobra**.
+>
+> Se documenta como parte del historial del proyecto, no como funcionalidad disponible.
+
+## Oleada 19 — metabuscador de vuelos con redirección
+
+| Código | Caso | Quién | Estado |
+|---|---|---|---|
+| **UC-T-25** | Buscar vuelos entre dos aeropuertos, con fecha, pasajeros y cabina | Turista (público) | implementado |
+| **UC-T-26** | Abrir la oferta elegida en el sitio del vendedor para comprarla ahí | Turista (público) | implementado |
+
+**UC-T-26** sólo se ofrece cuando la oferta es real, el enlace lo da el proveedor, es `https`
+y su host coincide exactamente con uno autorizado. TurisClick **no construye URLs**. Cuando
+no se puede redirigir, se dice por qué: `DEMO`, `NO_LINK` o `LINK_NOT_ALLOWED`.
+
+> **Estado actual: DEMO.** El proveedor configurado es el simulado (`Flights:Provider = Fake`),
+> así que las ofertas se rotulan como de demostración y **ninguna redirige**. Integrar un
+> proveedor con permiso contractual de redirección es una mejora futura, no un requisito de
+> cierre.
+
+---
+
+# Los dos servicios de vuelo, que no son lo mismo
+
+| | **Vuelo dentro de un paquete** | **Vuelo independiente** |
+|---|---|---|
+| Casos de uso | UC-P-15, UC-A-09, **UC-T-23**, UC-T-20, UC-T-21 | **UC-T-25**, **UC-T-26** |
+| Modelo | Marketplace | Metabuscador |
+| Quién vende | La agencia, dentro de TurisClick | Un vendedor externo, en su sitio |
+| Dónde se paga | **En TurisClick** (simulado) | **Fuera de TurisClick** |
+| Proveedor | Duffel: **integración implementada** y con token de prueba obligatorio (`duffel_test_`). **En el despliegue actual corre el proveedor simulado**, porque `Flights:Provider` no está configurado y su valor por omisión es `Fake` | Simulado (DEMO) |
+| Vigente | Sí | Sí, en modo demostración |
+
+Y una tercera, que **ya no está vigente**: **UC-P-17**, el vuelo independiente vendido *dentro*
+de TurisClick por el operador (Oleada 18). Está implementada y desactivada.
+
+**No confundir** un paquete que incluye transporte aéreo (se compra en TurisClick) con un
+vuelo independiente (se compra en el sitio del vendedor).
+
+---
+
+# Requisitos no funcionales
+
+Se documentan acá porque están implementados y probados, pero no son casos de uso: no tienen
+un actor que persiga un objetivo.
+
+| Código | Requisito | Oleada | Estado |
+|---|---|---|---|
+| **RNF-SEC-01** | El mensaje del turista se trata como dato, nunca como instrucción para el modelo | 9 | implementado |
+| **RNF-SEC-02** | Un error 500 no publica el detalle interno de la excepción ni el error de PostgreSQL | 15 | implementado |
+| **RNF-SEC-03** | Una empresa suspendida no filtra a la búsqueda de vuelos ni a los itinerarios de IA guardados | 17 | implementado |
+| **RNF-IA-01** | El modelo de lenguaje es opcional, sanitizado y medible; el sistema funciona sin él | 9 | implementado |
+| **RNF-IA-02** | Con el proveedor híbrido, las reglas ganan sobre el modelo en los escalares literales | 10 | implementado |
+| **RNF-ACC-01** | La búsqueda de vuelos es pública mientras el proveedor sea el simulado; la sesión se pide al reservar | 18 | implementado |

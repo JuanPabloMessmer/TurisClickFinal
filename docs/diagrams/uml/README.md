@@ -132,8 +132,8 @@ mantenimiento mientras está a la venta. Las ediciones posteriores no alteran la
 | cu-01 | Planificar viaje con el asistente de IA | UC-T-12 a UC-T-17, UC-AI-01 a UC-AI-06 |
 | cu-01 | Reservar itinerario propuesto | UC-T-18 (UC-SYS-05) |
 | cu-01 | Reservar experiencia o paquete | UC-T-08, UC-T-09 (UC-SYS-01, UC-SYS-04, UC-SYS-06) |
-| cu-01 | Incluir vuelo en el paquete | UC-T-19 (vuelos), UC-T-20, UC-T-21 |
-| cu-01 | Pagar reserva | UC-T-19 (pago), UC-SYS-02, UC-SYS-07 |
+| cu-01 | Incluir vuelo en el paquete | UC-T-23, UC-T-20, UC-T-21 |
+| cu-01 | Pagar reserva | UC-T-19, UC-SYS-02, UC-SYS-07 |
 | cu-01 | Consultar mis viajes | UC-T-10 |
 | cu-01 | Cancelar reserva | UC-T-11, UC-T-22 (UC-SYS-08) |
 | cu-02 | Gestionar cuenta y sesión | UC-AUTH-02 a UC-AUTH-04 y cambio de contraseña temporal (UC-P-01) |
@@ -206,7 +206,7 @@ Verificadas contra el código de `master`. Ninguna se corrigió en este trabajo 
 |---|---|---|---|
 | 1 | `use-cases.md`, UC-T-11 (y comentario XML de `ReservationService.CancelAsync`) | Cancelar una reserva `CONFIRMED` responde 409 `REFUND_POLICY_REQUIRED` | Desde la Oleada 12 se cancela con presupuesto aceptado (`cancellation-quote` + `cancel`); sin presupuesto responde 409 `CANCELLATION_QUOTE_REQUIRED` |
 | 2 | `use-cases.md`, tabla resumen | UC-P-01 "Registrar empresa y solicitar cuenta Provider", actor PROVIDER | El autorregistro se eliminó: el alta la hace un ADMIN (`POST /api/admin/provider-accounts`); la ficha detallada sí está actualizada |
-| 3 | `use-cases.md`, Oleada 10 | El código UC-T-19 se usa para "Pagar una reserva pendiente" y para "Cotizar el vuelo de un paquete" | Colisión de identificadores; en los diagramas se distingue como "UC-T-19 vuelos" |
+| 3 | `use-cases.md`, Oleada 10 | El código UC-T-19 se usaba para "Pagar una reserva pendiente" y para "Cotizar el vuelo de un paquete" | **Resuelto el 27/10/2026**: la cotización de vuelos pasó a **UC-T-23**; UC-T-19 queda para el pago |
 | 4 | `use-cases.md`, Oleada 10 | Cotizar y revalidar vuelo: "Turista (público)" | Ambos endpoints exigen `RequireTourist` (sesión de turista); sólo `GET /api/airports` es público |
 | 5 | `domain-model.md` | No describe `TouristPreference`, `PackageFlightRule`, `FlightQuote`, `FlightBooking`, `PaymentTransaction` ni `ReservationCancellation(+Line)`; la sección de descartes dice que `Payment` "no se modela todavía"; el diagrama ER tampoco los incluye | Todas existen como entidades EF Core (el libro de pagos cumple el rol de `Payment`) |
 | 6 | `domain-model.md`, tabla de enums | `ReservationStatus` sin `CANCELLING` | El enum incluye `CANCELLING` (la sección 7 sí lo menciona) |

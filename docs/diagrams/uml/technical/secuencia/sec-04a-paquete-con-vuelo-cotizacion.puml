@@ -3,7 +3,7 @@
 autonumber "<b>0."
 hide footbox
 
-title Secuencia — Paquete + vuelo (1/2): cotización y revalidación del vuelo (UC-T-19 vuelos, UC-T-20)
+title Secuencia — Paquete + vuelo (1/2): cotización y revalidación del vuelo (UC-T-23, UC-T-20)
 
 actor "Turista" as T
 participant "Tourist Mobile" as M
