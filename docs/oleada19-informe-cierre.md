@@ -374,8 +374,24 @@ Vienen de antes de esta oleada y bloquean la documentación de grado, no el cier
 # 7. PROPUESTA DE ACTUALIZACIÓN DE JIRA — no ejecutada
 
 Derivada de `docs/jira-import/00-turisclick-completo.csv`, que es la fuente de lo que se importó.
-**Los identificadores de abajo son los `Issue id` del CSV, no las claves `TC-xxx`** que Jira
-asignó en la importación: para operar hay que resolver la correspondencia leyendo el proyecto.
+Los identificadores de abajo son los `Issue id` del CSV. Su correspondencia con las claves
+`TC-xxx` que Jira asignó en la importación **ya está documentada** en
+[`jira-import/07-sprints-y-claves.md`](jira-import/07-sprints-y-claves.md), así que no hace falta
+resolverla leyendo el proyecto:
+
+| ID funcional | `Issue id` | Clave Jira |
+|---|---|---|
+| `UC-T-25` | 2073 | `TC-90` |
+| `UC-T-26` | 2074 | `TC-91` |
+| `BUG-10` | 2094 | `TC-111` |
+| `PEND-01` | 2164 | `TC-181` |
+| `PEND-02` | 2165 | `TC-182` |
+| `PEND-03` | 2166 | `TC-183` |
+| `PEND-04` | 2167 | `TC-184` |
+| `PEND-06` | 2169 | `TC-186` |
+| `PEND-07` | 2170 | `TC-187` |
+| `PEND-09` | 2172 | `TC-189` |
+| `PEND-13` | 2176 | `TC-193` |
 
 Hay **11 ítems etiquetados `oleada-19`**: 3 en *Done* y 8 en *To Do*.
 
@@ -441,6 +457,19 @@ y ponerlo antes falsearía la cronología.
 
 ---
 
+## 7.7 Seudonimización de los entrevistados
+
+El 11/11/2026, antes de versionar `docs/jira-import/`, los tres entrevistados pasaron a figurar
+por código —**E-1**, **E-2** y **E-3**— con una descripción genérica del tipo de informante, en
+lugar de su nombre y organización. Son 7 reemplazos en `00-turisclick-completo.csv`,
+`03-tareas.csv` y `08-informe-final.md`.
+
+La correspondencia se conserva **fuera del repositorio**, en la copia privada de la evidencia.
+El seudónimo es provisional y reversible: si para la defensa corresponde nombrarlos, con su
+consentimiento, la tabla privada permite restituirlos. **Jira no se modificó**: allá los ítems
+siguen con los nombres originales.
+
+---
 # 8. LO QUE NO SE HIZO
 
 Restricciones respetadas, para que quede constancia:
