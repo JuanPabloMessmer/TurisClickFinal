@@ -1,0 +1,821 @@
+"Issue id","Issue Type","Summary","Description","Priority","Status","Sprint","Parent id","Epica (referencia)","Labels","Labels.1","Labels.2","Labels.3","Labels.4","Labels.5","Labels.6","Labels.7","Labels.8","Labels.9"
+"2075","Task","[EXT-01] Disponibilidad por calendario programado","Extiende UC-P-10 y UC-P-11. Objetivo: que el operador pueda programar disponibilidad por calendario en vez de cargar fecha por fecha.
+
+CRITERIOS DE ACEPTACION:
+- Se pueden generar slots desde una programación de calendario, además de altas sueltas.
+- Las reglas de propiedad y de cupo de UC-P-10 y UC-P-11 siguen aplicando sin cambios.
+
+EVIDENCIA: commit 4bc89eb · CalendarAvailabilityEndpointsTests, AvailabilityScheduleTests
+DEPENDE DE: UC-P-10, UC-P-11
+ID FUNCIONAL: EXT-01
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 13","","7 — Experiencias y disponibilidad","evidencia-git","backend","backoffice","oleada-9","extension","retro-2026-10-27","","","",""
+"2076","Task","[EXT-02] Imágenes de destino en la API","Extiende UC-A-04. Objetivo: que un destino pueda tener imágenes asociadas.
+
+CRITERIOS DE ACEPTACION:
+- El modelo y los endpoints admiten imágenes por destino.
+- El catálogo público las devuelve junto al destino.
+
+EVIDENCIA: commit 393baa3 · DestinationImagesEndpointsTests, DestinationImageServiceTests
+DEPENDE DE: UC-A-04
+ID FUNCIONAL: EXT-02
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 13","","5 — Catálogo: destinos y categorías","evidencia-git","backend","oleada-9","extension","retro-2026-10-27","","","","",""
+"2077","Task","[EXT-03] Imágenes de destino en el catálogo","Extiende UC-A-04. Objetivo: que las imágenes se vean en el catálogo que consume el turista.
+
+CRITERIOS DE ACEPTACION:
+- Las imágenes aparecen en la navegación de destinos de la app y del Backoffice.
+
+EVIDENCIA: commit c7ef328 · PublicDestinationsEndpointsTests
+DEPENDE DE: UC-A-04
+ID FUNCIONAL: EXT-03
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Low","Done","Sprint 13","","5 — Catálogo: destinos y categorías","evidencia-git","tourist-mobile","backoffice","oleada-9","extension","retro-2026-10-27","","","",""
+"2078","Task","[EXT-04] El asistente explica los itinerarios con fechas vencidas","Extiende UC-AI-06 y UC-T-17. Objetivo: que un itinerario guardado cuyas fechas ya pasaron se explique, en vez de aparecer roto.
+
+CRITERIOS DE ACEPTACION:
+- Al retomar un itinerario con fechas vencidas, se informa explícitamente por qué no es reservable.
+- La explicación sale de hechos reales, igual que el resto de UC-AI-06.
+
+EVIDENCIA: commit c70e08e · AiItineraryLifecycleTests
+DEPENDE DE: UC-AI-06, UC-T-17
+ID FUNCIONAL: EXT-04
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 13","","11 — Asistente IA y RAG","evidencia-git","backend","tourist-mobile","oleada-9","extension","retro-2026-10-27","","","",""
+"2079","Task","[EXT-05] Subir la imagen del destino desde el Backoffice","Extiende UC-A-04. Objetivo: que el administrador cargue la imagen él mismo, sin depender de una URL externa.
+
+CRITERIOS DE ACEPTACION:
+- La carga queda disponible desde la ficha del destino en el Backoffice.
+- El almacenamiento de imágenes está registrado y es sustituible.
+
+EVIDENCIA: commit 0eeaca7 · DestinationImageUploadEndpointsTests, ImageStorageRegistrationTests
+DEPENDE DE: UC-A-04
+ID FUNCIONAL: EXT-05
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 15","","5 — Catálogo: destinos y categorías","evidencia-git","backend","backoffice","oleada-17","extension","retro-2026-10-27","","","",""
+"2080","Task","[EXT-06] Categorías en experiencias y cancelación excepcional desde el Backoffice","Extiende UC-P-04 y UC-P-14. Objetivo: que el operador clasifique sus experiencias y pueda ejercer su cancelación excepcional desde el Backoffice.
+
+CRITERIOS DE ACEPTACION:
+- Las experiencias admiten categorías en el alta y la edición.
+- La cancelación excepcional de UC-P-14 es operable desde el Backoffice, con motivo obligatorio.
+
+EVIDENCIA: commit ff18320
+DEPENDE DE: UC-P-04, UC-P-14
+ID FUNCIONAL: EXT-06
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 15","","7 — Experiencias y disponibilidad","evidencia-git","backend","backoffice","oleada-17","extension","retro-2026-10-27","","","",""
+"2081","Task","[RNF-SEC-01] El mensaje del turista es dato, nunca instrucción","Requisito no funcional de seguridad. Objetivo: que el texto que escribe el turista no pueda alterar el comportamiento del modelo.
+
+CRITERIOS DE ACEPTACION:
+- El texto del turista se inyecta como dato, nunca como parte de las instrucciones del sistema.
+- Existe cobertura que intenta inyección de instrucciones y verifica que no se obedecen.
+
+EVIDENCIA: commit 471bd7b · UntrustedUserTextTests, AiGuardrailsTests
+ID FUNCIONAL: RNF-SEC-01
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 13","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","backend","oleada-9","rnf","seguridad","retro-2026-10-27","","","",""
+"2082","Task","[RNF-IA-01] El LLM es opcional, sanitizado y medible","Requisito no funcional. Objetivo: que el sistema funcione sin modelo de lenguaje y que su aporte se pueda medir.
+
+CRITERIOS DE ACEPTACION:
+- Con el proveedor de IA apagado, el sistema sigue respondiendo por reglas.
+- El cableado del proveedor está fijado a configuración y cubierto por pruebas.
+- La salida del modelo se sanitiza antes de usarse.
+
+EVIDENCIA: commit ad565c8 · AiProviderWiringTests, FallbackAiModelClientTests
+ID FUNCIONAL: RNF-IA-01
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 13","","11 — Asistente IA y RAG","evidencia-git","backend","oleada-9","rnf","retro-2026-10-27","","","","",""
+"2083","Task","[RNF-IA-02] Las reglas ganan sobre el modelo en escalares literales","Requisito no funcional. Objetivo: que el modelo no contradiga un dato literal que las reglas ya extrajeron bien.
+
+CRITERIOS DE ACEPTACION:
+- Con el proveedor híbrido, un escalar literal detectado por reglas prevalece sobre el del modelo.
+- Hay cobertura que compara ambas salidas y verifica cuál gana.
+
+EVIDENCIA: commit 5f2a8f0 · HybridAiModelClientTests, DeterministicAiModelClientTests
+ID FUNCIONAL: RNF-IA-02
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 14","","11 — Asistente IA y RAG","evidencia-git","backend","oleada-10","rnf","retro-2026-10-27","","","","",""
+"2084","Task","[RNF-ACC-01] La búsqueda de vuelos es pública con proveedor simulado","Requisito no funcional de acceso. Objetivo: que explorar vuelos no exija crear una cuenta, mientras el inventario sea simulado.
+
+CRITERIOS DE ACEPTACION:
+- Con el proveedor simulado, POST /api/flights/search responde sin sesión.
+- La sesión se sigue exigiendo para reservar.
+
+EVIDENCIA: commit b18ef0c · FlightSearchEndpointTests
+DEPENDE DE: UC-T-25
+ID FUNCIONAL: RNF-ACC-01
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 15","","14 — Metabuscador de vuelos con redirección (Oleada 19)","evidencia-git","backend","oleada-18","rnf","retro-2026-10-27","","","","",""
+"2096","Task","[TEC-01] Inicializar la arquitectura V2","Objetivo: levantar la solución V2 como monolito modular, con los documentos de FASES 1-4 incorporados. ABSORBE la limpieza del paquete Microsoft.AspNetCore.OpenApi sin uso (commit 8f5eb38), que era una línea dentro del mismo arranque y antes figuraba como un ítem aparte.
+
+CRITERIOS DE ACEPTACION:
+- Solución, monolito modular y documentos de FASES 1-4 en el repositorio.
+- Compila y arranca.
+
+EVIDENCIA: commits 15efea5, 8f5eb38
+ID FUNCIONAL: TEC-01
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 10","","3 — Análisis y diseño (FASES 1–4)","evidencia-git","backend","oleada-0","retro-2026-10-27","","","","","",""
+"2097","Task","[TEC-02] Reemplazar User.FullName por FirstName/LastName","Objetivo: separar nombre y apellido en el modelo de usuario.
+
+CRITERIOS DE ACEPTACION:
+- El modelo y los DTO usan nombre y apellido separados.
+- Las pruebas de autenticación pasan.
+
+EVIDENCIA: commit 491a6c8
+ID FUNCIONAL: TEC-02
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Low","Done","Sprint 10","","4 — Autenticación y cuentas","evidencia-git","backend","oleada-0","retro-2026-10-27","","","","","",""
+"2098","Task","[TEC-03] Frontend del Backoffice con el sistema de diseño","Objetivo: levantar el Backoffice con el sistema de diseño de TurisClick.
+
+CRITERIOS DE ACEPTACION:
+- El Backoffice arranca con el sistema de diseño aplicado y navegación funcional.
+
+EVIDENCIA: commit 3cbbd39
+ID FUNCIONAL: TEC-03
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 11","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","backoffice","oleada-2","retro-2026-10-27","","","","","",""
+"2099","Task","[TEC-04] Pasada de UX del Backoffice y seed con datos reales de Bolivia","Objetivo: hacer navegable el Backoffice con datos de desarrollo verosímiles.
+
+CRITERIOS DE ACEPTACION:
+- Empresas, categorías y destinos navegables con datos de desarrollo verosímiles.
+
+EVIDENCIA: commit 8c9f635
+ID FUNCIONAL: TEC-04
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 11","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","backoffice","oleada-2","retro-2026-10-27","","","","","",""
+"2100","Task","[TEC-05] Retirar credenciales de desarrollo de archivos versionados","Objetivo: que ningún secreto quede en el repositorio.
+
+CRITERIOS DE ACEPTACION:
+- Ningún archivo versionado contiene credenciales.
+- El arranque local usa user-secrets o variables de entorno.
+
+EVIDENCIA: commit a53f332
+ID FUNCIONAL: TEC-05
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 13","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","infra","oleada-9","seguridad","retro-2026-10-27","","","","",""
+"2101","Task","[TEC-06] Infraestructura Terraform para Azure V2","Objetivo: describir la infraestructura de V2 como código.
+
+CRITERIOS DE ACEPTACION:
+- La infraestructura de V2 está descrita en Terraform y es reproducible.
+
+EVIDENCIA: commit 6094686
+ID FUNCIONAL: TEC-06
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 13","","15 — Infraestructura, CI/CD y despliegue Azure","evidencia-git","infra","oleada-9","retro-2026-10-27","","","","","",""
+"2102","Task","[TEC-07] Endurecer la base de datos, los secretos y el seed de V2","Objetivo: que el bootstrap no exponga credenciales y el seed no sea reejecutable por accidente.
+
+CRITERIOS DE ACEPTACION:
+- El bootstrap de base y secretos no expone credenciales.
+- El seed es de una sola vez y no es reejecutable por accidente.
+
+EVIDENCIA: commits a4d53e7, 1d276b4
+ID FUNCIONAL: TEC-07
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 13","","15 — Infraestructura, CI/CD y despliegue Azure","evidencia-git","infra","oleada-9","seguridad","retro-2026-10-27","","","","",""
+"2103","Task","[TEC-08] CI/CD de backend V2 con Azure OIDC","Objetivo: publicar sin secretos de larga vida.
+
+CRITERIOS DE ACEPTACION:
+- El pipeline construye y publica autenticándose por OIDC.
+- No hay secretos de larga vida en el pipeline.
+
+EVIDENCIA: commit af873b7
+ID FUNCIONAL: TEC-08
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 13","","15 — Infraestructura, CI/CD y despliegue Azure","evidencia-git","infra","oleada-9","retro-2026-10-27","","","","","",""
+"2104","Task","[TEC-09] Catálogo de demostración realista de Bolivia","Objetivo: tener datos de demostración creíbles y verificables.
+
+CRITERIOS DE ACEPTACION:
+- Existe un catálogo de demostración con destinos y productos bolivianos verificables.
+
+EVIDENCIA: commit 4128446
+ID FUNCIONAL: TEC-09
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 13","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","backend","oleada-9","retro-2026-10-27","","","","","",""
+"2105","Task","[TEC-10] Validar calendario, imágenes, onboarding e IA contra Azure","Objetivo: poder ejercer los flujos de la Oleada 9 contra el entorno desplegado.
+
+CRITERIOS DE ACEPTACION:
+- Existe un script que ejerce esos flujos contra el entorno desplegado y reporta resultado.
+
+EVIDENCIA: commit 24a6337
+ID FUNCIONAL: TEC-10
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 13","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","infra","oleada-9","retro-2026-10-27","","","","","",""
+"2106","Task","[TEC-11] Tourist Mobile contra el backend de Azure","Objetivo: que la app apunte al entorno desplegado por defecto.
+
+CRITERIOS DE ACEPTACION:
+- La app apunta por defecto al backend desplegado.
+
+EVIDENCIA: commit 5d4410c
+ID FUNCIONAL: TEC-11
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 13","","15 — Infraestructura, CI/CD y despliegue Azure","evidencia-git","tourist-mobile","oleada-9","retro-2026-10-27","","","","","",""
+"2107","Task","[TEC-12] Publicar el Backoffice en Azure Static Web Apps","Objetivo: tener el Backoffice accesible.
+
+CRITERIOS DE ACEPTACION:
+- El Backoffice está publicado y accesible.
+
+EVIDENCIA: commit 4da9dc8
+ID FUNCIONAL: TEC-12
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 13","","15 — Infraestructura, CI/CD y despliegue Azure","evidencia-git","backoffice","infra","oleada-9","retro-2026-10-27","","","","",""
+"2108","Task","[TEC-13] Configurar builds EAS","Objetivo: poder producir un artefacto instalable de la app.
+
+CRITERIOS DE ACEPTACION:
+- Existe configuración de build que produce un artefacto instalable.
+
+EVIDENCIA: commit 94c1251
+ID FUNCIONAL: TEC-13
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 13","","15 — Infraestructura, CI/CD y despliegue Azure","evidencia-git","tourist-mobile","infra","oleada-9","retro-2026-10-27","","","","",""
+"2109","Task","[TEC-14] Validación E2E por roles contra Azure","Objetivo: recorrer los tres roles contra el entorno desplegado.
+
+CRITERIOS DE ACEPTACION:
+- Un script recorre los flujos de turista, operador y administrador contra el entorno desplegado.
+
+EVIDENCIA: commit c72466c
+ID FUNCIONAL: TEC-14
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 13","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","infra","oleada-9","retro-2026-10-27","","","","","",""
+"2110","Task","[TEC-15] Fijar el cableado del proveedor de IA a configuración","Objetivo: que la elección de proveedor no dependa del código.
+
+CRITERIOS DE ACEPTACION:
+- La elección de proveedor se resuelve por configuración y está cubierta por pruebas.
+
+EVIDENCIA: commit 3d05393 · AiProviderWiringTests
+ID FUNCIONAL: TEC-15
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 13","","11 — Asistente IA y RAG","evidencia-git","backend","oleada-9","retro-2026-10-27","","","","","",""
+"2111","Task","[TEC-16] Documentar el modelo, el pipeline RAG y Ollama","Objetivo: dejar escrita la decisión de modelo y cómo funciona el pipeline.
+
+CRITERIOS DE ACEPTACION:
+- ai-model-selection.md, ai-rag-architecture.md y ollama-local-setup.md describen la decisión y el pipeline reales.
+
+EVIDENCIA: commit 5217e00
+ID FUNCIONAL: TEC-16
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 13","","17 — Documentación y cierre de tesis","evidencia-git","oleada-9","documentacion","retro-2026-10-27","","","","","",""
+"2112","Task","[TEC-17] Documentar distribución y validación E2E por roles","Objetivo: enlazar el script E2E y la distribución de la app desde la documentación.
+
+CRITERIOS DE ACEPTACION:
+- La documentación enlaza el script E2E y la primera build interna de Android.
+
+EVIDENCIA: commits 242a738, f369de8, ab3956a
+ID FUNCIONAL: TEC-17
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Low","Done","Sprint 13","","17 — Documentación y cierre de tesis","evidencia-git","oleada-9","documentacion","retro-2026-10-27","","","","","",""
+"2113","Task","[TEC-18] Documentar calendario, imágenes, onboarding y asistente","Objetivo: documentar las cuatro capacidades de la Oleada 9.
+
+CRITERIOS DE ACEPTACION:
+- Las cuatro capacidades de la Oleada 9 están documentadas.
+
+EVIDENCIA: commit 2c5475b
+ID FUNCIONAL: TEC-18
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Low","Done","Sprint 13","","17 — Documentación y cierre de tesis","evidencia-git","oleada-9","documentacion","retro-2026-10-27","","","","","",""
+"2114","Task","[TEC-19] Propuesta técnica de integración de vuelos","Objetivo: diseñar la integración antes de implementarla.
+
+CRITERIOS DE ACEPTACION:
+- flight-integration-design.md describe el diseño antes de implementarlo.
+
+EVIDENCIA: commit 58e06af
+ID FUNCIONAL: TEC-19
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 14","","12 — Vuelos DENTRO del paquete (Duffel, modo prueba)","evidencia-git","oleada-10","documentacion","retro-2026-10-27","","","","","",""
+"2115","Task","[TEC-20] Diagramas UML de tesis","Objetivo: producir los diagramas UML del sistema implementado.
+
+CRITERIOS DE ACEPTACION:
+- Los diagramas UML existen, se generan desde fuentes .puml y reflejan el sistema implementado.
+
+EVIDENCIA: commits d1ec210, cd004b0
+ID FUNCIONAL: TEC-20
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 14","","17 — Documentación y cierre de tesis","evidencia-git","oleada-15","documentacion","retro-2026-10-27","","","","","",""
+"2116","Task","[TEC-21] Diagramas de arquitectura, C4, ERD, Azure e IA+RAG","Objetivo: producir los diagramas de arquitectura del sistema.
+
+CRITERIOS DE ACEPTACION:
+- Existen y se generan desde fuente.
+
+EVIDENCIA: commits e69b10d, b3fd55a
+ID FUNCIONAL: TEC-21
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 14","","17 — Documentación y cierre de tesis","evidencia-git","oleada-15","documentacion","retro-2026-10-27","","","","","",""
+"2117","Task","[TEC-22] Diagrama de despliegue y carpeta de presentación","Objetivo: reflejar la topología real de Azure V2. NOTA: queda desactualizado hasta publicar la Oleada 19 (ver PEND-11).
+
+CRITERIOS DE ACEPTACION:
+- El diagrama de despliegue refleja la topología real de Azure V2.
+
+EVIDENCIA: commits 14bebb4, 2cb144b
+ID FUNCIONAL: TEC-22
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 14","","17 — Documentación y cierre de tesis","evidencia-git","oleada-15","documentacion","retro-2026-10-27","","","","","",""
+"2118","Task","[TEC-23] Imágenes finales e integración de los diagramas","Objetivo: integrar los renders finales en la documentación.
+
+CRITERIOS DE ACEPTACION:
+- Los renders finales están integrados en la documentación.
+
+EVIDENCIA: commits 566a1af, df5a7f9, 1b9f7c2, 3fff0d6
+ID FUNCIONAL: TEC-23
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Low","Done","Sprint 14","","17 — Documentación y cierre de tesis","evidencia-git","oleada-15","documentacion","retro-2026-10-27","","","","","",""
+"2119","Task","[TEC-24] El deploy deja de ser automático; Tourist Mobile pasa el lint","Objetivo: que un push a master no vuelva a desplegar solo.
+
+CRITERIOS DE ACEPTACION:
+- El despliegue requiere workflow_dispatch con una entrada explícita.
+- La app móvil no tiene errores de lint.
+
+EVIDENCIA: commit 315f7c6
+ID FUNCIONAL: TEC-24
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 14","","15 — Infraestructura, CI/CD y despliegue Azure","evidencia-git","infra","tourist-mobile","oleada-14","retro-2026-10-27","","","","",""
+"2120","Task","[TEC-25] Preparación de despliegue: Azure caído, formato de moneda, resolución manual","Objetivo: atender los tres asuntos del incidente de despliegue. NOTA: commit con varios asuntos mezclados; se registra como una tarea, no como un defecto único.
+
+CRITERIOS DE ACEPTACION:
+- Los tres asuntos del incidente quedan atendidos y documentados.
+
+EVIDENCIA: commit 3a17577
+ID FUNCIONAL: TEC-25
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 14","","15 — Infraestructura, CI/CD y despliegue Azure","evidencia-git","infra","oleada-14","retro-2026-10-27","","","","","",""
+"2121","Task","[TEC-26] Health mínimo, excepción de primer deploy acotada y rollback preparado","Objetivo: endurecer el despliegue tras el incidente de exposición de errores.
+
+CRITERIOS DE ACEPTACION:
+- Existe health de esquema.
+- El primer deploy tiene una excepción acotada.
+- Hay paquete de rollback preparado.
+
+EVIDENCIA: commit 030c933 · SchemaFingerprintTests
+DEPENDE DE: BUG-11
+ID FUNCIONAL: TEC-26
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 14","","15 — Infraestructura, CI/CD y despliegue Azure","evidencia-git","infra","oleada-15","seguridad","retro-2026-10-27","","","","",""
+"2122","Task","[TEC-27] CORS del Backoffice, Duffel por Terraform y -SkipBuild","Objetivo: corregir tres problemas de infraestructura y despliegue.
+
+CRITERIOS DE ACEPTACION:
+- Un apply ya no borra el CORS del Backoffice.
+- La configuración de Duffel vive en Terraform.
+- El script de despliegue no aborta por un código de salida viejo.
+
+EVIDENCIA: commits fdd4eda, 8fe94b1
+ID FUNCIONAL: TEC-27
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 15","","15 — Infraestructura, CI/CD y despliegue Azure","evidencia-git","infra","oleada-17","retro-2026-10-27","","","","","",""
+"2123","Task","[TEC-28] Integrar el asistente IA en Tourist Mobile","Objetivo: que el asistente sea usable desde la app. Es la SUPERFICIE de UC-T-12 a UC-T-18, no una capacidad nueva.
+
+CRITERIOS DE ACEPTACION:
+- El asistente es usable desde la app móvil.
+
+EVIDENCIA: commit 73fe614
+DEPENDE DE: UC-T-12, UC-T-13, UC-T-14
+ID FUNCIONAL: TEC-28
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 13","","11 — Asistente IA y RAG","evidencia-git","tourist-mobile","oleada-9","retro-2026-10-27","","","","","",""
+"2124","Task","[TEC-29] Contrato de diseño y slice vertical del Backoffice","Objetivo: fijar un contrato de diseño y demostrarlo con un recorrido vertical.
+
+CRITERIOS DE ACEPTACION:
+- Existe un contrato de diseño con tokens.
+- Un recorrido vertical del Backoffice lo demuestra.
+
+EVIDENCIA: commit 17541fa
+ID FUNCIONAL: TEC-29
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 14","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","backoffice","oleada-10","retro-2026-10-27","","","","","",""
+"2125","Task","[TEC-30] Slice vertical de Tourist Mobile","Objetivo: aplicar el contrato de diseño en la app.
+
+CRITERIOS DE ACEPTACION:
+- Home, ficha y entrada del asistente aplican el contrato de diseño.
+
+EVIDENCIA: commit 7109a2a
+ID FUNCIONAL: TEC-30
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 14","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","tourist-mobile","oleada-10","retro-2026-10-27","","","","","",""
+"2126","Task","[TEC-31] El logo de TurisClick","Objetivo: reemplazar el ícono genérico por el logo.
+
+CRITERIOS DE ACEPTACION:
+- El logo reemplaza el ícono genérico en el Backoffice y en el favicon.
+
+EVIDENCIA: commit f316232
+ID FUNCIONAL: TEC-31
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Low","Done","Sprint 15","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","backoffice","oleada-17","retro-2026-10-27","","","","","",""
+"2127","Task","[V1-01] V1 — Estructura inicial del proyecto ASP.NET Core","Prototipo V1, rama legacy/v1. NO forma parte del producto vigente: V1 se descartó.
+
+CRITERIOS DE ACEPTACION:
+- El proyecto compila y arranca.
+
+EVIDENCIA: rama legacy/v1, 15/06/2026
+ID FUNCIONAL: V1-01
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 6","","2 — V1 y decisión de rearquitectura","evidencia-git","backend","v1","retro-2026-10-27","","","","","",""
+"2128","Task","[V1-02] V1 — Esquema de autenticación con EF Core","Prototipo V1, rama legacy/v1.
+
+CRITERIOS DE ACEPTACION:
+- Las tablas de usuario existen y se crean por migración.
+
+EVIDENCIA: rama legacy/v1, 16/06/2026
+ID FUNCIONAL: V1-02
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 6","","2 — V1 y decisión de rearquitectura","evidencia-git","backend","v1","retro-2026-10-27","","","","","",""
+"2129","Task","[V1-03] V1 — Login con JWT","Prototipo V1, rama legacy/v1.
+
+CRITERIOS DE ACEPTACION:
+- Un usuario válido obtiene un JWT.
+
+EVIDENCIA: rama legacy/v1, 16/06/2026
+ID FUNCIONAL: V1-03
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 6","","2 — V1 y decisión de rearquitectura","evidencia-git","backend","v1","retro-2026-10-27","","","","","",""
+"2130","Task","[V1-04] V1 — Autenticación en la app y en el backoffice","Prototipo V1, rama legacy/v1.
+
+CRITERIOS DE ACEPTACION:
+- Ambos clientes inician sesión contra el backend de V1.
+
+EVIDENCIA: rama legacy/v1, 17/06/2026
+ID FUNCIONAL: V1-04
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 6","","2 — V1 y decisión de rearquitectura","evidencia-git","backoffice","tourist-mobile","v1","retro-2026-10-27","","","","",""
+"2131","Task","[V1-05] V1 — Workflow de build y despliegue en Azure App Service","Prototipo V1, rama legacy/v1.
+
+CRITERIOS DE ACEPTACION:
+- Existe un workflow que construye y publica V1.
+
+EVIDENCIA: rama legacy/v1, 14/07/2026
+ID FUNCIONAL: V1-05
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 8","","2 — V1 y decisión de rearquitectura","evidencia-git","infra","v1","retro-2026-10-27","","","","","",""
+"2132","Task","[V1-06] V1 — Módulo provider","Prototipo V1, rama legacy/v1.
+
+CRITERIOS DE ACEPTACION:
+- Alta y consulta de proveedores operativas en V1.
+
+EVIDENCIA: rama legacy/v1, 15/07/2026
+ID FUNCIONAL: V1-06
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 8","","2 — V1 y decisión de rearquitectura","evidencia-git","backend","v1","retro-2026-10-27","","","","","",""
+"2133","Task","[V1-07] V1 — Rutas de usuario en el backoffice","Prototipo V1, rama legacy/v1. Tres commits consolidados en un ítem.
+
+CRITERIOS DE ACEPTACION:
+- La navegación de usuarios del backoffice de V1 responde.
+
+EVIDENCIA: rama legacy/v1, 15/07/2026 (3 commits)
+ID FUNCIONAL: V1-07
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Low","Done","Sprint 8","","2 — V1 y decisión de rearquitectura","evidencia-git","backoffice","v1","retro-2026-10-27","","","","","",""
+"2134","Task","[V1-08] V1 — Módulo destinations","Prototipo V1, rama legacy/v1. ULTIMO TRABAJO DE V1.
+
+CRITERIOS DE ACEPTACION:
+- Alta y consulta de destinos operativas en V1.
+
+EVIDENCIA: rama legacy/v1, 15-21/07/2026
+ID FUNCIONAL: V1-08
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 8","","2 — V1 y decisión de rearquitectura","evidencia-git","backend","v1","retro-2026-10-27","","","","","",""
+"2135","Task","[FASE-01] FASE 1 — Catálogo de casos de uso","Análisis y diseño formal de V2. FECHA ESTIMADA: los entregables existen y son verificables; lo estimado es cuándo se escribieron. El commit del 09/08 marca su INCORPORACION al repositorio, no su elaboración.
+
+CRITERIOS DE ACEPTACION:
+- Cada caso de uso tiene actor, objetivo, precondiciones, flujo, excepciones y postcondiciones.
+- Cada entidad del dominio se justifica en al menos un caso de uso.
+
+EVIDENCIA: docs/use-cases.md
+ID FUNCIONAL: FASE-01
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 9","","3 — Análisis y diseño (FASES 1–4)","evidencia-doc","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2136","Task","[FASE-02] FASE 2 — Modelo de dominio","Análisis y diseño formal de V2. FECHA ESTIMADA.
+
+CRITERIOS DE ACEPTACION:
+- Cada entidad referencia el caso de uso que la justifica.
+- Define snapshots de precio, multi-moneda sin conversión y aislamiento por empresa.
+
+EVIDENCIA: docs/domain-model.md
+DEPENDE DE: FASE-01
+ID FUNCIONAL: FASE-02
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 9","","3 — Análisis y diseño (FASES 1–4)","evidencia-doc","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2137","Task","[FASE-03] FASE 3 — Diseño de base de datos PostgreSQL","Análisis y diseño formal de V2. FECHA ESTIMADA.
+
+CRITERIOS DE ACEPTACION:
+- Cada entidad del dominio se traduce a una tabla física con tipos, claves y restricciones.
+- Es diseño: no hay migraciones todavía.
+
+EVIDENCIA: docs/database-design.md
+DEPENDE DE: FASE-02
+ID FUNCIONAL: FASE-03
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 9","","3 — Análisis y diseño (FASES 1–4)","evidencia-doc","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2138","Task","[FASE-04] FASE 4 — Arquitectura del backend","Análisis y diseño formal de V2. FECHA ESTIMADA.
+
+CRITERIOS DE ACEPTACION:
+- Define el stack: ASP.NET Core 10, PostgreSQL 16, EF Core + Npgsql, JWT, Serilog, Azure.
+- Define el patrón de monolito modular por caso de uso: caso de uso -> diseño -> entidades -> DTO -> repositorio -> servicio -> controlador -> migración -> pruebas -> revisión.
+
+EVIDENCIA: docs/backend-architecture.md
+DEPENDE DE: FASE-03
+ID FUNCIONAL: FASE-04
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 9","","3 — Análisis y diseño (FASES 1–4)","evidencia-doc","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2139","Task","[FASE-05] Decisión de rearquitectura: descartar V1 y construir V2","Decisión de proyecto. SIN DOCUMENTO DE DECISION PROPIO: se infiere de que V1 se abandonó el 21/07 y V2 nació el 09/08 con FASES 1-4 ya escritas.
+
+CRITERIOS DE ACEPTACION:
+- La decisión queda registrada con sus motivos.
+- PENDIENTE DE VALIDACION: los motivos NO están escritos en ningún documento del repositorio. No se inventan. Candidato a redactarse en DOC-03.
+
+EVIDENCIA: SIN EVIDENCIA DOCUMENTAL — inferido de las fechas de las ramas
+DEPENDE DE: V1-08
+ID FUNCIONAL: FASE-05
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 9","","2 — V1 y decisión de rearquitectura","retro-2026-10-27","fecha-estimada","sin-evidencia","","","","","","",""
+"2140","Task","[INV-01] Relevar la oferta turística boliviana por departamento","Investigación preliminar. SIN EVIDENCIA EN EL REPOSITORIO: no hay commits ni documentos fechados antes del 15/06/2026. La fecha del sprint es ESTIMADA y no confirmada.
+
+CRITERIOS DE ACEPTACION:
+- Existe un relevamiento de destinos y tipos de producto por departamento.
+
+EVIDENCIA: sin evidencia
+ID FUNCIONAL: INV-01
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 1","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2141","Task","[INV-02] Relevar cómo comercializan hoy agencias y operadores","Investigación preliminar. SIN EVIDENCIA EN EL REPOSITORIO. Fecha ESTIMADA.
+
+CRITERIOS DE ACEPTACION:
+- Están descritos los canales de venta, la intermediación y el cobro actuales.
+
+EVIDENCIA: sin evidencia
+ID FUNCIONAL: INV-02
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 1","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2145","Task","[INV-06] Preparar el guion de entrevista para agencias y operadores","Investigación preliminar. SIN EVIDENCIA EN EL REPOSITORIO. Fecha ESTIMADA.
+
+CRITERIOS DE ACEPTACION:
+- Existe un guion con las preguntas.
+
+EVIDENCIA: sin evidencia
+ID FUNCIONAL: INV-06
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 2","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2146","Task","[INV-07] Entrevista — E-1 (dirección de una operadora de turismo receptivo)","Entrevista al sector, confirmada como realizada por el autor. FECHA POR VALIDAR. NO SE CARGAN RESULTADOS: no hay nada verificable.
+
+CRITERIOS DE ACEPTACION:
+- La entrevista se realizó.
+- Fecha exacta pendiente de confirmación por el autor.
+- Resultados y conclusiones: los completa el autor.
+
+EVIDENCIA: sin evidencia — confirmado por el autor
+ID FUNCIONAL: INV-07
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 2","","1 — Investigación y requisitos iniciales","reconstruido","fecha-por-validar","retro-2026-10-27","","","","","","",""
+"2147","Task","[INV-08] Entrevista — E-2 (ex-presidencia de una asociación de agencias de viajes)","Entrevista al sector, confirmada como realizada por el autor. FECHA POR VALIDAR. NO SE CARGAN RESULTADOS.
+
+CRITERIOS DE ACEPTACION:
+- La entrevista se realizó.
+- Fecha exacta pendiente de confirmación por el autor.
+- Resultados y conclusiones: los completa el autor.
+
+EVIDENCIA: sin evidencia — confirmado por el autor
+ID FUNCIONAL: INV-08
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 2","","1 — Investigación y requisitos iniciales","reconstruido","fecha-por-validar","retro-2026-10-27","","","","","","",""
+"2148","Task","[INV-09] Entrevista — E-3 (dirección de una agencia de viajes)","Entrevista al sector, confirmada como realizada por el autor. NOMBRE DEL ENTREVISTADO PENDIENTE DE CONFIRMAR. FECHA POR VALIDAR. NO SE CARGAN RESULTADOS.
+
+CRITERIOS DE ACEPTACION:
+- La entrevista se realizó.
+- Nombre del entrevistado pendiente de confirmación por el autor.
+- Fecha exacta pendiente de confirmación por el autor.
+- Resultados y conclusiones: los completa el autor.
+
+EVIDENCIA: sin evidencia — confirmado por el autor
+ID FUNCIONAL: INV-09
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 2","","1 — Investigación y requisitos iniciales","reconstruido","fecha-por-validar","dato-pendiente","retro-2026-10-27","","","","","",""
+"2149","Task","[INV-10] Consolidar los hallazgos de las entrevistas","DESCRIPCION DELIBERADAMENTE EN BLANCO: la completa el autor. No se cargan conclusiones, cifras ni resultados, porque no hay nada verificable.
+
+CRITERIOS DE ACEPTACION:
+- Contenido pendiente: lo completa el autor.
+
+EVIDENCIA: sin evidencia
+DEPENDE DE: INV-07, INV-08, INV-09
+ID FUNCIONAL: INV-10
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 2","","1 — Investigación y requisitos iniciales","reconstruido","fecha-por-validar","dato-pendiente","retro-2026-10-27","","","","","",""
+"2150","Task","[INV-11] Analizar plataformas existentes (OTAs y marketplaces)","Investigación preliminar. SIN EVIDENCIA EN EL REPOSITORIO. Fecha ESTIMADA.
+
+CRITERIOS DE ACEPTACION:
+- Existe un análisis comparativo de las plataformas revisadas.
+
+EVIDENCIA: sin evidencia
+ID FUNCIONAL: INV-11
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 2","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2156","Task","[INV-17] Definir la convención de identificadores de casos de uso","ENTREGABLE VERIFICABLE aunque la fecha sea estimada. Por eso lleva evidencia-doc y NO reconstruido.
+
+CRITERIOS DE ACEPTACION:
+- La convención UC-AUTH / T / P / A / AI / SYS está definida.
+- Verificable en docs/use-cases.md.
+
+EVIDENCIA: docs/use-cases.md
+ID FUNCIONAL: INV-17
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 3","","1 — Investigación y requisitos iniciales","evidencia-doc","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2157","Task","[INV-18] Evaluar el backend: ASP.NET Core frente a alternativas","EVIDENCIA PARCIAL: el RESULTADO es verificable (ASP.NET Core 10 en backend-architecture.md), pero LA COMPARATIVA QUE LLEVO A ELEGIRLO NO EXISTE EN EL REPOSITORIO.
+
+CRITERIOS DE ACEPTACION:
+- La elección está justificada.
+- Resultado verificable: ASP.NET Core 10.
+
+EVIDENCIA: docs/backend-architecture.md (sólo el resultado)
+ID FUNCIONAL: INV-18
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 4","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","evidencia-parcial","retro-2026-10-27","","","","","",""
+"2158","Task","[INV-19] Evaluar el motor de base de datos","EVIDENCIA PARCIAL: el resultado es verificable, la comparativa no existe.
+
+CRITERIOS DE ACEPTACION:
+- Resultado verificable: PostgreSQL 16 con EF Core + Npgsql.
+
+EVIDENCIA: docs/backend-architecture.md (sólo el resultado)
+ID FUNCIONAL: INV-19
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 4","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","evidencia-parcial","retro-2026-10-27","","","","","",""
+"2159","Task","[INV-20] Evaluar el frontend web","EVIDENCIA PARCIAL: el resultado es verificable, la comparativa no existe.
+
+CRITERIOS DE ACEPTACION:
+- Resultado verificable: React + Vite.
+
+EVIDENCIA: docs/backend-architecture.md (sólo el resultado)
+ID FUNCIONAL: INV-20
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 4","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","evidencia-parcial","retro-2026-10-27","","","","","",""
+"2160","Task","[INV-21] Evaluar el stack móvil","EVIDENCIA PARCIAL: el resultado es verificable, la comparativa no existe.
+
+CRITERIOS DE ACEPTACION:
+- Resultado verificable: Expo / React Native.
+
+EVIDENCIA: docs/backend-architecture.md (sólo el resultado)
+ID FUNCIONAL: INV-21
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 4","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","evidencia-parcial","retro-2026-10-27","","","","","",""
+"2161","Task","[INV-22] Evaluar la nube y documentar la decisión de stack","EVIDENCIA PARCIAL. NOTA: la evaluación del modelo de IA NO va acá; ai-model-selection.md es de fines de septiembre y corresponde a TEC-16.
+
+CRITERIOS DE ACEPTACION:
+- Resultado verificable: Azure.
+- El stack completo está en backend-architecture.md.
+
+EVIDENCIA: docs/backend-architecture.md (sólo el resultado)
+ID FUNCIONAL: INV-22
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 4","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","evidencia-parcial","retro-2026-10-27","","","","","",""
+"2162","Task","[INV-23] Preparar el entorno de desarrollo y el repositorio","Investigación preliminar. SIN EVIDENCIA EN EL REPOSITORIO. Fecha ESTIMADA.
+
+CRITERIOS DE ACEPTACION:
+- El repositorio existe y el entorno levanta localmente.
+
+EVIDENCIA: sin evidencia
+ID FUNCIONAL: INV-23
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 5","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2163","Task","[INV-24] Definir convenciones de código y de ramas","Investigación preliminar. SIN EVIDENCIA EN EL REPOSITORIO. Fecha ESTIMADA.
+
+CRITERIOS DE ACEPTACION:
+- Las convenciones están acordadas.
+
+EVIDENCIA: sin evidencia
+ID FUNCIONAL: INV-24
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 5","","1 — Investigación y requisitos iniciales","reconstruido","fecha-estimada","retro-2026-10-27","","","","","","",""
+"2164","Task","[PEND-01] Desplegar el backend V2 con la Oleada 19 en Azure","Objetivo: que el entorno desplegado deje de contradecir la decisión funcional vigente. RIESGO: hoy Azure corre la Oleada 18 (verificado por comportamiento el 27/10/2026); el gate ProviderFlightsFeature NO existe allá, y el bloqueo de cobro de BUG-10 tampoco.
+
+CRITERIOS DE ACEPTACION:
+- El backend desplegado corresponde a 2d75b5d o posterior.
+- Se ejecuta por workflow_dispatch con la entrada explícita de despliegue (TEC-24).
+
+EVIDENCIA: —
+DEPENDE DE: TEC-24
+ID FUNCIONAL: PEND-01
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","To Do","Sprint 16","","15 — Infraestructura, CI/CD y despliegue Azure","infra","oleada-19","","","","","","","",""
+"2165","Task","[PEND-02] Verificar que redirect aparece en la búsqueda tras el despliegue","Objetivo: confirmar por comportamiento que la Oleada 19 quedó desplegada. Es el mismo marcador que se usó el 27/10 para determinar que NO lo estaba.
+
+CRITERIOS DE ACEPTACION:
+- Una búsqueda anónima contra Azure devuelve el campo redirect en cada oferta.
+
+EVIDENCIA: —
+DEPENDE DE: PEND-01
+ID FUNCIONAL: PEND-02
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","To Do","Sprint 16","","14 — Metabuscador de vuelos con redirección (Oleada 19)","oleada-19","","","","","","","","",""
+"2166","Task","[PEND-03] Verificar que los vuelos de operador responden 501 en Azure","Objetivo: confirmar que la funcionalidad desactivada está efectivamente apagada en el entorno desplegado.
+
+CRITERIOS DE ACEPTACION:
+- Con sesión válida, los endpoints de operador y administrador devuelven 501 FEATURE_NOT_AVAILABLE.
+
+EVIDENCIA: —
+DEPENDE DE: PEND-01
+ID FUNCIONAL: PEND-03
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","To Do","Sprint 16","","13 — Vuelos de operador (Oleada 18) — conservada y DESACTIVADA","oleada-19","desactivado","","","","","","","",""
+"2167","Task","[PEND-04] Desplegar el Backoffice sin la navegación de Vuelos","Objetivo: alinear el Backoffice desplegado con la decisión de la Oleada 19.
+
+CRITERIOS DE ACEPTACION:
+- El Backoffice desplegado no muestra ""Vuelos"" ni el panel de emisión.
+
+EVIDENCIA: —
+DEPENDE DE: PEND-01
+ID FUNCIONAL: PEND-04
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","To Do","Sprint 16","","15 — Infraestructura, CI/CD y despliegue Azure","backoffice","infra","oleada-19","","","","","","",""
+"2168","Task","[PEND-05] Ejecutar la suite completa sobre 2d75b5d en base aislada","Objetivo: obtener un resultado de pruebas REAL. Hasta ahora ningún ítem tiene resultado ejecutado. NOTA: la base compartida produce fallos espurios por contención entre sesiones (ver PEND-18).
+
+CRITERIOS DE ACEPTACION:
+- La suite corre contra una base de datos propia de la ejecución.
+- Se reporta el resultado real, aprobado o no.
+
+EVIDENCIA: —
+ID FUNCIONAL: PEND-05
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","To Do","Sprint 16","","16 — Calidad: pruebas, seguridad y validación","","","","","","","","","",""
+"2171","Task","[PEND-08] Verificar la migración 0015 en base local y de tests","Objetivo: confirmar el estado de 0015 en cada entorno. ESTADO DE AZURE: reportado como aplicada (15 migraciones, 0 pendientes) POR OTRA SESION. No verificado en esta sesión.
+
+CRITERIOS DE ACEPTACION:
+- Se confirma el estado de la migración 0015 en base local y de tests.
+- Se confirma o se descarta el reporte sobre Azure V2.
+
+EVIDENCIA: reporte de otra sesión, no verificado
+ID FUNCIONAL: PEND-08
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","To Do","Sprint 16","","15 — Infraestructura, CI/CD y despliegue Azure","por-verificar","","","","","","","","",""
+"2172","Task","[PEND-09] Configurar Flights:RedirectHosts","Objetivo: dejar la clave creada. VACIA, porque el modo es DEMO y el proveedor simulado nunca redirige.
+
+CRITERIOS DE ACEPTACION:
+- La clave existe en Azure.
+- Queda vacía: en modo DEMO ninguna oferta redirige.
+
+EVIDENCIA: —
+ID FUNCIONAL: PEND-09
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","To Do","Sprint 16","","14 — Metabuscador de vuelos con redirección (Oleada 19)","oleada-19","","","","","","","","",""
+"2173","Task","[PEND-10] Verificar si existen reservas de vuelo de operador afectadas","Objetivo: determinar si hay reservas con ítem FLIGHT pendiente en el entorno desplegado. DECISION PENDIENTE DEL AUTOR: si no hay, NO HACE FALTA NINGUNA ACCION. Si hay, su tratamiento (avisar, cancelar a mano o dejar expirar) es una decisión operativa suya. NO SE CANCELA NADA por cuenta propia.
+
+CRITERIOS DE ACEPTACION:
+- Se determina si existen reservas afectadas.
+- Si no existen, el ítem se cierra sin acción.
+- Si existen, se eleva la decisión al autor sin ejecutar nada.
+
+EVIDENCIA: —
+ID FUNCIONAL: PEND-10
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","To Do","Sprint 16","","14 — Metabuscador de vuelos con redirección (Oleada 19)","decision-pendiente","","","","","","","","",""
+"2174","Task","[PEND-11] Actualizar el diagrama de despliegue tras publicar la Oleada 19","Objetivo: que el diagrama refleje la versión desplegada. Hoy TEC-22 queda desactualizado.
+
+CRITERIOS DE ACEPTACION:
+- El diagrama refleja la topología y la versión desplegadas.
+
+EVIDENCIA: —
+DEPENDE DE: PEND-01, TEC-22
+ID FUNCIONAL: PEND-11
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Low","To Do","Sprint 16","","17 — Documentación y cierre de tesis","documentacion","","","","","","","","",""
+"2175","Task","[PEND-12] Evaluar la vía para la cuenta ADMIN del tutor","Objetivo: determinar COMO se daría de alta la cuenta del tutor, SIN EJECUTARLO. RESTRICCION: sólo evaluación. No se crean cuentas ni se modifican permisos.
+
+CRITERIOS DE ACEPTACION:
+- Queda escrito si UC-A-12 (alta de administrador por API) resuelve el caso sin tocar el firewall.
+- Queda escrito qué haría falta si no.
+- No se ejecuta ninguna acción.
+
+EVIDENCIA: —
+DEPENDE DE: UC-A-12
+ID FUNCIONAL: PEND-12
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Low","To Do","Sprint 16","","6 — Empresas, operadores y administración de cuentas","solo-evaluacion","","","","","","","","",""
+"2178","Task","[PEND-15] QA visual del Backoffice","Objetivo: revisar las pantallas del Backoffice y registrar los defectos.
+
+CRITERIOS DE ACEPTACION:
+- Revisión de pantallas registrada.
+- Los defectos encontrados quedan abiertos como bugs.
+
+EVIDENCIA: —
+ID FUNCIONAL: PEND-15
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","To Do","Sprint 17","","16 — Calidad: pruebas, seguridad y validación","backoffice","","","","","","","","",""
+"2179","Task","[PEND-16] QA visual de la app móvil autenticada","Objetivo: revisar las pantallas de Tourist Mobile con sesión iniciada.
+
+CRITERIOS DE ACEPTACION:
+- Revisión de pantallas registrada.
+- Los defectos encontrados quedan abiertos como bugs.
+
+EVIDENCIA: —
+ID FUNCIONAL: PEND-16
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","To Do","Sprint 17","","16 — Calidad: pruebas, seguridad y validación","tourist-mobile","","","","","","","","",""
+"2180","Task","[PEND-17] Build final de la app móvil","Objetivo: producir el artefacto de la versión de cierre.
+
+CRITERIOS DE ACEPTACION:
+- Existe un artefacto instalable de la versión de cierre.
+
+EVIDENCIA: —
+DEPENDE DE: TEC-13
+ID FUNCIONAL: PEND-17
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","To Do","Sprint 17","","15 — Infraestructura, CI/CD y despliegue Azure","tourist-mobile","infra","","","","","","","",""
+"2181","Task","[PEND-18] Resolver la contención de la base de datos de pruebas","Objetivo: eliminar los fallos espurios que produce compartir la base de tests entre sesiones.
+
+CRITERIOS DE ACEPTACION:
+- Cada ejecución usa una base propia, o las sesiones se serializan.
+- Los fallos espurios desaparecen.
+
+EVIDENCIA: —
+ID FUNCIONAL: PEND-18
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","To Do","Sprint 17","","16 — Calidad: pruebas, seguridad y validación","","","","","","","","","",""
+"2182","Task","[PEND-19] Auditoría de seguridad final","Objetivo: revisar autorización, exposición de errores, secretos y redirección antes del cierre.
+
+CRITERIOS DE ACEPTACION:
+- Revisión de autorización, exposición de errores, secretos y política de redirección.
+- Hallazgos registrados.
+
+EVIDENCIA: —
+ID FUNCIONAL: PEND-19
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","To Do","Sprint 17","","16 — Calidad: pruebas, seguridad y validación","seguridad","","","","","","","","",""
+"2185","Task","[PEND-22] Base de demostración limpia y escenarios A–D","Objetivo: que la demostración arranque desde cero y se recorra sin intervención.
+
+CRITERIOS DE ACEPTACION:
+- La demo arranca desde una base limpia.
+- Los cuatro escenarios se recorren sin intervención.
+
+EVIDENCIA: —
+ID FUNCIONAL: PEND-22
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","To Do","Sprint 18","","16 — Calidad: pruebas, seguridad y validación","","","","","","","","","",""
+"2186","Task","[PEND-23] Validación final y veredicto de release","Objetivo: emitir un veredicto explícito sobre si el software está listo.
+
+CRITERIOS DE ACEPTACION:
+- Existe un veredicto explícito, listo o no listo, con sus fundamentos.
+
+EVIDENCIA: —
+DEPENDE DE: PEND-21, PEND-22
+ID FUNCIONAL: PEND-23
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","To Do","Sprint 18","","16 — Calidad: pruebas, seguridad y validación","","","","","","","","","",""
+"2187","Task","[PEND-24] Congelamiento de código — 30/11/2026","Objetivo: cerrar el desarrollo del software en la fecha meta.
+
+CRITERIOS DE ACEPTACION:
+- No se integran cambios funcionales después del 30/11/2026.
+
+EVIDENCIA: —
+DEPENDE DE: PEND-23
+ID FUNCIONAL: PEND-24
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","To Do","Sprint 18","","15 — Infraestructura, CI/CD y despliegue Azure","","","","","","","","","",""
+"2194","Task","[DOC-07] Integrar los diagramas UML y de arquitectura","SIN SPRINT: fechas pendientes.
+
+CRITERIOS DE ACEPTACION:
+- Los diagramas del documento coinciden con sus fuentes .puml.
+
+EVIDENCIA: —
+DEPENDE DE: TEC-20, TEC-21, PEND-11
+ID FUNCIONAL: DOC-07
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","To Do","","","17 — Documentación y cierre de tesis","documentacion","sin-fecha","","","","","","","",""
+"2195","Task","[DOC-08] Manual de usuario","SIN SPRINT: fechas pendientes.
+
+CRITERIOS DE ACEPTACION:
+- Cubre los tres roles: turista, operador y administrador.
+
+EVIDENCIA: —
+ID FUNCIONAL: DOC-08
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","To Do","","","17 — Documentación y cierre de tesis","documentacion","sin-fecha","","","","","","","",""
+"2196","Task","[DOC-09] Revisión del tutor e incorporación de correcciones","SIN SPRINT: fechas pendientes.
+
+CRITERIOS DE ACEPTACION:
+- Correcciones del tutor incorporadas.
+
+EVIDENCIA: —
+ID FUNCIONAL: DOC-09
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","To Do","","","17 — Documentación y cierre de tesis","documentacion","sin-fecha","","","","","","","",""
+"2197","Task","[DOC-10] Preparar la defensa","SIN SPRINT: fechas pendientes.
+
+CRITERIOS DE ACEPTACION:
+- Presentación y demostración ensayadas.
+
+EVIDENCIA: —
+ID FUNCIONAL: DOC-10
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","To Do","","","17 — Documentación y cierre de tesis","documentacion","sin-fecha","","","","","","","",""
+"2198","Task","[DOC-11] Extender el catálogo a las Oleadas 9 y 13–19","HECHO el 27/10/2026: el catálogo de casos de uso había dejado de mantenerse en la Oleada 12.
+
+CRITERIOS DE ACEPTACION:
+- 8 casos de uso nuevos incorporados: UC-T-24, UC-T-25, UC-T-26, UC-A-11 a UC-A-14, UC-P-17.
+- 6 requisitos no funcionales documentados.
+- Colisión del código UC-T-19 resuelta: la cotización de vuelos pasó a UC-T-23.
+- 4 diagramas regenerados con PlantUML 1.2024.7.
+
+EVIDENCIA: docs/use-cases.md, docs/diagrams/uml/ — 8 archivos modificados
+ID FUNCIONAL: DOC-11
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 15","","17 — Documentación y cierre de tesis","documentacion","retro-2026-10-27","","","","","","","",""

@@ -1,0 +1,128 @@
+"Issue id","Issue Type","Summary","Description","Priority","Status","Sprint","Parent id","Epica (referencia)","Labels","Labels.1","Labels.2","Labels.3","Labels.4","Labels.5","Labels.6","Labels.7","Labels.8","Labels.9"
+"2085","Bug","[BUG-01] La IA proponía y revalidaba fechas pasadas como reservables","Síntoma: el asistente ofrecía fechas anteriores a hoy como si fueran reservables. Corregido en el commit indicado.
+
+CRITERIOS DE ACEPTACION:
+- Una propuesta o revalidación nunca ofrece una fecha anterior a hoy.
+- SIN PRUEBA DE REGRESION IDENTIFICADA.
+
+EVIDENCIA: commit 5277108
+ID FUNCIONAL: BUG-01
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 13","","11 — Asistente IA y RAG","evidencia-git","backend","oleada-9","sin-prueba","retro-2026-10-27","","","","",""
+"2086","Bug","[BUG-02] El modelo omitía campos y se le pedía contar días","Síntoma: la salida estructurada del modelo llegaba incompleta, y se le delegaba un cálculo que debía hacer el backend.
+
+CRITERIOS DE ACEPTACION:
+- La salida estructurada del modelo no deja campos obligatorios vacíos.
+- El conteo de días lo hace el backend, no el modelo.
+- SIN PRUEBA DE REGRESION IDENTIFICADA.
+
+EVIDENCIA: commit 65105cc
+ID FUNCIONAL: BUG-02
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 14","","11 — Asistente IA y RAG","evidencia-git","backend","oleada-10","sin-prueba","retro-2026-10-27","","","","",""
+"2087","Bug","[BUG-03] Las fotos del catálogo no se veían en iOS ni Android","Síntoma: las imágenes del catálogo no cargaban en la app, en ninguno de los dos sistemas.
+
+CRITERIOS DE ACEPTACION:
+- Las imágenes del catálogo cargan en iOS y en Android.
+- SIN PRUEBA DE REGRESION IDENTIFICADA: es un defecto de cliente móvil y puede no tener cobertura automatizada.
+
+EVIDENCIA: commit b81aefa
+ID FUNCIONAL: BUG-03
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 15","","5 — Catálogo: destinos y categorías","evidencia-git","tourist-mobile","oleada-17","sin-prueba","retro-2026-10-27","","","","",""
+"2088","Bug","[BUG-04] El asistente perdía las recomendaciones en el historial","Síntoma: al retomar una conversación, las recomendaciones dadas en cada respuesta no estaban.
+
+CRITERIOS DE ACEPTACION:
+- Al retomar una conversación, cada respuesta conserva las recomendaciones que dio.
+- SIN PRUEBA DE REGRESION IDENTIFICADA.
+
+EVIDENCIA: commit 0e76e23
+ID FUNCIONAL: BUG-04
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 15","","11 — Asistente IA y RAG","evidencia-git","backend","oleada-16","sin-prueba","retro-2026-10-27","","","","",""
+"2089","Bug","[BUG-05] Una empresa suspendida seguía apareciendo en vuelos e itinerarios de IA","Síntoma: la suspensión de empresa filtraba el catálogo público pero NO la búsqueda de vuelos ni los itinerarios de IA guardados. Documentado como RNF-SEC-03.
+
+CRITERIOS DE ACEPTACION:
+- Los productos de una empresa SUSPENDED no aparecen en la búsqueda de vuelos.
+- Tampoco en itinerarios de IA guardados al revalidarlos.
+- PRUEBA DE REGRESION EXISTENTE: SuspendedCompanyLeaksTests.
+
+EVIDENCIA: commit 152cf01 · SuspendedCompanyLeaksTests
+DEPENDE DE: UC-A-08
+ID FUNCIONAL: BUG-05
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 15","","6 — Empresas, operadores y administración de cuentas","evidencia-git","backend","oleada-17","seguridad","retro-2026-10-27","","","","",""
+"2090","Bug","[BUG-06] Una línea cancelada por el operador se cobraba y reconfirmaba al pagar","Síntoma: hasta la Oleada 17 el pago cobraba y confirmaba TODAS las líneas, así que pagar después de una cancelación del operador revivía un servicio sobre un cupo ya liberado.
+
+CRITERIOS DE ACEPTACION:
+- Sólo se cobran y confirman las líneas en PENDING_PAYMENT.
+- Si no queda ninguna -> 409 RESERVATION_NO_LONGER_PAYABLE.
+- PRUEBA DE REGRESION EXISTENTE: ReservationCancellationTests.
+
+EVIDENCIA: commit 09aa83d · ReservationCancellationTests
+DEPENDE DE: UC-T-19, UC-P-14
+ID FUNCIONAL: BUG-06
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 15","","10 — Pagos, cancelaciones y reembolsos","evidencia-git","backend","oleada-17","retro-2026-10-27","","","","","",""
+"2091","Bug","[BUG-07] La expiración se trababa con reservas cuyo vuelo seguía en resolución","Síntoma: una reserva con el vuelo en resolución bloqueaba el lote entero del job de expiración.
+
+CRITERIOS DE ACEPTACION:
+- El job de expiración procesa el resto del lote aunque una reserva tenga el vuelo en resolución.
+- PRUEBA DE REGRESION EXISTENTE: ReservationExpirationTests.
+
+EVIDENCIA: commit 8aadacd · ReservationExpirationTests
+DEPENDE DE: UC-SYS-08
+ID FUNCIONAL: BUG-07
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","Done","Sprint 15","","10 — Pagos, cancelaciones y reembolsos","evidencia-git","backend","oleada-18","retro-2026-10-27","","","","","",""
+"2092","Bug","[BUG-08] Edades no validadas en cada tramo","Síntoma: la edad del pasajero se validaba una sola vez para todo el viaje, no por tramo.
+
+CRITERIOS DE ACEPTACION:
+- La edad de cada pasajero se valida por tramo.
+- PRUEBA DE REGRESION EXISTENTE: ProviderFlightContractTests.
+
+EVIDENCIA: commit 8e6e740 · ProviderFlightContractTests
+ID FUNCIONAL: BUG-08
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 15","","13 — Vuelos de operador (Oleada 18) — conservada y DESACTIVADA","evidencia-git","backend","oleada-18","retro-2026-10-27","","","","","",""
+"2093","Bug","[BUG-09] El infante dejaba de ser menor de 2 en la vuelta","Síntoma: un infante válido en la ida podía superar los 2 años en la fecha del tramo de vuelta. Misma familia de reglas que BUG-08, defecto distinto.
+
+CRITERIOS DE ACEPTACION:
+- Un infante sigue siendo menor de 2 años en la fecha del tramo de vuelta.
+- SIN PRUEBA DE REGRESION IDENTIFICADA por separado de BUG-08.
+
+EVIDENCIA: commit 83f8f8e
+DEPENDE DE: BUG-08
+ID FUNCIONAL: BUG-09
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Medium","Done","Sprint 15","","13 — Vuelos de operador (Oleada 18) — conservada y DESACTIVADA","evidencia-git","backend","oleada-18","sin-prueba","retro-2026-10-27","","","","",""
+"2094","Bug","[BUG-10] Se cobraban reservas de vuelo de operador heredadas con la funcionalidad apagada","Síntoma: con los vuelos de operador apagados, pagar una reserva heredada la dejaba con la emisión pendiente y sin nadie que pudiera registrarla, porque los endpoints de emisión también están apagados.
+
+CRITERIOS DE ACEPTACION:
+- Una reserva con un ítem FLIGHT en PENDING_PAYMENT no se cobra con la funcionalidad apagada; la reserva no se toca y su retención vence como cualquier otra.
+- Los paquetes, con o sin vuelo, SI se siguen pagando.
+- DOS PRUEBAS DE REGRESION EXISTENTES: ConLaFuncionalidadApagadaUnaReservaDeVueloPendienteNoSeCobra y ConLosVuelosDeOperadorApagadosElPaqueteConVueloSeReservaYPaga.
+
+EVIDENCIA: commit 2d75b5d · ProviderFlightBookingTests
+DEPENDE DE: UC-T-19, UC-P-17
+ID FUNCIONAL: BUG-10
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 15","","14 — Metabuscador de vuelos con redirección (Oleada 19)","evidencia-git","backend","oleada-19","retro-2026-10-27","","","","","",""
+"2095","Bug","[BUG-11] Los errores 500 publicaban el error de PostgreSQL","Síntoma: una excepción no controlada devolvía al cliente el mensaje crudo de PostgreSQL. Documentado como RNF-SEC-02.
+
+CRITERIOS DE ACEPTACION:
+- Un 5xx devuelve un mensaje genérico; el detail nunca se propaga.
+- La respuesta no contiene rastros del motor de base de datos.
+- PRUEBA DE REGRESION EXISTENTE: ErrorDisclosureAndHealthTests, GlobalExceptionHandlerTests.
+
+EVIDENCIA: commit bbabff8 · ErrorDisclosureAndHealthTests, GlobalExceptionHandlerTests
+ID FUNCIONAL: BUG-11
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","Done","Sprint 14","","16 — Calidad: pruebas, seguridad y validación","evidencia-git","backend","oleada-15","seguridad","retro-2026-10-27","","","","",""
+"2183","Bug","[PEND-20] Corrección de los defectos encontrados","Objetivo: cerrar lo que aparezca en el QA y en las pruebas E2E del Sprint 17.
+
+CRITERIOS DE ACEPTACION:
+- Cada defecto abierto en el Sprint 17 queda corregido o explícitamente diferido.
+
+EVIDENCIA: —
+DEPENDE DE: PEND-14, PEND-15, PEND-16
+ID FUNCIONAL: PEND-20
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","High","To Do","Sprint 17","","16 — Calidad: pruebas, seguridad y validación","","","","","","","","","",""
+"2184","Bug","[PEND-21] Corrección de defectos bloqueantes","Objetivo: que no quede ningún bloqueante antes del congelamiento.
+
+CRITERIOS DE ACEPTACION:
+- No queda ningún defecto bloqueante abierto.
+
+EVIDENCIA: —
+DEPENDE DE: PEND-20
+ID FUNCIONAL: PEND-21
+REGISTRO: ítem consolidado retrospectivamente el 27/10/2026. Jira no contiene el historial de transiciones de este trabajo.","Highest","To Do","Sprint 18","","16 — Calidad: pruebas, seguridad y validación","","","","","","","","","",""
