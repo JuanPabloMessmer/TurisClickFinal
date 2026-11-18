@@ -59,14 +59,15 @@ public class CompaniesEndpointsTests
         UseBearerToken(client, provider.AccessToken);
         var updateResponse = await client.PutAsJsonAsync("/api/companies/me", new
         {
-            name = "Andes Travel Renovada",
+            // Único por corrida: la base de tests persiste y desde la fase 1 el nombre de empresa es único (R-01).
+            name = CompanyNameFor("Andes Travel Renovada", Guid.NewGuid().ToString("N")),
             description = "Nueva descripción",
             contactEmail = "contacto-nuevo@turisclick.dev"
         });
 
         Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
         var body = await updateResponse.Content.ReadFromJsonAsync<CompanyResponse>(JsonOptions);
-        Assert.Equal("Andes Travel Renovada", body!.Name);
+        Assert.StartsWith("Andes Travel Renovada ", body!.Name);
         Assert.Equal("APPROVED", body.Status);
     }
 

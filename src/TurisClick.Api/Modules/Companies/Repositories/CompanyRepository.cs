@@ -9,8 +9,11 @@ public class CompanyRepository(TurisClickDbContext db) : ICompanyRepository
     public Task<Company?> GetByIdAsync(Guid id, CancellationToken ct) =>
         db.Companies.FirstOrDefaultAsync(c => c.Id == id, ct);
 
-    public Task<bool> LegalDocumentExistsAsync(string legalDocument, CancellationToken ct) =>
-        db.Companies.AnyAsync(c => c.LegalDocument == legalDocument, ct);
+    public Task<CompanyNameMatch?> FindNameConflictAsync(string nameKey, Guid? excludeId, CancellationToken ct) =>
+        CompanyQueries.FindNameConflictAsync(db, nameKey, excludeId, ct);
+
+    public Task<List<CompanyNameMatch>> FindSimilarAsync(string name, Guid? excludeId, CancellationToken ct) =>
+        CompanyQueries.FindSimilarAsync(db, name, excludeId, ct);
 
     public async Task<(List<Company> Items, int TotalCount)> ListAsync(
         CompanyStatus? status, string? search, int page, int pageSize, CancellationToken ct)

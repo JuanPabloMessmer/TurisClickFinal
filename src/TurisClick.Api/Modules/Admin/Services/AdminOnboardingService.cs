@@ -7,7 +7,10 @@ using TurisClick.Api.Modules.Admin.Dtos;
 using TurisClick.Api.Modules.Auth.Entities;
 using TurisClick.Api.Modules.Companies.Dtos;
 using TurisClick.Api.Modules.Companies.Entities;
+using TurisClick.Api.Modules.Companies.Repositories;
+using TurisClick.Api.Modules.Companies.Services;
 using TurisClick.Api.Shared.Exceptions;
+using TurisClick.Api.Shared.Validation;
 
 namespace TurisClick.Api.Modules.Admin.Services;
 
@@ -53,25 +56,32 @@ public class AdminOnboardingService(
     public async Task<ProviderAccountCreatedResponse> CreateProviderAccountAsync(
         CreateProviderAccountRequest request, CancellationToken ct)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
-        var legalDocument = request.LegalDocument.Trim();
+        // Los mismos valores normalizados que validaron los atributos del DTO (R-01 a R-06).
+        var email = FieldRules.Email.Normalize(request.Email) ?? string.Empty;
+        var legalDocument = FieldRules.Nit.Normalize(request.LegalDocument) ?? string.Empty;
+        var companyName = TextNormalizer.SingleLine(request.CompanyName) ?? string.Empty;
 
         if (await db.Users.AnyAsync(u => u.Email == email, ct))
-            throw new ConflictAppException("Ya existe una cuenta con ese email.");
+            throw DuplicateEmail();
 
-        if (await db.Companies.AnyAsync(c => c.LegalDocument == legalDocument, ct))
-            throw new ConflictAppException("Ya existe una empresa con ese documento legal.");
+        // Compara contra los NIT ya guardados también normalizados: "1234-567" viejo y "1234567" nuevo son el mismo.
+        if (await CompanyQueries.FindNitConflictAsync(db, legalDocument, ct) is not null)
+            throw new ConflictAppException("Ya existe una empresa con ese NIT.", ErrorCodes.Duplicate, "legalDocument");
+
+        var nameConflict = await CompanyQueries.FindNameConflictAsync(db, TextNormalizer.NameKey(companyName), null, ct);
+        if (nameConflict is not null)
+            throw CompanyService.DuplicateName(nameConflict.Name, "companyName");
 
         var now = DateTimeOffset.UtcNow;
 
         var company = new Company
         {
             Id = Guid.NewGuid(),
-            Name = request.CompanyName.Trim(),
-            Description = string.IsNullOrWhiteSpace(request.CompanyDescription) ? null : request.CompanyDescription.Trim(),
+            Name = companyName,
+            Description = TextNormalizer.NullIfEmpty(TextNormalizer.MultiLine(request.CompanyDescription)),
             LegalDocument = legalDocument,
-            ContactEmail = request.ContactEmail.Trim().ToLowerInvariant(),
-            ContactPhone = string.IsNullOrWhiteSpace(request.ContactPhone) ? null : request.ContactPhone.Trim(),
+            ContactEmail = FieldRules.Email.Normalize(request.ContactEmail) ?? string.Empty,
+            ContactPhone = FieldRules.Phone.Parse(request.ContactPhone).Value,
             // Quien da el alta ya conoce a la empresa; pedirle que después se la apruebe a sí mismo sería un
             // paso ceremonial. Puede quedar pendiente igual si así lo decide.
             Status = request.Approve ? CompanyStatus.APPROVED : CompanyStatus.PENDING_APPROVAL,
@@ -85,8 +95,8 @@ public class AdminOnboardingService(
         var user = new User
         {
             Id = Guid.NewGuid(),
-            FirstName = request.FirstName.Trim(),
-            LastName = request.LastName.Trim(),
+            FirstName = TextNormalizer.SingleLine(request.FirstName) ?? string.Empty,
+            LastName = TextNormalizer.SingleLine(request.LastName) ?? string.Empty,
             Email = email,
             PasswordHash = passwordHasher.Hash(temporaryPassword),
             Role = UserRole.PROVIDER,
@@ -101,7 +111,21 @@ public class AdminOnboardingService(
 
         // Empresa y cuenta se confirman juntas: una empresa sin cuenta no se puede operar, y una cuenta sin
         // empresa no puede publicar nada.
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresUniqueViolation } pg)
+        {
+            // Dos altas simultáneas con el mismo dato: el índice único decide y la segunda recibe lo mismo que
+            // si hubiera llegado después, con el campo que corresponde.
+            throw pg.ConstraintName switch
+            {
+                "uq_users_email" => DuplicateEmail(),
+                "uq_companies_name_key" => CompanyService.DuplicateName(companyName, "companyName"),
+                _ => new ConflictAppException("Ya existe una empresa con ese NIT.", ErrorCodes.Duplicate, "legalDocument"),
+            };
+        }
 
         return new ProviderAccountCreatedResponse
         {
@@ -128,20 +152,20 @@ public class AdminOnboardingService(
     public async Task<AdminAccountCreatedResponse> CreateAdminAccountAsync(
         CreateAdminAccountRequest request, CancellationToken ct)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
+        var email = FieldRules.Email.Normalize(request.Email) ?? string.Empty;
 
         // Si el email ya existe no se toca esa cuenta, sea del rol que sea: ni se la promueve ni se le cambia
         // la contraseña. Promover a alguien existente sería otra operación, y no esta.
         if (await db.Users.AnyAsync(u => u.Email == email, ct))
-            throw new ConflictAppException("Ya existe una cuenta con ese email.");
+            throw DuplicateEmail();
 
         var temporaryPassword = GenerateTemporaryPassword();
 
         var user = new User
         {
             Id = Guid.NewGuid(),
-            FirstName = request.FirstName.Trim(),
-            LastName = request.LastName.Trim(),
+            FirstName = TextNormalizer.SingleLine(request.FirstName) ?? string.Empty,
+            LastName = TextNormalizer.SingleLine(request.LastName) ?? string.Empty,
             Email = email,
             PasswordHash = passwordHasher.Hash(temporaryPassword),
             Role = UserRole.ADMIN,
@@ -160,7 +184,7 @@ public class AdminOnboardingService(
         {
             // Dos altas simultáneas con el mismo email: el índice único decide, y la segunda recibe lo mismo que
             // si hubiera llegado después.
-            throw new ConflictAppException("Ya existe una cuenta con ese email.");
+            throw DuplicateEmail();
         }
 
         logger.LogInformation("El administrador {CreatedBy} dio de alta al administrador {UserId}",
@@ -269,6 +293,9 @@ public class AdminOnboardingService(
     /// caracteres que se confundan (ni O ni 0, ni l ni 1). Se dicta por teléfono sin pedir que se repita, y
     /// aun así tiene suficiente entropía para el rato que vive.
     /// </summary>
+    private static ConflictAppException DuplicateEmail() =>
+        new("Ya existe una cuenta con ese correo.", ErrorCodes.Duplicate, "email");
+
     private static string GenerateTemporaryPassword()
     {
         const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

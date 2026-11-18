@@ -5,6 +5,7 @@ using TurisClick.Api.Modules.Flights.ProviderFlights.Dtos;
 using TurisClick.Api.Modules.Flights.ProviderFlights.Entities;
 using TurisClick.Api.Shared.Exceptions;
 using TurisClick.Api.Shared.Responses;
+using TurisClick.Api.Shared.Validation;
 
 namespace TurisClick.Api.Modules.Flights.ProviderFlights.Services;
 
@@ -33,7 +34,7 @@ public class AdminProviderFlightService(
         if (request.Authorized)
         {
             company.CanSellFlights = true;
-            company.FlightSellerRegistration = request.Registration!.Trim();
+            company.FlightSellerRegistration = TextNormalizer.SingleLine(request.Registration);
             company.FlightSellerAuthorizedAt = DateTimeOffset.UtcNow;
             company.FlightSellerAuthorizedByUserId = currentUser.UserId;
         }

@@ -37,6 +37,11 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
             .IsUnique()
             .HasDatabaseName("uq_companies_legal_document");
 
+        // Además existen dos índices únicos por expresión, creados con SQL por la migración
+        // 0016_Fase1_Validaciones porque EF Core no los modela (no borrar):
+        //   uq_companies_name_key                  — nombre normalizado (NameKeySql.NameKey)
+        //   uq_companies_legal_document_normalized — NIT sin espacios, puntos ni guiones (NameKeySql.NormalizedNit)
+
         builder.Property(c => c.ContactEmail)
             .HasColumnName("contact_email")
             .HasMaxLength(255)

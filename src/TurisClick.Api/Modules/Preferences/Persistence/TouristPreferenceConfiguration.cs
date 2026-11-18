@@ -27,12 +27,13 @@ public class TouristPreferenceConfiguration : IEntityTypeConfiguration<TouristPr
         builder.Property(p => p.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
         builder.Property(p => p.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");
 
-        // N—N con Category, mismo patrón que AiConversation. Borrar una categoría solo quita el interés.
+        // N—N con Category, mismo patrón que AiConversation. Una categoría elegida como interés no se puede borrar
+        // (D-11, docs/auditoria-validaciones.md): RESTRICT hacia categories; borrar la preferencia sí arrastra la fila.
         builder.HasMany(p => p.Categories)
             .WithMany()
             .UsingEntity<Dictionary<string, object>>(
                 "tourist_preference_categories",
-                j => j.HasOne<Category>().WithMany().HasForeignKey("category_id").OnDelete(DeleteBehavior.Cascade),
+                j => j.HasOne<Category>().WithMany().HasForeignKey("category_id").OnDelete(DeleteBehavior.Restrict),
                 j => j.HasOne<TouristPreference>().WithMany().HasForeignKey("user_id").OnDelete(DeleteBehavior.Cascade),
                 j =>
                 {

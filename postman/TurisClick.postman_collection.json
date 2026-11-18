@@ -1537,7 +1537,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "const suffix = `${Date.now()}${Math.floor(Math.random() * 1000)}`;",
-                  "pm.collectionVariables.set(\"provider_suffix\", suffix);",
+                  "pm.collectionVariables.set(\"provider_suffix\", suffix); pm.collectionVariables.set(\"provider_nit\", String(pm.collectionVariables.get(\"provider_suffix\")).replace(/\\D/g, \"\").slice(-10));",
                   "pm.collectionVariables.set(\"provider_email\", `provider.${suffix}@turisclick.dev`);",
                   "pm.collectionVariables.set(\"provider_password\", \"Password123!\");"
                 ]
@@ -1592,7 +1592,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Andrés\",\n  \"lastName\": \"Rojas\",\n  \"email\": \"{{provider_email}}\",\n  \"password\": \"{{provider_password}}\",\n  \"companyName\": \"Andes Travel {{provider_suffix}}\",\n  \"companyDescription\": \"Tours por el Salar de Uyuni\",\n  \"legalDocument\": \"NIT-{{provider_suffix}}\",\n  \"contactEmail\": \"contacto.{{provider_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Andrés\",\n  \"lastName\": \"Rojas\",\n  \"email\": \"{{provider_email}}\",\n  \"password\": \"{{provider_password}}\",\n  \"companyName\": \"Andes Travel {{provider_suffix}}\",\n  \"companyDescription\": \"Tours por el Salar de Uyuni\",\n  \"legalDocument\": \"24{{provider_nit}}\",\n  \"contactEmail\": \"contacto.{{provider_suffix}}@turisclick.dev\"\n}"
             },
             "description": "UC-P-01. Flujo exitoso: crea User (PROVIDER) + Company (PENDING_APPROVAL) y devuelve tokens (mismo patrón que UC-AUTH-01)."
           }
@@ -1634,7 +1634,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Otro\",\n  \"lastName\": \"Proveedor\",\n  \"email\": \"{{provider_email}}\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra empresa {{$timestamp}}\",\n  \"legalDocument\": \"NIT-{{$timestamp}}\",\n  \"contactEmail\": \"otro.{{$timestamp}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Otro\",\n  \"lastName\": \"Proveedor\",\n  \"email\": \"{{provider_email}}\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra empresa {{$timestamp}}\",\n  \"legalDocument\": \"4{{$timestamp}}\",\n  \"contactEmail\": \"otro.{{$timestamp}}@turisclick.dev\"\n}"
             },
             "description": "UC-P-01. Excepción: el email ya existe (reutiliza provider_email del request anterior)."
           }
@@ -1676,7 +1676,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Otro\",\n  \"lastName\": \"Proveedor\",\n  \"email\": \"otro.{{$timestamp}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra empresa {{$timestamp}}\",\n  \"legalDocument\": \"NIT-{{provider_suffix}}\",\n  \"contactEmail\": \"otro.{{$timestamp}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Otro\",\n  \"lastName\": \"Proveedor\",\n  \"email\": \"otro.{{$timestamp}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra empresa {{$timestamp}}\",\n  \"legalDocument\": \"24{{provider_nit}}\",\n  \"contactEmail\": \"otro.{{$timestamp}}@turisclick.dev\"\n}"
             },
             "description": "UC-P-01. Excepción: el documento legal ya existe (reutiliza provider_suffix del request exitoso)."
           }
@@ -1995,7 +1995,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Camila\",\n  \"lastName\": \"Fernández\",\n  \"email\": \"provider.reject.{{$timestamp}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Empresa a rechazar {{$timestamp}}\",\n  \"legalDocument\": \"NIT-REJECT-{{$timestamp}}\",\n  \"contactEmail\": \"contacto.reject.{{$timestamp}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Camila\",\n  \"lastName\": \"Fernández\",\n  \"email\": \"provider.reject.{{$timestamp}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Empresa a rechazar {{$timestamp}}\",\n  \"legalDocument\": \"3{{$timestamp}}\",\n  \"contactEmail\": \"contacto.reject.{{$timestamp}}@turisclick.dev\"\n}"
             },
             "description": "Setup: una empresa PENDING_APPROVAL distinta, dedicada al flujo de rechazo."
           }
@@ -2374,7 +2374,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Pendiente\",\n  \"lastName\": \"DeAprobación\",\n  \"email\": \"provider.pending.{{$timestamp}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Empresa pendiente {{$timestamp}}\",\n  \"legalDocument\": \"NIT-PENDING-{{$timestamp}}\",\n  \"contactEmail\": \"contacto.pending.{{$timestamp}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Pendiente\",\n  \"lastName\": \"DeAprobación\",\n  \"email\": \"provider.pending.{{$timestamp}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Empresa pendiente {{$timestamp}}\",\n  \"legalDocument\": \"2{{$timestamp}}\",\n  \"contactEmail\": \"contacto.pending.{{$timestamp}}@turisclick.dev\"\n}"
             },
             "description": "Setup: un Provider cuya empresa todavía NO fue aprobada, para probar la Regla de UC-P-02 (PUT requiere APPROVED)."
           }
@@ -2442,7 +2442,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.collectionVariables.set(\"exp_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`);"
+                  "pm.collectionVariables.set(\"exp_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`); pm.collectionVariables.set(\"exp_nit\", String(pm.collectionVariables.get(\"exp_suffix\")).replace(/\\D/g, \"\").slice(-10));"
                 ]
               }
             },
@@ -2630,7 +2630,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Andrés\",\n  \"lastName\": \"Rojas\",\n  \"email\": \"exp.owner.{{exp_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Andes Travel Exp {{exp_suffix}}\",\n  \"legalDocument\": \"NIT-EXP-{{exp_suffix}}\",\n  \"contactEmail\": \"contacto.exp.{{exp_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Andrés\",\n  \"lastName\": \"Rojas\",\n  \"email\": \"exp.owner.{{exp_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Andes Travel Exp {{exp_suffix}}\",\n  \"legalDocument\": \"15{{exp_nit}}\",\n  \"contactEmail\": \"contacto.exp.{{exp_suffix}}@turisclick.dev\"\n}"
             },
             "description": "El Provider dueño de las experiencias de este bloque de tests."
           }
@@ -2714,7 +2714,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Sin\",\n  \"lastName\": \"Aprobar\",\n  \"email\": \"exp.unapproved.{{exp_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Empresa Pendiente {{exp_suffix}}\",\n  \"legalDocument\": \"NIT-PEND-{{exp_suffix}}\",\n  \"contactEmail\": \"contacto.pend.{{exp_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Sin\",\n  \"lastName\": \"Aprobar\",\n  \"email\": \"exp.unapproved.{{exp_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Empresa Pendiente {{exp_suffix}}\",\n  \"legalDocument\": \"17{{exp_nit}}\",\n  \"contactEmail\": \"contacto.pend.{{exp_suffix}}@turisclick.dev\"\n}"
             },
             "description": "Queda PENDING_APPROVAL a propósito, para probar UC-P-04 con empresa no aprobada."
           }
@@ -2758,7 +2758,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Otro\",\n  \"lastName\": \"Proveedor\",\n  \"email\": \"exp.attacker.{{exp_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra Empresa {{exp_suffix}}\",\n  \"legalDocument\": \"NIT-ATK-{{exp_suffix}}\",\n  \"contactEmail\": \"contacto.atk.{{exp_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Otro\",\n  \"lastName\": \"Proveedor\",\n  \"email\": \"exp.attacker.{{exp_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra Empresa {{exp_suffix}}\",\n  \"legalDocument\": \"14{{exp_nit}}\",\n  \"contactEmail\": \"contacto.atk.{{exp_suffix}}@turisclick.dev\"\n}"
             },
             "description": "Segundo Provider aprobado, dueño de NADA de lo creado acá — usado para probar aislamiento de ownership."
           }
@@ -3997,7 +3997,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.collectionVariables.set(\"pkg_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`);"
+                  "pm.collectionVariables.set(\"pkg_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`); pm.collectionVariables.set(\"pkg_nit\", String(pm.collectionVariables.get(\"pkg_suffix\")).replace(/\\D/g, \"\").slice(-10));"
                 ]
               }
             },
@@ -4137,7 +4137,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Rosa\",\n  \"lastName\": \"Quispe\",\n  \"email\": \"pkg.owner.{{pkg_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Uyuni Tours {{pkg_suffix}}\",\n  \"legalDocument\": \"NIT-PKG-{{pkg_suffix}}\",\n  \"contactEmail\": \"contacto.pkg.{{pkg_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Rosa\",\n  \"lastName\": \"Quispe\",\n  \"email\": \"pkg.owner.{{pkg_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Uyuni Tours {{pkg_suffix}}\",\n  \"legalDocument\": \"21{{pkg_nit}}\",\n  \"contactEmail\": \"contacto.pkg.{{pkg_suffix}}@turisclick.dev\"\n}"
             }
           },
           "event": [
@@ -4221,7 +4221,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Otro\",\n  \"lastName\": \"Provider\",\n  \"email\": \"pkg.attacker.{{pkg_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra Empresa Pkg {{pkg_suffix}}\",\n  \"legalDocument\": \"NIT-PKG-ATK-{{pkg_suffix}}\",\n  \"contactEmail\": \"contacto.pkg.atk.{{pkg_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Otro\",\n  \"lastName\": \"Provider\",\n  \"email\": \"pkg.attacker.{{pkg_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra Empresa Pkg {{pkg_suffix}}\",\n  \"legalDocument\": \"18{{pkg_nit}}\",\n  \"contactEmail\": \"contacto.pkg.atk.{{pkg_suffix}}@turisclick.dev\"\n}"
             }
           },
           "event": [
@@ -4305,7 +4305,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Sin\",\n  \"lastName\": \"Aprobar\",\n  \"email\": \"pkg.unapproved.{{pkg_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Empresa Pendiente Pkg {{pkg_suffix}}\",\n  \"legalDocument\": \"NIT-PKG-PEND-{{pkg_suffix}}\",\n  \"contactEmail\": \"contacto.pkg.pend.{{pkg_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Sin\",\n  \"lastName\": \"Aprobar\",\n  \"email\": \"pkg.unapproved.{{pkg_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Empresa Pendiente Pkg {{pkg_suffix}}\",\n  \"legalDocument\": \"19{{pkg_nit}}\",\n  \"contactEmail\": \"contacto.pkg.pend.{{pkg_suffix}}@turisclick.dev\"\n}"
             }
           },
           "event": [
@@ -6552,7 +6552,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.collectionVariables.set(\"res_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`);"
+                  "pm.collectionVariables.set(\"res_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`); pm.collectionVariables.set(\"res_nit\", String(pm.collectionVariables.get(\"res_suffix\")).replace(/\\D/g, \"\").slice(-10));"
                 ]
               }
             },
@@ -6692,7 +6692,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Andrés\",\n  \"lastName\": \"Rojas\",\n  \"email\": \"res.owner.{{res_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Andes Reservas {{res_suffix}}\",\n  \"legalDocument\": \"NIT-RES-{{res_suffix}}\",\n  \"contactEmail\": \"contacto.res.{{res_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Andrés\",\n  \"lastName\": \"Rojas\",\n  \"email\": \"res.owner.{{res_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Andes Reservas {{res_suffix}}\",\n  \"legalDocument\": \"23{{res_nit}}\",\n  \"contactEmail\": \"contacto.res.{{res_suffix}}@turisclick.dev\"\n}"
             },
             "description": "El Provider dueño de la Experience que se va a reservar."
           },
@@ -6782,7 +6782,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Bruno\",\n  \"lastName\": \"Attacker\",\n  \"email\": \"res.attacker.{{res_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra Empresa Res {{res_suffix}}\",\n  \"legalDocument\": \"NIT-RES-ATK-{{res_suffix}}\",\n  \"contactEmail\": \"contacto.res.attacker.{{res_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Bruno\",\n  \"lastName\": \"Attacker\",\n  \"email\": \"res.attacker.{{res_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Otra Empresa Res {{res_suffix}}\",\n  \"legalDocument\": \"22{{res_nit}}\",\n  \"contactEmail\": \"contacto.res.attacker.{{res_suffix}}@turisclick.dev\"\n}"
             },
             "description": "Provider de una empresa completamente distinta — se usa para demostrar que UC-P-12/13 aíslan por empresa."
           },
@@ -8989,7 +8989,7 @@
                 "exec": [
                   "const base = Date.now() + 30 * 24 * 60 * 60 * 1000; // ~30 días adelante — nunca hardcodeado (se pudre con el tiempo)",
                   "function iso(offsetDays) { return new Date(base + offsetDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10); }",
-                  "pm.collectionVariables.set(\"ai_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`);",
+                  "pm.collectionVariables.set(\"ai_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`); pm.collectionVariables.set(\"ai_nit\", String(pm.collectionVariables.get(\"ai_suffix\")).replace(/\\D/g, \"\").slice(-10));",
                   "pm.collectionVariables.set(\"ai_avail_date\", iso(0));",
                   "pm.collectionVariables.set(\"ai_msg_date_from\", iso(-2));",
                   "pm.collectionVariables.set(\"ai_msg_date_to\", iso(2));",
@@ -9237,7 +9237,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Elena\",\n  \"lastName\": \"Choque\",\n  \"email\": \"ai.owner.{{ai_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Salar Expediciones {{ai_suffix}}\",\n  \"legalDocument\": \"NIT-AI-{{ai_suffix}}\",\n  \"contactEmail\": \"contacto.ai.{{ai_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Elena\",\n  \"lastName\": \"Choque\",\n  \"email\": \"ai.owner.{{ai_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Salar Expediciones {{ai_suffix}}\",\n  \"legalDocument\": \"11{{ai_nit}}\",\n  \"contactEmail\": \"contacto.ai.{{ai_suffix}}@turisclick.dev\"\n}"
             }
           },
           "event": [
@@ -11279,7 +11279,7 @@
                 "exec": [
                   "const base = Date.now() + 30 * 24 * 60 * 60 * 1000;",
                   "function iso(offsetDays) { return new Date(base + offsetDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10); }",
-                  "pm.collectionVariables.set(\"aib_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`);",
+                  "pm.collectionVariables.set(\"aib_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`); pm.collectionVariables.set(\"aib_nit\", String(pm.collectionVariables.get(\"aib_suffix\")).replace(/\\D/g, \"\").slice(-10));",
                   "pm.collectionVariables.set(\"aib_avail_date\", iso(0));",
                   "// Ventana de 2 días: hace que el Package de 1 día califique como \"strong fit\" y entre en la propuesta",
                   "// junto a la Experience — así el itinerario queda multi-proveedor y multi-moneda.",
@@ -11474,7 +11474,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Mamani\",\n  \"email\": \"aib.exp.{{aib_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Experiencias AiBook {{aib_suffix}}\",\n  \"legalDocument\": \"NIT-AIBE-{{aib_suffix}}\",\n  \"contactEmail\": \"contacto.exp.{{aib_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Mamani\",\n  \"email\": \"aib.exp.{{aib_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Experiencias AiBook {{aib_suffix}}\",\n  \"legalDocument\": \"12{{aib_nit}}\",\n  \"contactEmail\": \"contacto.exp.{{aib_suffix}}@turisclick.dev\"\n}"
             }
           },
           "event": [
@@ -11558,7 +11558,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Bruno\",\n  \"lastName\": \"Vargas\",\n  \"email\": \"aib.pkg.{{aib_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Paquetes AiBook {{aib_suffix}}\",\n  \"legalDocument\": \"NIT-AIBP-{{aib_suffix}}\",\n  \"contactEmail\": \"contacto.pkg.{{aib_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Bruno\",\n  \"lastName\": \"Vargas\",\n  \"email\": \"aib.pkg.{{aib_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Paquetes AiBook {{aib_suffix}}\",\n  \"legalDocument\": \"13{{aib_nit}}\",\n  \"contactEmail\": \"contacto.pkg.{{aib_suffix}}@turisclick.dev\"\n}"
             }
           },
           "event": [
@@ -13074,7 +13074,7 @@
                 "exec": [
                   "const base = Date.now() + 30 * 24 * 60 * 60 * 1000;",
                   "function iso(d) { return new Date(base + d * 24 * 60 * 60 * 1000).toISOString().slice(0, 10); }",
-                  "pm.collectionVariables.set(\"o8_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`);",
+                  "pm.collectionVariables.set(\"o8_suffix\", `${Date.now()}${Math.floor(Math.random() * 1000)}`); pm.collectionVariables.set(\"o8_nit\", String(pm.collectionVariables.get(\"o8_suffix\")).replace(/\\D/g, \"\").slice(-10));",
                   "pm.collectionVariables.set(\"o8_avail_date\", iso(0));"
                 ]
               }
@@ -13216,7 +13216,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Carla\",\n  \"lastName\": \"Rojas\",\n  \"email\": \"o8.provider.{{o8_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Andes Tours O8 {{o8_suffix}}\",\n  \"legalDocument\": \"NIT-O8-{{o8_suffix}}\",\n  \"contactEmail\": \"contacto.o8.{{o8_suffix}}@turisclick.dev\"\n}"
+              "raw": "{\n  \"firstName\": \"Carla\",\n  \"lastName\": \"Rojas\",\n  \"email\": \"o8.provider.{{o8_suffix}}@turisclick.dev\",\n  \"password\": \"Password123!\",\n  \"companyName\": \"Andes Tours O8 {{o8_suffix}}\",\n  \"legalDocument\": \"16{{o8_nit}}\",\n  \"contactEmail\": \"contacto.o8.{{o8_suffix}}@turisclick.dev\"\n}"
             }
           },
           "event": [

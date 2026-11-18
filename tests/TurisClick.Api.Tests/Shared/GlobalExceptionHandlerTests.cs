@@ -62,9 +62,24 @@ public class GlobalExceptionHandlerTests
 
         var (status, body, _) = await HandleAsync(exception);
 
-        Assert.Equal(StatusCodes.Status500InternalServerError, status);
+        // Desde la fase 1 de validaciones un texto demasiado largo es un dato inválido (400), no una falla del
+        // servidor (500); lo que no cambia es que el SQL nunca llega al cliente.
+        Assert.Equal(StatusCodes.Status400BadRequest, status);
         AssertNoInternals(body);
         Assert.DoesNotContain("varying", body.GetRawText());
+    }
+
+    [Fact]
+    public async Task UnDbUpdateExceptionDeOtroTipoSigueSiendoUn500Generico()
+    {
+        var exception = new DbUpdateException(
+            "An error occurred while saving the entity changes.",
+            new PostgresException("deadlock detected", "ERROR", "ERROR", "40P01"));
+
+        var (status, body, _) = await HandleAsync(exception);
+
+        Assert.Equal(StatusCodes.Status500InternalServerError, status);
+        AssertNoInternals(body);
     }
 
     [Fact]
@@ -150,6 +165,51 @@ public class GlobalExceptionHandlerTests
             Assert.DoesNotContain(fragment, raw, StringComparison.OrdinalIgnoreCase);
 
         Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("traceId").GetString()));
+    }
+
+    // ── Fase 1 de validaciones: un dato que la base rechaza nunca es un 500 ──────────────────────────────
+
+    private static DbUpdateException DbError(string sqlState, string? constraint = null) =>
+        new("An error occurred while saving the entity changes.",
+            new PostgresException("rechazado por la base", "ERROR", "ERROR", sqlState, constraintName: constraint));
+
+    [Fact]
+    public async Task UnaViolacionDeUnicidadEsUn409ConElCampoQueChoca()
+    {
+        var (status, body, _) = await HandleAsync(DbError("23505", "uq_companies_legal_document_normalized"));
+
+        Assert.Equal(StatusCodes.Status409Conflict, status);
+        Assert.Equal(GlobalExceptionHandler.DuplicateDetail, body.GetProperty("detail").GetString());
+        Assert.Equal("DUPLICATE", body.GetProperty("errorCode").GetString());
+        Assert.Equal(GlobalExceptionHandler.DuplicateDetail,
+            body.GetProperty("errors").GetProperty("legalDocument")[0].GetString());
+        AssertNoInternals(body);
+    }
+
+    [Theory]
+    [InlineData("23514")]
+    [InlineData("22001")]
+    [InlineData("22003")]
+    public async Task UnDatoQueLaBaseRechazaEsUn400EnEspanol(string sqlState)
+    {
+        var (status, body, logs) = await HandleAsync(DbError(sqlState, "ck_experiences_price"));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, status);
+        Assert.Equal(GlobalExceptionHandler.InvalidDataDetail, body.GetProperty("detail").GetString());
+        Assert.Equal("VALIDATION_FAILED", body.GetProperty("errorCode").GetString());
+        Assert.DoesNotContain(logs, l => l.Level == LogLevel.Error);
+        AssertNoInternals(body);
+    }
+
+    [Fact]
+    public async Task UnConflictoConCampoLlevaElErrorDebajoDeEseCampo()
+    {
+        var (status, body, _) = await HandleAsync(
+            new ConflictAppException("Ya existe una empresa con ese NIT.", ErrorCodes.Duplicate, "legalDocument"));
+
+        Assert.Equal(StatusCodes.Status409Conflict, status);
+        Assert.Equal("Ya existe una empresa con ese NIT.",
+            body.GetProperty("errors").GetProperty("legalDocument")[0].GetString());
     }
 
     private static async Task<(int Status, JsonElement Body, List<LogEntry> Logs)> HandleAsync(Exception exception)

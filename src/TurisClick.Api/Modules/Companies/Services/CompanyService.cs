@@ -1,9 +1,12 @@
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using TurisClick.Api.Infrastructure.Database;
 using TurisClick.Api.Modules.Companies.Dtos;
 using TurisClick.Api.Modules.Companies.Entities;
 using TurisClick.Api.Modules.Companies.Repositories;
 using TurisClick.Api.Shared.Exceptions;
 using TurisClick.Api.Shared.Responses;
+using TurisClick.Api.Shared.Validation;
 
 namespace TurisClick.Api.Modules.Companies.Services;
 
@@ -43,7 +46,7 @@ public class CompanyService(ICompanyRepository companyRepository, TurisClickDbCo
             ?? throw new NotFoundAppException("Empresa no encontrada.");
 
         if (company.Status != CompanyStatus.PENDING_APPROVAL)
-            throw new ConflictAppException($"Solo se pueden aprobar empresas en estado PENDING_APPROVAL (estado actual: {company.Status}).");
+            throw new ConflictAppException($"Solo se pueden aprobar empresas pendientes de aprobación (esta empresa está {StatusLabel(company.Status)}).");
 
         company.Status = CompanyStatus.APPROVED;
         company.ApprovedByUserId = adminUserId;
@@ -69,7 +72,7 @@ public class CompanyService(ICompanyRepository companyRepository, TurisClickDbCo
             return ToResponse(company);
 
         if (company.Status != CompanyStatus.APPROVED)
-            throw new ConflictAppException($"Solo se puede suspender una empresa aprobada (estado actual: {company.Status}).");
+            throw new ConflictAppException($"Solo se puede suspender una empresa aprobada (esta empresa está {StatusLabel(company.Status)}).");
 
         company.Status = CompanyStatus.SUSPENDED;
         await db.SaveChangesAsync(ct);
@@ -84,7 +87,7 @@ public class CompanyService(ICompanyRepository companyRepository, TurisClickDbCo
             ?? throw new NotFoundAppException("Empresa no encontrada.");
 
         if (company.Status != CompanyStatus.SUSPENDED)
-            throw new ConflictAppException($"Solo se puede reactivar una empresa suspendida (estado actual: {company.Status}).");
+            throw new ConflictAppException($"Solo se puede reactivar una empresa suspendida (esta empresa está {StatusLabel(company.Status)}).");
 
         company.Status = CompanyStatus.APPROVED;
         await db.SaveChangesAsync(ct);
@@ -98,11 +101,11 @@ public class CompanyService(ICompanyRepository companyRepository, TurisClickDbCo
             ?? throw new NotFoundAppException("Empresa no encontrada.");
 
         if (company.Status != CompanyStatus.PENDING_APPROVAL)
-            throw new ConflictAppException($"Solo se pueden rechazar empresas en estado PENDING_APPROVAL (estado actual: {company.Status}).");
+            throw new ConflictAppException($"Solo se pueden rechazar empresas pendientes de aprobación (esta empresa está {StatusLabel(company.Status)}).");
 
         company.Status = CompanyStatus.REJECTED;
         company.ApprovedByUserId = adminUserId;
-        company.RejectionReason = request.Reason.Trim();
+        company.RejectionReason = TextNormalizer.MultiLine(request.Reason);
         // ApprovedAt queda nulo a propósito: docs/domain-model.md lo define como "nulo hasta aprobación".
 
         await db.SaveChangesAsync(ct);
@@ -126,15 +129,60 @@ public class CompanyService(ICompanyRepository companyRepository, TurisClickDbCo
         if (company.Status != CompanyStatus.APPROVED)
             throw new ConflictAppException("Solo se puede editar el perfil de una empresa aprobada.");
 
-        company.Name = request.Name.Trim();
-        company.Description = request.Description?.Trim();
-        company.ContactEmail = request.ContactEmail.Trim().ToLowerInvariant();
-        company.ContactPhone = request.ContactPhone?.Trim();
+        // Mismos valores normalizados que validaron los atributos del DTO (R-01, R-02, R-04, R-05).
+        var name = TextNormalizer.SingleLine(request.Name) ?? string.Empty;
+        var conflict = await companyRepository.FindNameConflictAsync(TextNormalizer.NameKey(name), companyId, ct);
+        if (conflict is not null)
+            throw DuplicateName(conflict.Name);
 
-        await db.SaveChangesAsync(ct);
+        company.Name = name;
+        company.Description = TextNormalizer.NullIfEmpty(TextNormalizer.MultiLine(request.Description));
+        company.ContactEmail = FieldRules.Email.Normalize(request.ContactEmail) ?? string.Empty;
+        company.ContactPhone = FieldRules.Phone.Parse(request.ContactPhone).Value;
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresUniqueViolation })
+        {
+            // Otra empresa tomó el mismo nombre entre la verificación y el guardado: el índice único decide.
+            throw DuplicateName(name);
+        }
 
         return ToResponse(company);
     }
+
+    public async Task<CompanyNameCheckResponse> CheckNameAsync(string? name, Guid? excludeId, CancellationToken ct)
+    {
+        var normalized = TextNormalizer.SingleLine(name) ?? string.Empty;
+        var response = new CompanyNameCheckResponse { Name = normalized };
+        if (normalized.Length == 0) return response;
+
+        var exact = await companyRepository.FindNameConflictAsync(TextNormalizer.NameKey(normalized), excludeId, ct);
+        if (exact is not null)
+            response.ExactMatch = new CompanyNameMatchResponse { Id = exact.Id, Name = exact.Name };
+
+        response.Similar = (await companyRepository.FindSimilarAsync(normalized, excludeId, ct))
+            .Select(m => new CompanyNameMatchResponse { Id = m.Id, Name = m.Name })
+            .ToList();
+        return response;
+    }
+
+    private const string PostgresUniqueViolation = "23505";
+
+    /// <summary>"Ya existe…" para el campo del nombre (en Mi empresa el campo se llama <c>name</c>).</summary>
+    public static ConflictAppException DuplicateName(string existing, string field = "name") =>
+        new($"Ya existe una empresa con ese nombre: «{existing}».", ErrorCodes.Duplicate, field);
+
+    private static string StatusLabel(CompanyStatus status) => status switch
+    {
+        CompanyStatus.PENDING_APPROVAL => "pendiente de aprobación",
+        CompanyStatus.APPROVED => "aprobada",
+        CompanyStatus.REJECTED => "rechazada",
+        CompanyStatus.SUSPENDED => "suspendida",
+        _ => status.ToString().ToLowerInvariant(),
+    };
 
     private static CompanySummaryResponse ToSummary(Company company) => new()
     {

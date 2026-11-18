@@ -52,7 +52,9 @@ no esté publicado. `TURISCLICK_API` apunta los scripts a otro backend (por defe
   | Jichi Amazonía Expediciones | Rurrenabaque, Trinidad, Riberalta |
 
   Los nombres se buscaron en la web antes de usarlos para no coincidir con empresas reales. Los NIT son
-  `NIT-DEMO-*`, los correos son `@turisclick.dev` y no se cargan teléfonos.
+  números ficticios de 7 dígitos (hasta la fase 1 de validaciones eran `NIT-DEMO-*`; las bases cargadas antes los
+  conservan hasta corregirlos según `docs/auditoria-validaciones.md`, §14), los correos son `@turisclick.dev` y no se
+  cargan teléfonos.
 - **90 experiencias** en 26 ciudades y **13 paquetes**, cuyas referencias apuntan sólo a experiencias de la
   misma empresa.
 - **5 ciudades nuevas** (Copacabana, Coroico, Rurrenabaque, Samaipata, Torotoro), creadas con

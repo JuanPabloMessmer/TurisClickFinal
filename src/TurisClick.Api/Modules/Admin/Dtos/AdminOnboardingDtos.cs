@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using TurisClick.Api.Modules.Companies.Dtos;
+using TurisClick.Api.Shared.Validation;
 
 namespace TurisClick.Api.Modules.Admin.Dtos;
 
@@ -9,31 +10,41 @@ namespace TurisClick.Api.Modules.Admin.Dtos;
 /// No hay contraseña acá a propósito: la genera el servidor. Dejar que un administrador elija la contraseña
 /// de otra persona es la forma más rápida de terminar con cinco cuentas que comparten la misma.
 /// </summary>
+///
+/// Reglas R-01 a R-06 de docs/auditoria-validaciones.md: cada atributo valida el valor normalizado y el
+/// servicio guarda ese mismo valor.
 public class CreateProviderAccountRequest
 {
-    [Required, MinLength(2), MaxLength(150)]
+    [Required(AllowEmptyStrings = true)] // obligatorio en el contrato OpenAPI; el mensaje lo da la regla propia
+    [Rule.OrganizationName]
     public string CompanyName { get; set; } = string.Empty;
 
-    [MaxLength(2000)]
+    [Rule.PlainText("La descripción", ValidationLimits.CompanyDescriptionMax, MultiLine = true)]
     public string? CompanyDescription { get; set; }
 
-    [Required, MinLength(3), MaxLength(50)]
+    /// <summary>NIT boliviano: 5 a 12 dígitos; se aceptan espacios, puntos y guiones, que se quitan al guardar.</summary>
+    [Required(AllowEmptyStrings = true)] // obligatorio en el contrato OpenAPI; el mensaje lo da la regla propia
+    [Rule.BolivianNit]
     public string LegalDocument { get; set; } = string.Empty;
 
-    [Required, EmailAddress, MaxLength(150)]
+    [Required(AllowEmptyStrings = true)] // obligatorio en el contrato OpenAPI; el mensaje lo da la regla propia
+    [Rule.StrictEmail(Label = "El correo de contacto")]
     public string ContactEmail { get; set; } = string.Empty;
 
-    [MaxLength(30)]
+    [Rule.ContactPhone]
     public string? ContactPhone { get; set; }
 
-    [Required, MinLength(2), MaxLength(100)]
+    [Required(AllowEmptyStrings = true)] // obligatorio en el contrato OpenAPI; el mensaje lo da la regla propia
+    [Rule.PersonName("El nombre")]
     public string FirstName { get; set; } = string.Empty;
 
-    [Required, MinLength(2), MaxLength(100)]
+    [Required(AllowEmptyStrings = true)] // obligatorio en el contrato OpenAPI; el mensaje lo da la regla propia
+    [Rule.PersonName("El apellido")]
     public string LastName { get; set; } = string.Empty;
 
     /// <summary>Email con el que el operador va a entrar. Puede ser distinto del de contacto de la empresa.</summary>
-    [Required, EmailAddress, MaxLength(150)]
+    [Required(AllowEmptyStrings = true)] // obligatorio en el contrato OpenAPI; el mensaje lo da la regla propia
+    [Rule.StrictEmail(Label = "El correo de acceso")]
     public string Email { get; set; } = string.Empty;
 
     /// <summary>
@@ -72,13 +83,16 @@ public class ProviderAccountCreatedResponse
 /// </summary>
 public class CreateAdminAccountRequest
 {
-    [Required, MinLength(2), MaxLength(100)]
+    [Required(AllowEmptyStrings = true)] // obligatorio en el contrato OpenAPI; el mensaje lo da la regla propia
+    [Rule.PersonName("El nombre")]
     public string FirstName { get; set; } = string.Empty;
 
-    [Required, MinLength(2), MaxLength(100)]
+    [Required(AllowEmptyStrings = true)] // obligatorio en el contrato OpenAPI; el mensaje lo da la regla propia
+    [Rule.PersonName("El apellido")]
     public string LastName { get; set; } = string.Empty;
 
-    [Required, EmailAddress, MaxLength(150)]
+    [Required(AllowEmptyStrings = true)] // obligatorio en el contrato OpenAPI; el mensaje lo da la regla propia
+    [Rule.StrictEmail(Label = "El correo de acceso")]
     public string Email { get; set; } = string.Empty;
 }
 

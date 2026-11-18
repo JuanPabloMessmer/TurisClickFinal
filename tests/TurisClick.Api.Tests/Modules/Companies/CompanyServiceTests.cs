@@ -96,12 +96,36 @@ public class CompanyServiceTests
         var companyId = Guid.NewGuid();
         var company = new Company { Id = companyId, Status = CompanyStatus.APPROVED, Name = "Viejo nombre", ContactEmail = "old@x.dev" };
         _companyRepository.Setup(r => r.GetByIdAsync(companyId, It.IsAny<CancellationToken>())).ReturnsAsync(company);
+        _companyRepository.Setup(r => r.FindNameConflictAsync("nuevo nombre", companyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CompanyNameMatch?)null);
 
-        var request = new UpdateCompanyRequest { Name = "Nuevo nombre", ContactEmail = "nuevo@x.dev" };
+        var request = new UpdateCompanyRequest
+        {
+            Name = "  Nuevo   nombre ", ContactEmail = " Nuevo@X.dev ", ContactPhone = "7 123-4567", Description = "  "
+        };
         var result = await _sut.UpdateMyCompanyAsync(companyId, request, CancellationToken.None);
 
+        // Se guarda el valor normalizado, el mismo que validaron los atributos del DTO.
         Assert.Equal("Nuevo nombre", result.Name);
         Assert.Equal("nuevo@x.dev", result.ContactEmail);
+        Assert.Equal("+59171234567", result.ContactPhone);
+        Assert.Null(result.Description);
+    }
+
+    [Fact]
+    public async Task UpdateMyCompanyAsync_NameOfAnotherCompany_ThrowsConflictOnName()
+    {
+        var companyId = Guid.NewGuid();
+        _companyRepository.Setup(r => r.GetByIdAsync(companyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Company { Id = companyId, Status = CompanyStatus.APPROVED, Name = "Mía" });
+        _companyRepository.Setup(r => r.FindNameConflictAsync("andes tours", companyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CompanyNameMatch { Id = Guid.NewGuid(), Name = "Andes Tours" });
+
+        var request = new UpdateCompanyRequest { Name = "ANDES TÓURS", ContactEmail = "a@b.bo" };
+        var ex = await Assert.ThrowsAsync<ConflictAppException>(() => _sut.UpdateMyCompanyAsync(companyId, request, CancellationToken.None));
+
+        Assert.Equal("name", ex.Field);
+        Assert.Equal(ErrorCodes.Duplicate, ex.ErrorCode);
     }
 
     [Theory]

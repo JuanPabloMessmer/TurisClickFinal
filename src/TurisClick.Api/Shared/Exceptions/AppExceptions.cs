@@ -11,6 +11,16 @@ public interface IHasErrorCode
     string? ErrorCode { get; }
 }
 
+/// <summary>
+/// Campo del formulario al que corresponde el error (en camelCase, igual que en el JSON del pedido). Cuando una
+/// excepción lo declara, GlobalExceptionHandler agrega <c>errors: { campo: [mensaje] }</c> al ProblemDetails y
+/// el frontend muestra el mensaje debajo de ese campo (docs/auditoria-validaciones.md, §9.2).
+/// </summary>
+public interface IHasField
+{
+    string? Field { get; }
+}
+
 /// <summary>Códigos usados por el booking de itinerarios IA (UC-T-18) — ver docs/backend-architecture.md.</summary>
 public static class ErrorCodes
 {
@@ -91,6 +101,17 @@ public static class ErrorCodes
 
     /// <summary>Cancelar una reserva confirmada exige aceptar antes un presupuesto de reembolso.</summary>
     public const string CancellationQuoteRequired = "CANCELLATION_QUOTE_REQUIRED";
+
+    // ---- Fase 1 de validaciones ----
+
+    /// <summary>Uno o más campos no cumplen las reglas de validación.</summary>
+    public const string ValidationFailed = "VALIDATION_FAILED";
+
+    /// <summary>Ya existe un registro con ese dato único (nombre normalizado, NIT, correo).</summary>
+    public const string Duplicate = "DUPLICATE";
+
+    /// <summary>La categoría está asignada a experiencias, paquetes o preferencias y no se puede eliminar.</summary>
+    public const string CategoryInUse = "CATEGORY_IN_USE";
 }
 
 /// <summary>Recurso solicitado no existe. El GlobalExceptionHandler la mapea a 404.</summary>
@@ -100,9 +121,11 @@ public class NotFoundAppException(string message, string? errorCode = null) : Ex
 }
 
 /// <summary>Conflicto de negocio (ej. email duplicado, sin cupo). Se mapea a 409.</summary>
-public class ConflictAppException(string message, string? errorCode = null) : Exception(message), IHasErrorCode
+public class ConflictAppException(string message, string? errorCode = null, string? field = null)
+    : Exception(message), IHasErrorCode, IHasField
 {
     public string? ErrorCode { get; } = errorCode;
+    public string? Field { get; } = field;
 }
 
 /// <summary>El usuario autenticado no tiene permiso sobre el recurso (ej. UC-SYS-03). Se mapea a 403.</summary>
@@ -115,9 +138,11 @@ public class ForbiddenAppException(string message, string? errorCode = null) : E
 public class UnauthorizedAppException(string message) : Exception(message);
 
 /// <summary>Regla de negocio inválida que no corresponde a una validación de ModelState. Se mapea a 400.</summary>
-public class ValidationAppException(string message, string? errorCode = null) : Exception(message), IHasErrorCode
+public class ValidationAppException(string message, string? errorCode = null, string? field = null)
+    : Exception(message), IHasErrorCode, IHasField
 {
     public string? ErrorCode { get; } = errorCode;
+    public string? Field { get; } = field;
 }
 
 /// <summary>

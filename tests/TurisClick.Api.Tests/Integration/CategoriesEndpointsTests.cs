@@ -14,12 +14,15 @@ public class CategoriesEndpointsTests
 
     public CategoriesEndpointsTests(TurisClickApiFactory factory) => _factory = factory;
 
+    private static string Digits() => NitFor(Guid.NewGuid().ToString("N"));
+
     [Fact]
     public async Task Create_AsAdmin_Succeeds()
     {
         var client = _factory.CreateClient();
         UseBearerToken(client, await LoginAsAdminAsync(client));
-        var name = $"Aventura-{Guid.NewGuid():N}";
+        // Nombres únicos dentro del límite de 40 caracteres (R-07).
+        var name = $"Aventura {Digits()}";
 
         var response = await client.PostAsJsonAsync("/api/admin/categories", new { name, description = "Actividades al aire libre" });
 
@@ -33,7 +36,7 @@ public class CategoriesEndpointsTests
     {
         var client = _factory.CreateClient();
         UseBearerToken(client, await LoginAsAdminAsync(client));
-        var name = $"Gastronomía-{Guid.NewGuid():N}";
+        var name = $"Gastronomía {Digits()}";
 
         await client.PostAsJsonAsync("/api/admin/categories", new { name });
         var second = await client.PostAsJsonAsync("/api/admin/categories", new { name });
@@ -46,7 +49,7 @@ public class CategoriesEndpointsTests
     {
         var client = _factory.CreateClient();
         UseBearerToken(client, await LoginAsAdminAsync(client));
-        var createResponse = await client.PostAsJsonAsync("/api/admin/categories", new { name = $"Cultura-{Guid.NewGuid():N}" });
+        var createResponse = await client.PostAsJsonAsync("/api/admin/categories", new { name = $"Cultura {Digits()}" });
         var created = await createResponse.Content.ReadFromJsonAsync<CategoryResponse>(JsonOptions);
 
         var deleteResponse = await client.DeleteAsync($"/api/admin/categories/{created!.Id}");

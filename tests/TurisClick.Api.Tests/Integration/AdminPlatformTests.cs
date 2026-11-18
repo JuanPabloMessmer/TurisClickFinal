@@ -36,9 +36,9 @@ public class AdminPlatformTests(TurisClickApiFactory factory)
 
     private static object AccountPayload(string suffix, bool approve = true) => new
     {
-        companyName = $"Operador {suffix}",
+        companyName = CompanyNameFor("Operador", suffix),
         companyDescription = "Operador turístico de prueba.",
-        legalDocument = $"NIT-{suffix}",
+        legalDocument = NitFor(suffix),
         contactEmail = $"contacto.{suffix}@turisclick.dev",
         firstName = "Camila",
         lastName = "Aramayo",
@@ -62,7 +62,7 @@ public class AdminPlatformTests(TurisClickApiFactory factory)
             email = $"intruso.{Guid.NewGuid():N}@turisclick.dev",
             password = "Password123!",
             companyName = "Empresa Fantasma",
-            legalDocument = $"NIT-{Guid.NewGuid():N}",
+            legalDocument = NewNit(),
             contactEmail = "contacto@fantasma.dev",
         });
 
@@ -139,7 +139,7 @@ public class AdminPlatformTests(TurisClickApiFactory factory)
         var duplicateEmail = await admin.PostAsJsonAsync("/api/admin/provider-accounts", new
         {
             companyName = "Otra Empresa",
-            legalDocument = $"NIT-{Guid.NewGuid():N}",
+            legalDocument = NewNit(),
             contactEmail = "otro@turisclick.dev",
             firstName = "Otro",
             lastName = "Operador",
@@ -152,7 +152,7 @@ public class AdminPlatformTests(TurisClickApiFactory factory)
         var duplicateDocument = await admin.PostAsJsonAsync("/api/admin/provider-accounts", new
         {
             companyName = "Otra Empresa",
-            legalDocument = $"NIT-{suffix}",
+            legalDocument = NitFor(suffix),
             contactEmail = "otro@turisclick.dev",
             firstName = "Otro",
             lastName = "Operador",

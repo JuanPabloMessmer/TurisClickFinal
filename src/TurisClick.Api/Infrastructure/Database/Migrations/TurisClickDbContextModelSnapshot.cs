@@ -2651,7 +2651,7 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.HasOne("TurisClick.Api.Modules.Categories.Entities.Category", null)
                         .WithMany()
                         .HasForeignKey("category_id")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TurisClick.Api.Modules.Experiences.Entities.Experience", null)
@@ -2666,7 +2666,7 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.HasOne("TurisClick.Api.Modules.Categories.Entities.Category", null)
                         .WithMany()
                         .HasForeignKey("category_id")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TurisClick.Api.Modules.Packages.Entities.Package", null)
@@ -2681,7 +2681,7 @@ namespace TurisClick.Api.Infrastructure.Database.Migrations
                     b.HasOne("TurisClick.Api.Modules.Categories.Entities.Category", null)
                         .WithMany()
                         .HasForeignKey("category_id")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TurisClick.Api.Modules.Preferences.Entities.TouristPreference", null)

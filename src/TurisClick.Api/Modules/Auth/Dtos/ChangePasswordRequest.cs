@@ -11,10 +11,11 @@ namespace TurisClick.Api.Modules.Auth.Dtos;
 /// </summary>
 public class ChangePasswordRequest
 {
-    [Required]
+    [Required(ErrorMessage = "Ingresá tu contraseña actual.")]
     public string CurrentPassword { get; set; } = string.Empty;
 
-    [Required, MinLength(10, ErrorMessage = "La contraseña nueva tiene que tener al menos 10 caracteres.")]
-    [MaxLength(200)]
+    [Required(ErrorMessage = "Ingresá la contraseña nueva.")]
+    [MinLength(10, ErrorMessage = "La contraseña nueva tiene que tener al menos 10 caracteres.")]
+    [MaxLength(200, ErrorMessage = "La contraseña nueva puede tener hasta 200 caracteres.")]
     public string NewPassword { get; set; } = string.Empty;
 }

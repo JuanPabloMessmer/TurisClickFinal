@@ -26,6 +26,9 @@ export const NEW_CITIES = [
 ]
 
 // passwordEnv: variable de entorno con la contraseña (la pone run-catalog.ps1 desde DPAPI; nunca en el repo).
+// legalDocument: NIT ficticio, sólo dígitos (desde la fase 1 de validaciones el NIT admite 5 a 12 dígitos). Las bases
+// cargadas antes guardan 'NIT-DEMO-…': el loader encuentra esas empresas por nombre, y corregirlas sigue el
+// procedimiento de docs/auditoria-validaciones.md, §14.
 export const PROVIDERS = [
   {
     key: 'altura',
@@ -33,7 +36,7 @@ export const PROVIDERS = [
     passwordEnv: 'PROVIDER_PASSWORD',
     firstName: 'Carla', lastName: 'Mamani',
     companyName: 'Altura Viva Expediciones',
-    legalDocument: 'NIT-DEMO-1020304',
+    legalDocument: '1020304',
     contactEmail: 'contacto.demo@turisclick.dev',
     description: 'Operador receptivo (ficticio, cuenta de demostración) del altiplano: La Paz, El Alto, Oruro y el Salar de Uyuni.',
     zone: ['La Paz', 'El Alto', 'Oruro', 'Uyuni'],
@@ -44,7 +47,7 @@ export const PROVIDERS = [
     passwordEnv: 'CATALOG_PROVIDER_PASSWORD',
     firstName: 'Rolando', lastName: 'Quispe',
     companyName: 'Lago y Yunga Senderos',
-    legalDocument: 'NIT-DEMO-2030405',
+    legalDocument: '2030405',
     contactEmail: 'lagoyungas.demo@turisclick.dev',
     description: 'Operador (ficticio, cuenta de demostración) del Lago Titicaca y los Yungas: Copacabana, Isla del Sol y Coroico.',
     zone: ['Copacabana', 'Coroico'],
@@ -55,7 +58,7 @@ export const PROVIDERS = [
     passwordEnv: 'CATALOG_PROVIDER_PASSWORD',
     firstName: 'Marcelo', lastName: 'Choque',
     companyName: 'Quebrada Roja Andina',
-    legalDocument: 'NIT-DEMO-3040506',
+    legalDocument: '3040506',
     contactEmail: 'surandino.demo@turisclick.dev',
     description: 'Operador (ficticio, cuenta de demostración) del sur andino: la Villa Imperial de Potosí y las quebradas de Tupiza.',
     zone: ['Potosí', 'Tupiza'],
@@ -66,7 +69,7 @@ export const PROVIDERS = [
     passwordEnv: 'CATALOG_PROVIDER_PASSWORD',
     firstName: 'Verónica', lastName: 'Rojas',
     companyName: 'Llajta Verde Aventura',
-    legalDocument: 'NIT-DEMO-4050607',
+    legalDocument: '4050607',
     contactEmail: 'llajta.demo@turisclick.dev',
     description: 'Operador (ficticio, cuenta de demostración) del valle y el trópico de Cochabamba, con salidas a Torotoro.',
     zone: ['Cochabamba', 'Quillacollo', 'Sipe Sipe', 'Tiquipaya', 'Villa Tunari', 'Torotoro'],
@@ -77,7 +80,7 @@ export const PROVIDERS = [
     passwordEnv: 'CATALOG_PROVIDER_PASSWORD',
     firstName: 'Gabriela', lastName: 'Arancibia',
     companyName: 'Charcas Patrimonio Vivo',
-    legalDocument: 'NIT-DEMO-5060708',
+    legalDocument: '5060708',
     contactEmail: 'charcas.demo@turisclick.dev',
     description: 'Operador (ficticio, cuenta de demostración) de Sucre y sus alrededores: patrimonio colonial, Cal Orck\'o y Maragua.',
     zone: ['Sucre'],
@@ -88,7 +91,7 @@ export const PROVIDERS = [
     passwordEnv: 'CATALOG_PROVIDER_PASSWORD',
     firstName: 'Esteban', lastName: 'Baldiviezo',
     companyName: 'Cepa Chapaca Rutas',
-    legalDocument: 'NIT-DEMO-6070809',
+    legalDocument: '6070809',
     contactEmail: 'chapaca.demo@turisclick.dev',
     description: 'Operador (ficticio, cuenta de demostración) de Tarija y el Chaco tarijeño: vino de altura, cascadas y reservas naturales.',
     zone: ['Tarija', 'Bermejo', 'Villamontes'],
@@ -99,7 +102,7 @@ export const PROVIDERS = [
     passwordEnv: 'CATALOG_PROVIDER_PASSWORD',
     firstName: 'Daniela', lastName: 'Suárez',
     companyName: 'Curichi Oriente Travesías',
-    legalDocument: 'NIT-DEMO-7080910',
+    legalDocument: '7080910',
     contactEmail: 'curichi.demo@turisclick.dev',
     description: 'Operador (ficticio, cuenta de demostración) del oriente cruceño: Santa Cruz, Samaipata, Amboró y las misiones de Chiquitos.',
     zone: ['Santa Cruz de la Sierra', 'Cotoca', 'Santiago del Torno', 'Samaipata', 'San Ignacio de Velasco'],
@@ -110,7 +113,7 @@ export const PROVIDERS = [
     passwordEnv: 'CATALOG_PROVIDER_PASSWORD',
     firstName: 'Tomás', lastName: 'Vaca',
     companyName: 'Jichi Amazonía Expediciones',
-    legalDocument: 'NIT-DEMO-8091011',
+    legalDocument: '8091011',
     contactEmail: 'jichi.demo@turisclick.dev',
     description: 'Operador (ficticio, cuenta de demostración) de la Amazonía boliviana: Rurrenabaque, Madidi, Trinidad y Riberalta.',
     zone: ['Rurrenabaque', 'Trinidad', 'Riberalta'],

@@ -29,6 +29,12 @@ public interface ICompanyService
     /// <summary>UC-A-08 — suspende la empresa: su catálogo deja de ser visible y no puede operar comercialmente.</summary>
     Task<CompanyResponse> SuspendAsync(Guid companyId, CancellationToken ct);
 
+    /// <summary>
+    /// Verificación de nombre para el alta de operadores (sólo ADMIN, sólo lectura): duplicado exacto
+    /// normalizado y nombres parecidos. Ver docs/auditoria-validaciones.md, C-3.
+    /// </summary>
+    Task<CompanyNameCheckResponse> CheckNameAsync(string? name, Guid? excludeId, CancellationToken ct);
+
     /// <summary>UC-A-08 — levanta la suspensión sin restaurar estados de productos (nunca se modificaron).</summary>
     Task<CompanyResponse> ReactivateAsync(Guid companyId, CancellationToken ct);
 }

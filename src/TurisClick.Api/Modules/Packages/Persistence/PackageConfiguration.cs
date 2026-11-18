@@ -87,7 +87,9 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
             .WithMany()
             .UsingEntity<Dictionary<string, object>>(
                 "package_categories",
-                j => j.HasOne<Category>().WithMany().HasForeignKey("category_id"),
+                // Borrar una categoría en uso está prohibido (D-11, docs/auditoria-validaciones.md): RESTRICT en la base
+                // cubre también la carrera entre la verificación de CategoryService y el borrado.
+                j => j.HasOne<Category>().WithMany().HasForeignKey("category_id").OnDelete(DeleteBehavior.Restrict),
                 j => j.HasOne<Package>().WithMany().HasForeignKey("package_id"),
                 j =>
                 {

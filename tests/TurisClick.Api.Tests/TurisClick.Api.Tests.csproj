@@ -28,6 +28,8 @@
   <ItemGroup>
     <!-- Fixtures de Duffel: forma verificada contra el entorno de prueba, sin secretos ni datos reales. -->
     <Content Include="fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Casos compartidos con el frontend (frontend/packages/validation): docs/auditoria-validaciones.md, §11.1. -->
+    <Content Include="..\contract\validation-vectors.json" Link="contract\validation-vectors.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

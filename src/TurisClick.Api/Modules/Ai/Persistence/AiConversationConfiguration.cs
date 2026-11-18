@@ -70,6 +70,10 @@ public class AiConversationConfiguration : IEntityTypeConfiguration<AiConversati
             .HasMaxLength(20);
 
         // N—N con Category, sin navegación inversa (mismo patrón que Experience/Package).
+        // ON DELETE CASCADE hacia categories, a propósito (decisión de la fase 1 de validaciones,
+        // docs/auditoria-validaciones.md §18): las categorías de una conversación con el asistente son contexto
+        // histórico, no catálogo. Eliminar una categoría la quita de esas conversaciones y NO se bloquea por ellas,
+        // a diferencia de experiencias, paquetes y preferencias de turistas, que usan RESTRICT (D-11).
         builder.HasMany(c => c.Categories)
             .WithMany()
             .UsingEntity<Dictionary<string, object>>(

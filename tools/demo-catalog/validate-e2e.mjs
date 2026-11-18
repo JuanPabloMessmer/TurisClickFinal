@@ -97,7 +97,7 @@ const registration = await call('POST', '/api/admin/provider-accounts', {
   body: {
     firstName: 'Quimey', lastName: 'Proveedor', email: providerEmail,
     companyName: 'QA E2E Operadora', companyDescription: 'Empresa de prueba automatizada (no aparece en el catálogo).',
-    legalDocument: 'NIT-QA-E2E', contactEmail: 'qa.e2e@turisclick.dev', approve: true,
+    legalDocument: '9900000001', // NIT ficticio fijo (sólo dígitos): la cuenta QA se reutiliza entre corridas contactEmail: 'qa.e2e@turisclick.dev', approve: true,
   },
 })
 ok([201, 409].includes(registration.status), 'alta de proveedor QA por el admin (o ya existente)', `${registration.status}`)

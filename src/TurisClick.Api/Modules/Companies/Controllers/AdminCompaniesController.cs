@@ -30,6 +30,16 @@ public class AdminCompaniesController(ICompanyService companyService, ICurrentUs
         return Ok(result);
     }
 
+    /// <summary>
+    /// Sólo lectura. ¿El nombre choca con una empresa existente (mismo nombre sin mayúsculas, tildes ni espacios
+    /// repetidos) o se parece a alguna (sólo difiere en puntuación o forma societaria)? El alta rechaza el
+    /// primer caso; el segundo es una advertencia para el administrador (docs/auditoria-validaciones.md, C-3).
+    /// </summary>
+    [HttpGet("name-check")]
+    public async Task<ActionResult<CompanyNameCheckResponse>> CheckName(
+        [FromQuery] string? name, [FromQuery] Guid? excludeId, CancellationToken ct) =>
+        Ok(await companyService.CheckNameAsync(name, excludeId, ct));
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CompanyResponse>> GetById(Guid id, CancellationToken ct)
     {

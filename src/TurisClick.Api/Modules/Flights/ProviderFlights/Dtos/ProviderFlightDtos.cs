@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using TurisClick.Api.Modules.Flights.Services;
 using TurisClick.Api.Modules.Reservations.Dtos;
 using TurisClick.Api.Modules.Reservations.Policies;
+using TurisClick.Api.Shared.Validation;
 
 namespace TurisClick.Api.Modules.Flights.ProviderFlights.Dtos;
 
@@ -300,7 +301,8 @@ public class FlightSellerAuthorizationRequest : IValidatableObject
 {
     public bool Authorized { get; set; }
 
-    [StringLength(100)]
+    /// <summary>R-11 de docs/auditoria-validaciones.md: 3 a 100 caracteres, letras, números y - . / °.</summary>
+    [Rule.FlightSellerRegistration]
     public string? Registration { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

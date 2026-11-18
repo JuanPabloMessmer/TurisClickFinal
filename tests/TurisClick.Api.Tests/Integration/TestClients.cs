@@ -1,4 +1,6 @@
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Net.Http.Json;
 using System.Text.Json;
 using TurisClick.Api.Modules.Auth.Dtos;
@@ -14,6 +16,28 @@ namespace TurisClick.Api.Tests.Integration;
 internal static class TestClients
 {
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// NIT válido (12 dígitos, sin empezar en 0) derivado de <paramref name="seed"/>: la misma semilla da el mismo
+    /// NIT, lo que permite probar duplicados. Desde la fase 1 de validaciones el NIT sólo admite dígitos.
+    /// </summary>
+    public static string NitFor(string seed)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));
+        var digits = new StringBuilder(12);
+        digits.Append((char)('1' + hash[0] % 9));
+        for (var i = 1; i < 12; i++) digits.Append((char)('0' + hash[i] % 10));
+        return digits.ToString();
+    }
+
+    /// <summary>NIT válido y único para cada llamada.</summary>
+    public static string NewNit() => NitFor(Guid.NewGuid().ToString("N"));
+
+    /// <summary>
+    /// Nombre de empresa único que cumple R-01: sólo letras y dígitos (un sufijo hexadecimal podría repetir una
+    /// misma letra más de tres veces seguidas y ser rechazado).
+    /// </summary>
+    public static string CompanyNameFor(string prefix, string seed) => $"{prefix} {NitFor("nombre:" + seed)}";
 
     public static async Task<string> LoginAsAdminAsync(HttpClient client)
     {
@@ -56,8 +80,8 @@ internal static class TestClients
         {
             Content = JsonContent.Create(new
             {
-                companyName = $"Empresa {suffix}",
-                legalDocument = $"DOC-{suffix}",
+                companyName = CompanyNameFor("Empresa", suffix),
+                legalDocument = NitFor(suffix),
                 contactEmail = $"contacto.{suffix}@turisclick.dev",
                 firstName = "Operador",
                 lastName = "DePrueba",

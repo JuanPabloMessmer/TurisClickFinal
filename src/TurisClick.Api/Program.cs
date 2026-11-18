@@ -138,7 +138,11 @@ builder.Services.AddAdminModule();
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
 
-    builder.Services.AddControllers();
+    // Los 400 de validación de modelo salen en español y con las claves del formulario (camelCase), no con la
+    // respuesta por defecto de [ApiController] en inglés — docs/auditoria-validaciones.md, §9.2.
+    builder.Services.AddControllers()
+        .ConfigureApiBehaviorOptions(options =>
+            options.InvalidModelStateResponseFactory = TurisClick.Api.Shared.Validation.ValidationProblemFactory.Create);
 
     // ---- Swagger/OpenAPI ----
     builder.Services.AddEndpointsApiExplorer();
