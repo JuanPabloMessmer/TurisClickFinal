@@ -1,9 +1,11 @@
+import { LIMITS, multiLine, rules } from '@turisclick/validation'
 import { useState } from 'react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { FormField } from '@/components/form/FormField'
+import { fieldAria } from '@/components/form/fieldAria'
 import { getErrorMessage } from '@/lib/errors'
 import { useCompany, useRejectCompany } from './api'
 
@@ -26,15 +28,20 @@ function RejectDialogContent({ companyId, onClose }: { companyId: string; onClos
   const rejectMutation = useRejectCompany()
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [fieldError, setFieldError] = useState<string | null>(null)
 
   const onConfirm = async () => {
     setError(null)
-    if (reason.trim().length < 5) {
-      setError('El motivo debe tener al menos 5 caracteres.')
-      return
-    }
+    // R-10 (docs/auditoria-validaciones.md): la misma regla que valida el backend.
+    const invalid = rules.plainText(reason, 'El motivo', LIMITS.rejectionReasonMax, {
+      min: LIMITS.rejectionReasonMin,
+      required: true,
+      multiLine: true,
+    })
+    setFieldError(invalid)
+    if (invalid) return
     try {
-      await rejectMutation.mutateAsync({ id: companyId, body: { reason } })
+      await rejectMutation.mutateAsync({ id: companyId, body: { reason: multiLine(reason) ?? '' } })
       onClose()
     } catch (err) {
       setError(getErrorMessage(err))
@@ -46,10 +53,19 @@ function RejectDialogContent({ companyId, onClose }: { companyId: string; onClos
       <DialogHeader>
         <DialogTitle>Rechazar solicitud{company?.name ? ` de ${company.name}` : ''}</DialogTitle>
       </DialogHeader>
-      <div className="flex flex-col gap-1.5">
-        <Label>Motivo</Label>
-        <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
-      </div>
+      <FormField
+        id="reject-reason"
+        label="Motivo"
+        error={fieldError ?? undefined}
+        counter={{ length: reason.trim().length, max: LIMITS.rejectionReasonMax }}
+      >
+        <Textarea
+          {...fieldAria('reject-reason', fieldError ?? undefined)}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          rows={3}
+        />
+      </FormField>
       {error && (
         <Alert variant="destructive" className="mt-2">
           {error}

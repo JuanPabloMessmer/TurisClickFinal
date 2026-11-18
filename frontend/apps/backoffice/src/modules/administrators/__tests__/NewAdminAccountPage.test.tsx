@@ -54,9 +54,10 @@ describe('NewAdminAccountPage', () => {
 
     fill('', '', 'no-es-un-correo')
 
-    expect(await screen.findByText('Ingresá el nombre.')).toBeTruthy()
-    expect(screen.getByText('Ingresá el apellido.')).toBeTruthy()
-    expect(screen.getByText('Ingresá el correo con el que va a entrar.')).toBeTruthy()
+    // Mensajes de las reglas compartidas (@turisclick/validation), los mismos que devuelve el backend.
+    expect(await screen.findByText('El nombre es obligatorio.')).toBeTruthy()
+    expect(screen.getByText('El apellido es obligatorio.')).toBeTruthy()
+    expect(screen.getByText('El correo de acceso no tiene un formato válido (falta la @ o hay más de una).')).toBeTruthy()
     expect(createAdminAccount.mock.calls.length).toBe(callsBefore)
   })
 

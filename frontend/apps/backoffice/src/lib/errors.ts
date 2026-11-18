@@ -1,19 +1,13 @@
-import { isAxiosError } from 'axios'
+import { getErrorMessage as describeError } from '@turisclick/validation'
 
 /**
- * El backend responde errores de negocio como ProblemDetails ({ title, detail, status }) vía
- * GlobalExceptionHandler. Los 400 de validación de modelo (DataAnnotations en el DTO, antes de llegar
- * al Service) usan el shape estándar de ASP.NET Core ([ApiController]): ValidationProblemDetails con un
- * diccionario `errors`.
+ * Mensaje en español para mostrar en un aviso general, a partir de cualquier error.
+ *
+ * Delega en el traductor compartido de `@turisclick/validation` (docs/auditoria-validaciones.md, §9.2): usa el
+ * `detail` de dominio del backend o los mensajes por campo, y nunca deja pasar texto técnico o en inglés — ni el
+ * `detail` de un 5xx, ni "Network Error" de Axios, ni los mensajes por defecto de ASP.NET. Para ubicar los errores
+ * debajo de cada campo de un formulario, usar `applyServerErrors` del mismo paquete.
  */
 export function getErrorMessage(error: unknown): string {
-  if (isAxiosError(error)) {
-    const data = error.response?.data as
-      | { detail?: string; title?: string; errors?: Record<string, string[]> }
-      | undefined
-    if (data?.errors) return Object.values(data.errors).flat().join(' ')
-    return data?.detail ?? data?.title ?? error.message
-  }
-  if (error instanceof Error) return error.message
-  return 'Ocurrió un error inesperado.'
+  return describeError(error)
 }

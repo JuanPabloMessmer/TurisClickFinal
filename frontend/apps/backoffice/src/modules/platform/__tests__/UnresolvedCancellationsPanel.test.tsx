@@ -74,13 +74,14 @@ describe('UnresolvedCancellationsPanel', () => {
 
   it('si el reintento falla, informa el motivo y la cola sigue visible', async () => {
     listUnresolved.mockResolvedValue([PENDING])
+    // Un 500 nunca muestra su detalle (puede ser técnico): el aviso es el genérico en español.
     resolveCancellations.mockRejectedValue(
       new AxiosError('Request failed with status code 500', 'ERR_BAD_RESPONSE', undefined, undefined, {
         status: 500,
         statusText: 'Internal Server Error',
         headers: {},
         config: { headers: new AxiosHeaders() },
-        data: { title: 'No se pudo contactar al procesador de pagos.' },
+        data: { title: 'Error interno del servidor', detail: 'Npgsql.PostgresException: 40P01 deadlock detected' },
       }),
     )
     setup()
@@ -88,7 +89,8 @@ describe('UnresolvedCancellationsPanel', () => {
     await screen.findByText('Reembolso pendiente')
     fireEvent.click(screen.getByRole('button', { name: /Reintentar ahora/ }))
 
-    expect(await screen.findByText('No se pudo contactar al procesador de pagos.')).toBeTruthy()
+    expect(await screen.findByText('Tuvimos un problema de nuestro lado. Intentá de nuevo en un momento.')).toBeTruthy()
+    expect(screen.queryByText(/Npgsql|deadlock/)).toBeNull()
     expect(screen.getByText('Reembolso pendiente')).toBeTruthy()
   })
 

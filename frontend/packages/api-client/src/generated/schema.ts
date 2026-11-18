@@ -161,6 +161,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/companies/name-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    name?: string;
+                    excludeId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompanyNameCheckResponse"];
+                        "application/json": components["schemas"]["CompanyNameCheckResponse"];
+                        "text/json": components["schemas"]["CompanyNameCheckResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/companies/{id}": {
         parameters: {
             query?: never;
@@ -5047,6 +5087,16 @@ export interface components {
             currentPassword: string;
             newPassword: string;
         };
+        CompanyNameCheckResponse: {
+            name?: string | null;
+            exactMatch?: components["schemas"]["CompanyNameMatchResponse"];
+            similar?: components["schemas"]["CompanyNameMatchResponse"][] | null;
+        };
+        CompanyNameMatchResponse: {
+            /** Format: uuid */
+            id?: string;
+            name?: string | null;
+        };
         CompanyResponse: {
             /** Format: uuid */
             id?: string;
@@ -5141,7 +5191,6 @@ export interface components {
         CreateAdminAccountRequest: {
             firstName: string;
             lastName: string;
-            /** Format: email */
             email: string;
         };
         CreateCategoryRequest: {
@@ -5207,12 +5256,10 @@ export interface components {
             companyName: string;
             companyDescription?: string | null;
             legalDocument: string;
-            /** Format: email */
             contactEmail: string;
             contactPhone?: string | null;
             firstName: string;
             lastName: string;
-            /** Format: email */
             email: string;
             approve?: boolean;
         };
@@ -6243,7 +6290,6 @@ export interface components {
         UpdateCompanyRequest: {
             name: string;
             description?: string | null;
-            /** Format: email */
             contactEmail: string;
             contactPhone?: string | null;
         };

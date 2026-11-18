@@ -1,6 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  LIMITS,
+  applyServerErrors,
+  contactPhoneSchema,
+  emailSchema,
+  organizationNameSchema,
+  plainTextSchema,
+  rules,
+} from '@turisclick/validation'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { PageHeader } from '@/components/PageHeader'
 import { Alert } from '@/components/ui/alert'
@@ -9,18 +18,22 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FullScreenSpinner } from '@/components/FullScreenSpinner'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { getErrorMessage } from '@/lib/errors'
+import { Textarea } from '@/components/ui/textarea'
+import { FormField } from '@/components/form/FormField'
+import { fieldAria } from '@/components/form/fieldAria'
 import { useMyCompany, useUpdateMyCompany } from './api'
 
+// Reglas R-01, R-02, R-04 y R-05 (docs/auditoria-validaciones.md): las mismas que valida PUT /api/companies/me.
 const schema = z.object({
-  name: z.string().min(2).max(150),
-  description: z.string().max(1000).optional().or(z.literal('')),
-  contactEmail: z.string().email(),
-  contactPhone: z.string().max(30).optional().or(z.literal('')),
+  name: organizationNameSchema(),
+  description: plainTextSchema('La descripción', LIMITS.companyDescriptionMax, { multiLine: true }),
+  contactEmail: emailSchema('El correo de contacto'),
+  contactPhone: contactPhoneSchema(),
 })
 
 type FormValues = z.infer<typeof schema>
+
+const FIELDS = ['name', 'description', 'contactEmail', 'contactPhone'] as const satisfies readonly (keyof FormValues)[]
 
 const statusVariant: Record<string, 'success' | 'warning' | 'destructive' | 'neutral'> = {
   APPROVED: 'success',
@@ -44,6 +57,7 @@ export function MyCompanyPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onTouched',
     values: company
       ? {
           name: company.name ?? '',
@@ -53,6 +67,10 @@ export function MyCompanyPage() {
         }
       : undefined,
   })
+
+  const errors = form.formState.errors
+  const description = useWatch({ control: form.control, name: 'description' }) ?? ''
+  const phone = rules.parsePhone(useWatch({ control: form.control, name: 'contactPhone' }))
 
   if (isLoading || !company) return <FullScreenSpinner />
 
@@ -67,7 +85,7 @@ export function MyCompanyPage() {
       })
       setSuccess(true)
     } catch (error) {
-      setSubmitError(getErrorMessage(error))
+      setSubmitError(applyServerErrors(error, form.setError, FIELDS))
     }
   }
 
@@ -107,28 +125,38 @@ export function MyCompanyPage() {
           </CardHeader>
           <CardContent>
             <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
-              <div className="flex flex-col gap-1.5">
-                <Label>Nombre</Label>
-                <Input {...form.register('name')} />
-                {form.formState.errors.name && (
-                  <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
-                )}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Descripción</Label>
-                <Input {...form.register('description')} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Email de contacto</Label>
-                <Input type="email" {...form.register('contactEmail')} />
-                {form.formState.errors.contactEmail && (
-                  <p className="text-xs text-destructive">{form.formState.errors.contactEmail.message}</p>
-                )}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Teléfono de contacto</Label>
-                <Input {...form.register('contactPhone')} />
-              </div>
+              <FormField id="name" label="Nombre" error={errors.name?.message}>
+                <Input {...fieldAria('name', errors.name?.message)} {...form.register('name')} />
+              </FormField>
+              <FormField
+                id="description"
+                label="Descripción (opcional)"
+                error={errors.description?.message}
+                counter={{ length: description.length, max: LIMITS.companyDescriptionMax }}
+              >
+                <Textarea {...fieldAria('description', errors.description?.message)} rows={3} {...form.register('description')} />
+              </FormField>
+              <FormField id="contactEmail" label="Correo de contacto" error={errors.contactEmail?.message}>
+                <Input
+                  {...fieldAria('contactEmail', errors.contactEmail?.message)}
+                  type="email"
+                  maxLength={LIMITS.emailMax}
+                  {...form.register('contactEmail')}
+                />
+              </FormField>
+              <FormField
+                id="contactPhone"
+                label="Teléfono de contacto (opcional)"
+                error={errors.contactPhone?.message}
+                hint={phone.kind ? `Se guarda como ${phone.value} (${phone.kind}).` : 'Fijo, celular o 800 de Bolivia, o un número del exterior con +.'}
+              >
+                <Input
+                  {...fieldAria('contactPhone', errors.contactPhone?.message, true)}
+                  type="tel"
+                  inputMode="tel"
+                  {...form.register('contactPhone')}
+                />
+              </FormField>
               {submitError && <Alert variant="destructive">{submitError}</Alert>}
               {success && <Alert variant="success">Perfil actualizado.</Alert>}
               <Button type="submit" disabled={form.formState.isSubmitting} className="self-start">

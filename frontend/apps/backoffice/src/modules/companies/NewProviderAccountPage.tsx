@@ -1,9 +1,21 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import { adminApi } from '@turisclick/api-client'
+import { adminApi, companiesApi } from '@turisclick/api-client'
+import {
+  LIMITS,
+  applyServerErrors,
+  contactPhoneSchema,
+  emailSchema,
+  nitSchema,
+  organizationNameSchema,
+  personNameSchema,
+  plainTextSchema,
+  rules,
+  singleLine,
+} from '@turisclick/validation'
 import { ArrowLeft, Copy, KeyRound } from 'lucide-react'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
 import { PageHeader } from '@/components/PageHeader'
@@ -11,9 +23,9 @@ import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { getErrorMessage } from '@/lib/errors'
+import { FormField } from '@/components/form/FormField'
+import { fieldAria } from '@/components/form/fieldAria'
 import { httpClient } from '@/lib/httpClient'
 
 /**
@@ -26,26 +38,44 @@ import { httpClient } from '@/lib/httpClient'
  * puede volver a consultar. La pantalla lo dice con esas palabras, porque descubrirlo después es el camino
  * seguro a una cuenta inutilizable.
  */
+// Reglas R-01 a R-06 (docs/auditoria-validaciones.md): las mismas, con los mismos mensajes, que valida el backend.
 const schema = z.object({
-  companyName: z.string().min(2, 'Ingresá el nombre de la empresa.').max(150),
-  companyDescription: z.string().max(2000).optional().or(z.literal('')),
-  legalDocument: z.string().min(3, 'Ingresá el NIT o documento legal.').max(50),
-  contactEmail: z.string().email('Ingresá un correo válido.'),
-  contactPhone: z.string().max(30).optional().or(z.literal('')),
-  firstName: z.string().min(2, 'Ingresá el nombre.').max(100),
-  lastName: z.string().min(2, 'Ingresá el apellido.').max(100),
-  email: z.string().email('Ingresá el correo con el que va a entrar.'),
+  companyName: organizationNameSchema(),
+  companyDescription: plainTextSchema('La descripción', LIMITS.companyDescriptionMax, { multiLine: true }),
+  legalDocument: nitSchema(),
+  contactEmail: emailSchema('El correo de contacto'),
+  contactPhone: contactPhoneSchema(),
+  firstName: personNameSchema('El nombre'),
+  lastName: personNameSchema('El apellido'),
+  email: emailSchema('El correo de acceso'),
 })
 
 type FormValues = z.infer<typeof schema>
+
+const FIELDS = [
+  'companyName',
+  'companyDescription',
+  'legalDocument',
+  'contactEmail',
+  'contactPhone',
+  'firstName',
+  'lastName',
+  'email',
+] as const satisfies readonly (keyof FormValues)[]
 
 export function NewProviderAccountPage() {
   const [created, setCreated] = useState<adminApi.ProviderAccountCreatedResponse | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
+  const [similar, setSimilar] = useState<companiesApi.CompanyNameMatch[]>([])
+  // Duplicado detectado al salir del nombre. Vive aparte de los errores del formulario: la validación de
+  // react-hook-form al salir del campo corre en paralelo y, si terminara después, lo borraría.
+  const [nameConflict, setNameConflict] = useState<string | null>(null)
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onTouched',
     defaultValues: {
       companyName: '',
       companyDescription: '',
@@ -70,8 +100,34 @@ export function NewProviderAccountPage() {
       setCreated(result)
       setSubmitError(null)
     },
-    onError: (error) => setSubmitError(getErrorMessage(error)),
+    onError: (error) => setSubmitError(applyServerErrors(error, form.setError, FIELDS)),
   })
+
+  /**
+   * Al salir del nombre se consulta si ya hay una empresa igual (el alta la va a rechazar) o parecida (sólo
+   * cambia la puntuación o la forma societaria: se avisa y se deja seguir). Un fallo de esta consulta no bloquea
+   * nada: el servidor vuelve a verificar al guardar.
+   */
+  const checkName = async (raw: string) => {
+    const name = singleLine(raw)
+    setNameConflict(null)
+    if (rules.organizationName(name)) {
+      setSimilar([])
+      return
+    }
+    try {
+      const result = await companiesApi.checkCompanyName(httpClient, name)
+      setSimilar(result.similar ?? [])
+      if (result.exactMatch?.name) setNameConflict(`Ya existe una empresa con ese nombre: «${result.exactMatch.name}».`)
+    } catch {
+      setSimilar([])
+    }
+  }
+
+  const errors = form.formState.errors
+  const companyNameError = errors.companyName?.message ?? nameConflict ?? undefined
+  const description = useWatch({ control: form.control, name: 'companyDescription' }) ?? ''
+  const phone = rules.parsePhone(useWatch({ control: form.control, name: 'contactPhone' }))
 
   if (created) {
     return (
@@ -133,6 +189,8 @@ export function NewProviderAccountPage() {
                 onClick={() => {
                   setCreated(null)
                   setCopied(false)
+                  setSimilar([])
+                  setNameConflict(null)
                   form.reset()
                 }}
               >
@@ -164,39 +222,75 @@ export function NewProviderAccountPage() {
             <CardTitle className="text-heading">La empresa</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <Label htmlFor="companyName">Nombre</Label>
-              <Input id="companyName" {...form.register('companyName')} />
-              {form.formState.errors.companyName && (
-                <p className="text-xs text-destructive">{form.formState.errors.companyName.message}</p>
+            <FormField id="companyName" label="Nombre" error={companyNameError} className="sm:col-span-2">
+              <Input
+                {...fieldAria('companyName', companyNameError)}
+                maxLength={LIMITS.organizationNameMax + 20}
+                {...form.register('companyName', { onBlur: (e) => void checkName(e.target.value) })}
+              />
+              {similar.length > 0 && !companyNameError && (
+                <Alert variant="warning">
+                  Hay {similar.length === 1 ? 'una empresa con un nombre parecido' : 'empresas con nombres parecidos'}:{' '}
+                  {similar.map((s) => `«${s.name}»`).join(', ')}. Verificá que no sea la misma antes de darla de alta.
+                </Alert>
               )}
-            </div>
+            </FormField>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="legalDocument">NIT o documento legal</Label>
-              <Input id="legalDocument" {...form.register('legalDocument')} />
-              {form.formState.errors.legalDocument && (
-                <p className="text-xs text-destructive">{form.formState.errors.legalDocument.message}</p>
-              )}
-            </div>
+            <FormField
+              id="legalDocument"
+              label="NIT"
+              error={errors.legalDocument?.message}
+              hint="Sólo números, de 5 a 12 dígitos. Podés pegarlo con puntos o guiones."
+            >
+              <Input
+                {...fieldAria('legalDocument', errors.legalDocument?.message, true)}
+                inputMode="numeric"
+                autoComplete="off"
+                {...form.register('legalDocument')}
+              />
+            </FormField>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="contactPhone">Teléfono de contacto</Label>
-              <Input id="contactPhone" {...form.register('contactPhone')} />
-            </div>
+            <FormField
+              id="contactPhone"
+              label="Teléfono de contacto (opcional)"
+              error={errors.contactPhone?.message}
+              hint={phone.kind ? `Se guarda como ${phone.value} (${phone.kind}).` : 'Fijo, celular o 800 de Bolivia, o un número del exterior con +.'}
+            >
+              <Input
+                {...fieldAria('contactPhone', errors.contactPhone?.message, true)}
+                type="tel"
+                inputMode="tel"
+                {...form.register('contactPhone')}
+              />
+            </FormField>
 
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <Label htmlFor="contactEmail">Correo de contacto de la empresa</Label>
-              <Input id="contactEmail" type="email" {...form.register('contactEmail')} />
-              {form.formState.errors.contactEmail && (
-                <p className="text-xs text-destructive">{form.formState.errors.contactEmail.message}</p>
-              )}
-            </div>
+            <FormField
+              id="contactEmail"
+              label="Correo de contacto de la empresa"
+              error={errors.contactEmail?.message}
+              className="sm:col-span-2"
+            >
+              <Input
+                {...fieldAria('contactEmail', errors.contactEmail?.message)}
+                type="email"
+                maxLength={LIMITS.emailMax}
+                {...form.register('contactEmail')}
+              />
+            </FormField>
 
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <Label htmlFor="companyDescription">Qué hace (opcional)</Label>
-              <Textarea id="companyDescription" rows={3} {...form.register('companyDescription')} />
-            </div>
+            <FormField
+              id="companyDescription"
+              label="Qué hace (opcional)"
+              error={errors.companyDescription?.message}
+              counter={{ length: description.length, max: LIMITS.companyDescriptionMax }}
+              className="sm:col-span-2"
+            >
+              <Textarea
+                {...fieldAria('companyDescription', errors.companyDescription?.message)}
+                rows={3}
+                {...form.register('companyDescription')}
+              />
+            </FormField>
           </CardContent>
         </Card>
 
@@ -205,30 +299,29 @@ export function NewProviderAccountPage() {
             <CardTitle className="text-heading">Quién la administra</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="firstName">Nombre</Label>
-              <Input id="firstName" {...form.register('firstName')} />
-              {form.formState.errors.firstName && (
-                <p className="text-xs text-destructive">{form.formState.errors.firstName.message}</p>
-              )}
-            </div>
+            <FormField id="firstName" label="Nombre" error={errors.firstName?.message}>
+              <Input {...fieldAria('firstName', errors.firstName?.message)} autoComplete="off" {...form.register('firstName')} />
+            </FormField>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lastName">Apellido</Label>
-              <Input id="lastName" {...form.register('lastName')} />
-              {form.formState.errors.lastName && (
-                <p className="text-xs text-destructive">{form.formState.errors.lastName.message}</p>
-              )}
-            </div>
+            <FormField id="lastName" label="Apellido" error={errors.lastName?.message}>
+              <Input {...fieldAria('lastName', errors.lastName?.message)} autoComplete="off" {...form.register('lastName')} />
+            </FormField>
 
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <Label htmlFor="email">Correo con el que va a entrar</Label>
-              <Input id="email" type="email" autoComplete="off" {...form.register('email')} />
-              <p className="text-caption text-ink-muted">Puede ser distinto del correo de contacto de la empresa.</p>
-              {form.formState.errors.email && (
-                <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
-              )}
-            </div>
+            <FormField
+              id="email"
+              label="Correo con el que va a entrar"
+              error={errors.email?.message}
+              hint="Puede ser distinto del correo de contacto de la empresa."
+              className="sm:col-span-2"
+            >
+              <Input
+                {...fieldAria('email', errors.email?.message, true)}
+                type="email"
+                autoComplete="off"
+                maxLength={LIMITS.emailMax}
+                {...form.register('email')}
+              />
+            </FormField>
           </CardContent>
         </Card>
 

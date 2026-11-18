@@ -13,7 +13,8 @@ import { getErrorMessage } from '@/lib/errors'
 import { useAuth } from './useAuth'
 
 const schema = z.object({
-  email: z.string().email('Ingresá un email válido.'),
+  // Sin reglas de formato extra ni mínimo de contraseña: las cuentas que ya existen tienen que poder entrar (D-7).
+  email: z.string().email('Ingresá un email válido.').max(254, 'El correo puede tener hasta 254 caracteres.'),
   password: z.string().min(1, 'La contraseña es requerida.'),
 })
 

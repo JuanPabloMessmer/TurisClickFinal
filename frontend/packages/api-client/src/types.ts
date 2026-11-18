@@ -25,6 +25,8 @@ export type CreateCategoryRequest = Schemas['CreateCategoryRequest']
 export type UpdateCategoryRequest = Schemas['UpdateCategoryRequest']
 
 export type CompanyResponse = Schemas['CompanyResponse']
+export type CompanyNameCheckResponse = Schemas['CompanyNameCheckResponse']
+export type CompanyNameMatchResponse = Schemas['CompanyNameMatchResponse']
 export type CompanyResponsePagedResult = Schemas['CompanyResponsePagedResult']
 export type RejectCompanyRequest = Schemas['RejectCompanyRequest']
 export type UpdateCompanyRequest = Schemas['UpdateCompanyRequest']

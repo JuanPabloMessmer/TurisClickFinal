@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { adminApi } from '@turisclick/api-client'
+import { LIMITS, applyServerErrors, emailSchema, personNameSchema, rules, singleLine } from '@turisclick/validation'
 import { ArrowLeft, Copy, KeyRound } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -11,8 +12,8 @@ import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { getErrorMessage } from '@/lib/errors'
+import { FormField } from '@/components/form/FormField'
+import { fieldAria } from '@/components/form/fieldAria'
 import { httpClient } from '@/lib/httpClient'
 
 /**
@@ -23,13 +24,16 @@ import { httpClient } from '@/lib/httpClient'
  * vive en el estado del componente mientras se la entrega— y recomienda pasarla por un canal distinto del que
  * lleva el enlace de ingreso.
  */
+// Reglas R-04 y R-06 (docs/auditoria-validaciones.md): las mismas que valida POST /api/admin/admin-accounts.
 const schema = z.object({
-  firstName: z.string().trim().min(2, 'Ingresá el nombre.').max(100),
-  lastName: z.string().trim().min(2, 'Ingresá el apellido.').max(100),
-  email: z.string().trim().email('Ingresá el correo con el que va a entrar.').max(150),
+  firstName: personNameSchema('El nombre'),
+  lastName: personNameSchema('El apellido'),
+  email: emailSchema('El correo de acceso'),
 })
 
 type FormValues = z.infer<typeof schema>
+
+const FIELDS = ['firstName', 'lastName', 'email'] as const satisfies readonly (keyof FormValues)[]
 
 export function NewAdminAccountPage() {
   const [created, setCreated] = useState<adminApi.AdminAccountCreatedResponse | null>(null)
@@ -38,16 +42,23 @@ export function NewAdminAccountPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onTouched',
     defaultValues: { firstName: '', lastName: '', email: '' },
   })
 
   const create = useMutation({
-    mutationFn: (values: FormValues) => adminApi.createAdminAccount(httpClient, values),
+    // Se envía ya normalizado (el servidor lo vuelve a normalizar igual).
+    mutationFn: (values: FormValues) =>
+      adminApi.createAdminAccount(httpClient, {
+        firstName: singleLine(values.firstName),
+        lastName: singleLine(values.lastName),
+        email: rules.normalizeEmail(values.email) ?? '',
+      }),
     onSuccess: (result) => {
       setCreated(result)
       setSubmitError(null)
     },
-    onError: (error) => setSubmitError(getErrorMessage(error)),
+    onError: (error) => setSubmitError(applyServerErrors(error, form.setError, FIELDS)),
   })
 
   if (created) {
@@ -144,29 +155,28 @@ export function NewAdminAccountPage() {
             <CardTitle className="text-heading">La persona</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="firstName">Nombre</Label>
-              <Input id="firstName" {...form.register('firstName')} />
-              {form.formState.errors.firstName && (
-                <p className="text-xs text-destructive">{form.formState.errors.firstName.message}</p>
-              )}
-            </div>
+            <FormField id="firstName" label="Nombre" error={form.formState.errors.firstName?.message}>
+              <Input {...fieldAria('firstName', form.formState.errors.firstName?.message)} {...form.register('firstName')} />
+            </FormField>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lastName">Apellido</Label>
-              <Input id="lastName" {...form.register('lastName')} />
-              {form.formState.errors.lastName && (
-                <p className="text-xs text-destructive">{form.formState.errors.lastName.message}</p>
-              )}
-            </div>
+            <FormField id="lastName" label="Apellido" error={form.formState.errors.lastName?.message}>
+              <Input {...fieldAria('lastName', form.formState.errors.lastName?.message)} {...form.register('lastName')} />
+            </FormField>
 
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <Label htmlFor="email">Correo con el que va a entrar</Label>
-              <Input id="email" type="email" autoComplete="off" {...form.register('email')} />
-              {form.formState.errors.email && (
-                <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
-              )}
-            </div>
+            <FormField
+              id="email"
+              label="Correo con el que va a entrar"
+              error={form.formState.errors.email?.message}
+              className="sm:col-span-2"
+            >
+              <Input
+                {...fieldAria('email', form.formState.errors.email?.message)}
+                type="email"
+                autoComplete="off"
+                maxLength={LIMITS.emailMax}
+                {...form.register('email')}
+              />
+            </FormField>
           </CardContent>
         </Card>
 

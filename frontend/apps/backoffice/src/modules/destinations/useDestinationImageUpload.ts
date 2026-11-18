@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { uploadDestinationImage } from './api'
 import { getUploadErrorMessage, type ImageSelection } from './imageFile'
+import { UserMessageError } from '@turisclick/validation'
 
 /**
  * Convierte la imagen elegida en el `imageUrl` que se manda al guardar el destino. Si el archivo es nuevo lo
@@ -19,11 +20,11 @@ export function useDestinationImageUpload() {
     setProgress(0)
     try {
       const { url } = await uploadDestinationImage(selection.file, setProgress)
-      if (!url) throw new Error('El servidor no devolvió la dirección de la imagen.')
+      if (!url) throw new UserMessageError('El servidor no devolvió la dirección de la imagen.')
       lastUpload.current = { file: selection.file, url }
       return url
     } catch (error) {
-      throw new Error(getUploadErrorMessage(error))
+      throw new UserMessageError(getUploadErrorMessage(error))
     } finally {
       setProgress(null)
     }

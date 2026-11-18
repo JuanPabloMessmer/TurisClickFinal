@@ -3,6 +3,7 @@ import { authApi } from '@turisclick/api-client'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import { newPasswordSchema } from '@turisclick/validation'
 import { z } from 'zod'
 import { Alert } from '@/components/ui/alert'
 import { BrandMark } from '@/components/BrandMark'
@@ -25,7 +26,8 @@ import { useAuth } from './useAuth'
 const schema = z
   .object({
     currentPassword: z.string().min(1, 'Ingresá la contraseña que te enviaron.'),
-    newPassword: z.string().min(10, 'Usá al menos 10 caracteres.'),
+    // D-7 (docs/auditoria-validaciones.md): 10 a 200 caracteres, igual que el backend.
+    newPassword: newPasswordSchema(),
     confirmPassword: z.string().min(1, 'Repetí la contraseña nueva.'),
   })
   .refine((values) => values.newPassword === values.confirmPassword, {

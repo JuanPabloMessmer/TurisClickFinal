@@ -1,5 +1,6 @@
 import type { CompanyResponse, providerFlightsApi } from '@turisclick/api-client'
 import { formatDateTime } from '@turisclick/utils'
+import { rules } from '@turisclick/validation'
 import { Plane } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
@@ -47,6 +48,12 @@ export function FlightSellerCard({ company }: { company: CompanyResponse }) {
     setValidation(null)
     if (!registration.trim()) {
       setValidation('Para autorizar la venta de vuelos hay que indicar el registro o la licencia de la empresa.')
+      return
+    }
+    // R-11 (docs/auditoria-validaciones.md): la misma regla que valida el backend.
+    const invalid = rules.flightSellerRegistration(registration)
+    if (invalid) {
+      setValidation(invalid)
       return
     }
     setError(null)

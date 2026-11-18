@@ -1,5 +1,7 @@
 import type { AxiosInstance } from 'axios'
 import type {
+  CompanyNameCheckResponse,
+  CompanyNameMatchResponse,
   CompanyResponse,
   CompanyResponsePagedResult,
   RejectCompanyRequest,
@@ -46,3 +48,16 @@ export const getMyCompany = (http: AxiosInstance) => http.get<CompanyResponse>('
 
 export const updateMyCompany = (http: AxiosInstance, body: UpdateCompanyRequest) =>
   http.put<CompanyResponse>('/api/companies/me', body).then((r) => r.data)
+
+/** Empresa existente cuyo nombre choca o se parece al consultado (tipo generado desde OpenAPI). */
+export type CompanyNameMatch = CompanyNameMatchResponse
+
+/**
+ * `GET /api/admin/companies/name-check` (sólo ADMIN, sólo lectura). `exactMatch` es un duplicado que el alta va a
+ * rechazar (mismo nombre sin mayúsculas, tildes ni espacios repetidos); `similar` son nombres que sólo difieren en
+ * puntuación o forma societaria: una advertencia, no un bloqueo.
+ */
+export const checkCompanyName = (http: AxiosInstance, name: string, excludeId?: string) =>
+  http
+    .get<CompanyNameCheckResponse>('/api/admin/companies/name-check', { params: { name, excludeId } })
+    .then((r) => r.data)

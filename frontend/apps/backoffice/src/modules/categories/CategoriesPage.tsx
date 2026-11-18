@@ -1,18 +1,33 @@
+import { zodResolver } from '@hookform/resolvers/zod'
 import type { CategoryResponse } from '@turisclick/api-client'
+import { LIMITS, applyServerErrors, categoryNameSchema, plainTextSchema, singleLine } from '@turisclick/validation'
 import { Pencil, Plus, Tags, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
+import { z } from 'zod'
 import { PageHeader } from '@/components/PageHeader'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { FormField } from '@/components/form/FormField'
+import { fieldAria } from '@/components/form/fieldAria'
 import { Table, TableBody, TableCell, TableEmptyRow, TableHead, TableHeader, TableLoadingRow, TableRow } from '@/components/ui/table'
 import { getErrorMessage } from '@/lib/errors'
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from './api'
 
 type DialogState = { mode: 'create' } | { mode: 'edit'; category: CategoryResponse } | null
+
+// Reglas R-07 y R-08 (docs/auditoria-validaciones.md): las mismas que valida /api/admin/categories.
+const schema = z.object({
+  name: categoryNameSchema(),
+  description: plainTextSchema('La descripción', LIMITS.categoryDescriptionMax),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const FIELDS = ['name', 'description'] as const satisfies readonly (keyof FormValues)[]
 
 export function CategoriesPage() {
   const { data: categories = [], isLoading } = useCategories()
@@ -107,23 +122,30 @@ function CategoryDialogContent({ category, onClose }: { category?: CategoryRespo
   const isEdit = !!category
   const createMutation = useCreateCategory()
   const updateMutation = useUpdateCategory()
-  const [name, setName] = useState(category?.name ?? '')
-  const [description, setDescription] = useState(category?.description ?? '')
   const [error, setError] = useState<string | null>(null)
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    mode: 'onTouched',
+    defaultValues: { name: category?.name ?? '', description: category?.description ?? '' },
+  })
+  const errors = form.formState.errors
+  const name = useWatch({ control: form.control, name: 'name' }) ?? ''
+  const description = useWatch({ control: form.control, name: 'description' }) ?? ''
 
   const isPending = createMutation.isPending || updateMutation.isPending
 
-  const onSave = async () => {
+  const onSave = async (values: FormValues) => {
     setError(null)
+    const body = { name: singleLine(values.name), description: singleLine(values.description) || undefined }
     try {
       if (isEdit) {
-        await updateMutation.mutateAsync({ id: category.id!, body: { name, description: description || undefined } })
+        await updateMutation.mutateAsync({ id: category.id!, body })
       } else {
-        await createMutation.mutateAsync({ name, description: description || undefined })
+        await createMutation.mutateAsync(body)
       }
       onClose()
     } catch (err) {
-      setError(getErrorMessage(err))
+      setError(applyServerErrors(err, form.setError, FIELDS))
     }
   }
 
@@ -132,26 +154,35 @@ function CategoryDialogContent({ category, onClose }: { category?: CategoryRespo
       <DialogHeader>
         <DialogTitle>{isEdit ? 'Editar categoría' : 'Crear categoría'}</DialogTitle>
       </DialogHeader>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label>Nombre</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label>Descripción (opcional)</Label>
-          <Input value={description} onChange={(e) => setDescription(e.target.value)} />
-        </div>
-      </div>
+      <form id="category-form" className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSave)} noValidate>
+        <FormField
+          id="category-name"
+          label="Nombre"
+          error={errors.name?.message}
+          hint="De 3 a 40 caracteres. Puede llevar números, como en «Turismo 4x4»."
+          counter={{ length: name.length, max: LIMITS.categoryNameMax }}
+        >
+          <Input {...fieldAria('category-name', errors.name?.message, true)} autoFocus {...form.register('name')} />
+        </FormField>
+        <FormField
+          id="category-description"
+          label="Descripción (opcional)"
+          error={errors.description?.message}
+          counter={{ length: description.length, max: LIMITS.categoryDescriptionMax }}
+        >
+          <Input {...fieldAria('category-description', errors.description?.message)} {...form.register('description')} />
+        </FormField>
+      </form>
       {error && (
         <Alert variant="destructive" className="mt-2">
           {error}
         </Alert>
       )}
       <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
+        <Button type="button" variant="outline" onClick={onClose}>
           Cancelar
         </Button>
-        <Button onClick={() => void onSave()} disabled={isPending || name.trim().length < 2}>
+        <Button type="submit" form="category-form" disabled={isPending}>
           Guardar
         </Button>
       </DialogFooter>

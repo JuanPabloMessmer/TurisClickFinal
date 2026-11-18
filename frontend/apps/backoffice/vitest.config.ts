@@ -13,7 +13,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: false,
     restoreMocks: true,
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // Las pruebas del paquete compartido de validaciones corren con esta misma configuración: no tiene una propia.
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', '../../packages/validation/src/**/*.test.ts'],
     setupFiles: ['src/test-setup/rtl.ts'],
   },
 })
