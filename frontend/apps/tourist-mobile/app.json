@@ -50,6 +50,9 @@
         }
       ]
     ],
+    "updates": {
+      "url": "https://u.expo.dev/d67cb9be-745c-4d5f-9e30-e7aa9321c69e"
+    },
     "extra": {
       "router": {},
       "eas": {
