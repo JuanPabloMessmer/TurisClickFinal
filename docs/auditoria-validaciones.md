@@ -945,6 +945,24 @@ campos obligatorios: se agregó `[Required(AllowEmptyStrings = true)]` (sólo co
 la regla propia) y se volvió a generar. `checkCompanyName` usa ahora los tipos generados. Verificación posterior: backend 958/958 (base
 desechable `turisclick_fase1_tests_dto_tmp`, borrada), backoffice typecheck OK y 388/388, app móvil typecheck OK y 528/528.
 
+**Scripts SQL idempotentes de la 0016 para Azure V2 (17/11/2026, sin commit):** `infra/migrations/0016_Fase1_Validaciones.up.sql`
+y `.down.sql`, generados con `dotnet ef migrations script --idempotent` y probados con
+`psql --single-transaction -v ON_ERROR_STOP=1 -f` sobre la base desechable `turisclick_fase1_script0016_tmp` (restaurada de
+un `pg_dump` de `turisclick_staging_o19` con el catálogo; 15 migraciones; borrada al terminar):
+
+- *up*: aplica la verificación previa (el `DO $$` anidado dentro del `DO $EF$` funciona), las 3 FK en `RESTRICT` y los
+  3 índices, y registra la migración; los índices rechazan mayúsculas, tildes y espacios repetidos y respetan la ñ. Datos
+  intactos (10 empresas, 6 categorías, 163 asignaciones). Aplicado dos veces: idempotente.
+- *down*: vuelve a 15 migraciones, sin índices y con las FK en `CASCADE`; idempotente; el *up* se puede reaplicar.
+- Aborto: con dos pares de categorías duplicadas el *up* termina con código 3 y el mensaje en español, sin aplicar nada.
+- **Codificación:** el script generado, ejecutado con codificación de cliente LATIN1, se aplicaba sin error pero con
+  índices incorrectos (dejaba pasar "Aventúra" frente a "Aventura"); con WIN1252 fallaba sin aplicar nada. Los archivos de
+  `infra/migrations` llevan, sin BOM, `SET client_encoding = 'UTF8';` como primera sentencia; con eso se probaron con
+  LATIN1, WIN1252 y UTF8 (*up*, *down*, idempotencia y aborto) y el resultado es correcto en los tres casos. La migración
+  de EF no cambió.
+- `psql --single-transaction` muestra dos advertencias inofensivas porque el script trae su propio
+  `START TRANSACTION`/`COMMIT`.
+
 **Pendiente / a decidir:** (las bases desechables `turisclick_fase1_ensayo_tmp`, `turisclick_fase1_tests_tmp` y
 `turisclick_fase1_tests_rerun_tmp` ya están borradas); `ai_conversation_categories` resuelto (se mantiene CASCADE, ver arriba);
 `frontend/package-lock.json` difiere de master por el workspace nuevo (RS-9); los 10 NIT inválidos de staging no se corrigen por ahora (decisión del 17/11/2026); cuando se autorice, seguir el procedimiento
